@@ -28,12 +28,11 @@ Die `docker-compose.yml` mappt deshalb alle relevanten **Host-**Ports über Vari
 | `LIVEKIT_HOST_PORT_RTC_TCP` | `7881` | RTC TCP (Host → 7881) |
 | `LIVEKIT_HOST_PORT_TURN_UDP` | `3478` | TURN UDP (Host → 3478) |
 | `LIVEKIT_HOST_PORT_TURN_TLS` | `5349` | TURN TLS (Host → 5349) |
-| `LIVEKIT_HOST_UDP_RANGE_START` | `50000` | Beginn Host-UDP-Range für Medien |
-| `LIVEKIT_HOST_UDP_RANGE_END` | `60000` | Ende Host-UDP-Range für Medien |
+| `LIVEKIT_HOST_UDP_PORT_PUBLISH` | `50000-60000:50000-60000/udp` | **Komplette** UDP-Publish-Zeile (Host-Bereich → Container 50000–60000, wie `livekit.yaml`) |
 | `CADDY_HOST_PORT_HTTP` | `80` | Caddy HTTP (nur wenn Service aktiv) |
 | `CADDY_HOST_PORT_HTTPS` | `443` | Caddy HTTPS (nur wenn Service aktiv) |
 
-**Wichtig (UDP-Range):** Im Container bleibt der Medienbereich **50000–60000** (wie in `livekit.yaml`). Auf dem Host muss der abgebildete Bereich **dieselbe Anzahl Ports** haben (Standard: 50000–60000). Ändern Sie z. B. den Start auf `60001`, muss das Ende **70001** sein (gleiche Spanne wie 50000–60000).
+**Wichtig (UDP-Range):** Im Container bleibt der Medienbereich **50000–60000** (wie in `livekit.yaml`). Setzen Sie **`LIVEKIT_HOST_UDP_PORT_PUBLISH`** auf eine vollständige Zeile `HOST_START-HOST_END:50000-60000/udp`. Die Spanne auf dem Host muss **dieselbe Anzahl Ports** haben wie 50000–60000 (10001 Ports). Beispiel zweite Instanz: `60001-70001:50000-60000/udp`. *(Zwei separate Variablen für Start/Ende werden wegen eines Docker-Compose-Parsers nicht verwendet.)*
 
 **Caddy:** Läuft eine zweite Instanz **mit** Caddy auf demselben Host, kollidieren auch **80/443** — dort andere `CADDY_HOST_PORT_*` wählen oder Caddy weglassen (Coolify/Traefik).
 
