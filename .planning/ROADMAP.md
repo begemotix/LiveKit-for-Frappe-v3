@@ -20,7 +20,7 @@
 **Plans:** 2 plans
 Plans:
 - [x] 01-01-PLAN.md — Create the base LiveKit configuration and environment structure.
-- [ ] 01-02-PLAN.md — Create the Docker Compose and Reverse Proxy setup for deployment.
+- [x] 01-02-PLAN.md — Create the Docker Compose and Reverse Proxy setup for deployment.
 
 ### Phase 2: Frontend Widget
 **Goal**: Users can initiate a voice connection to the LiveKit server from their browser

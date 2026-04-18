@@ -6,8 +6,8 @@
 ## v1 Requirements
 
 ### Infrastructure
-- [ ] **INFR-01**: Docker Compose Setup für LiveKit Server bereitstellen
-- [ ] **INFR-02**: Reverse Proxy (Caddy) für automatische SSL-Zertifikate (Let's Encrypt) integrieren
+- [x] **INFR-01**: Docker Compose Setup für LiveKit Server bereitstellen
+- [x] **INFR-02**: Reverse Proxy (Caddy) für automatische SSL-Zertifikate (Let's Encrypt) integrieren
 - [x] **INFR-03**: Environment-Variablen für White-Labeling (Farbwerte im UI), Verbindungs-URLs und API-Keys generisch definieren
 - [x] **INFR-04**: TURN/STUN-Konfiguration für reibungslose WebRTC-Verbindungen hinter NAT sicherstellen
 
@@ -56,8 +56,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete |
+| INFR-02 | Phase 1 | Complete |
 | INFR-03 | Phase 1 | Complete |
 | INFR-04 | Phase 1 | Complete |
 | WIDG-01 | Phase 2 | Pending |
