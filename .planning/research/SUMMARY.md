@@ -9,7 +9,7 @@
 
 The product is a 100% self-hosted, cloud-independent voice assistant for Frappe/ERPNext business software. It bridges a Next.js floating browser widget, a LiveKit WebRTC engine, a Python-based Agent Worker (Type A using OpenAI Realtime API), and the Frappe ERP via the Model Context Protocol (MCP). Experts build this with decoupled, external standalone microservices to avoid Frappe monolith coupling and to ensure hardware-agnostic deployment.
 
-The recommended approach relies on a multi-container Docker Compose setup with Caddy for reverse proxying and SSL. The Agent uses the Frappe MCP Server for dynamic tool discovery, fully delegating ERP business logic. Crucially, the Next.js widget captures the Frappe session token and passes it to the LiveKit Server as connection metadata, ensuring the Agent acts strictly within the user's permission boundaries.
+The recommended approach relies on a multi-container Docker Compose setup with Caddy for reverse proxying and SSL. The Agent uses the Frappe MCP Server for dynamic tool discovery, fully delegating ERP business logic. Crucially, the LiveKit-Agent acts as a fixed, dedicated Frappe user with its own account, authenticated via a fixed API key from the environment. Website visitors are unauthenticated guests in the LiveKit context, ensuring a secure and simplified architecture without per-call token passthrough.
 
 Key risks include "dead air" during latent Frappe API queries (which breaks conversational UX) and the temptation to use global API keys that bypass user permissions. To mitigate these risks, the Agent must employ asynchronous "filler words" before blocking tool calls and strictly enforce token-based impersonation for all MCP requests.
 
@@ -73,7 +73,7 @@ The architecture is deeply decoupled from the Frappe internal bench/app structur
 ### Critical Pitfalls
 
 1. **Dead Air During Frappe Tool Calls:** OpenAI Realtime pauses audio during function calling. Prevent by implementing asynchronous "filler words" before executing the MCP call.
-2. **Auth Bypass via Global API Keys:** Never use a master key for the Agent. Prevent by passing the Frappe session token from the widget to the Agent and MCP server for strict user-permission enforcement.
+2. **Auth Bypass via Global API Keys:** The LiveKit-Agent acts as a fixed, dedicated Frappe user with its own account. Prevent unauthorized access by using a fixed API key from the environment. Website visitors are unauthenticated guests in the LiveKit context; no per-call token passthrough.
 3. **WebRTC/TURN Routing in Docker:** Connection fails externally due to NAT leakage. Prevent by properly configuring `node_ip` in `livekit.yaml` and testing WebRTC Fallbacks early.
 
 ## Implications for Roadmap
@@ -140,7 +140,7 @@ Phases with standard patterns (skip research-phase):
 ### Gaps to Address
 
 - **Frappe Link-Field Permissions:** Handling opaque 403s elegantly in the MCP server so the Agent can inform the user properly.
-- **Token Transport:** Exact mechanics of passing the Frappe session cookie/token via LiveKit Room Metadata into the Python agent context securely.
+- **Token Transport:** (resolved by v4 decision) Exact mechanics of passing the Frappe session cookie/token via LiveKit Room Metadata into the Python agent context securely are no longer required as the agent uses dedicated credentials.
 
 ## Sources
 
