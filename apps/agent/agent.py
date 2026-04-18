@@ -57,11 +57,33 @@ async def entrypoint(ctx: JobContext):
         allow_interruptions=True,
     )
 
+    async def start_agent_session(participant):
+        logger.info(f"starting session for participant {participant.identity}")
+        session.start(ctx.room, participant)
+        
+        # Task 2: DSGVO Announcement (mandatory, non-interruptible)
+        announcement = os.getenv("MANDATORY_ANNOUNCEMENT", "Dieser Anruf kann zu Qualitätszwecken aufgezeichnet werden.")
+        await session.say(announcement, allow_interruptions=False)
+        
+        # Initial greeting (interruptible)
+        greeting = os.getenv("INITIAL_GREETING", "Hallo! Ich bin {AGENT_NAME} von {COMPANY_NAME}. Wie kann ich Ihnen heute helfen?") \
+            .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
+            .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+        await session.say(greeting, allow_interruptions=True)
+
+    @ctx.room.on("participant_joined")
+    def on_participant_joined(participant):
+        asyncio.create_task(start_agent_session(participant))
+
     # Core logic will be added in future plans (03-02 and 03-03)
-    # For now, we just connect to verify the skeleton
     logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect()
     logger.info(f"agent connected to room {ctx.room.name}")
+
+    # If participants are already in the room, start session for the first one
+    for participant in ctx.room.remote_participants.values():
+        asyncio.create_task(start_agent_session(participant))
+        break
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
