@@ -14,6 +14,22 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 **Stack in der Compose-Datei:** **LiveKit** + optional **Caddy**. Frontend und Python-Agent sind ggf. weitere Dienste — Env in den folgenden Abschnitten.
 
+### Warum sind die Ports in der Compose-Datei fest (nicht Coolify-Variablen)?
+
+**In diesem Repository:** Die Einträge unter `services.*.ports` in **`docker-compose.yml`** sind **literal** gesetzt (z. B. `7880:7880`, `50000-60000:50000-60000/udp`). Das ist eine **bewusst einfache** Konfiguration.
+
+**Technisch muss das nicht immer so sein:** Docker Compose erlaubt grundsätzlich Platzhalter wie `"${MEIN_PORT}:7880"`, wenn die Werte aus **`.env`** oder der **Umgebung** kommen. Mit **Coolify** ist das in der Praxis oft problematisch: Coolify ruft u. a. **`docker compose build`** auf und reicht Variablen als **`--build-arg`** durch — dabei können **Portstrings mit `:`** oder **Bereiche** falsch geparst oder abgeschnitten werden (**`invalid hostPort`**, fehlgeschlagene Deploys). Deshalb: **Ports fest in der YAML**, statt über Coolify-Env für Host-Ports.
+
+**Was Sie bei abweichenden Ports tun können:**
+
+| Vorgehen | Beschreibung |
+|----------|--------------|
+| **Compose im Repo / Fork anpassen** | `ports:` direkt editieren (und bei Bedarf `livekit.yaml` konsistent halten). |
+| **Eigene Compose in Coolify** | Angepasste Datei in der Coolify-UI hinterlegen statt der Standard-Datei aus dem Repo. |
+| **Wieder Env-gesteuert** | Möglich, erfordert aber eine **robuste** Deploy-Pipeline (z. B. nur `up` ohne problematische Build-Phase, oder ein separates Rendern der YAML aus Templates) — bewusst **nicht** Teil dieses vereinfachten Setups. |
+
+**Zweite LiveKit-Instanz auf demselben Host:** Gleiche Host-Ports sind nur einmal nutzbar — entweder **andere Ports in der Compose-Datei** wählen oder einen **weiteren Server** verwenden.
+
 ---
 
 ## A) LiveKit-Server (Service `livekit`)
