@@ -13,8 +13,8 @@
 
 ### Frontend (Widget)
 - [x] **WIDG-01**: Next.js-basiertes Voice/Text-Widget als Floating Button bereitstellen
-- [ ] **WIDG-02**: Button ermöglicht Verbindungsaufbau (WebRTC) zum lokalen LiveKit Server
-- [ ] **WIDG-03**: Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten
+- [x] **WIDG-02**: Button ermöglicht Verbindungsaufbau (WebRTC) zum lokalen LiveKit Server
+- [x] **WIDG-03**: Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten
 
 ### Agent Core (Type A)
 - [ ] **AGNT-01**: Python Agent Worker mit `livekit-agents` implementieren
@@ -61,8 +61,8 @@
 | INFR-03 | Phase 1 | Complete |
 | INFR-04 | Phase 1 | Complete |
 | WIDG-01 | Phase 2 | Complete |
-| WIDG-02 | Phase 2 | Pending |
-| WIDG-03 | Phase 2 | Pending |
+| WIDG-02 | Phase 2 | Complete |
+| WIDG-03 | Phase 2 | Complete |
 | AGNT-01 | Phase 3 | Pending |
 | AGNT-02 | Phase 3 | Pending |
 | AGNT-03 | Phase 3 | Pending |
