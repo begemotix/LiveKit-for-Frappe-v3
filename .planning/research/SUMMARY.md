@@ -15,12 +15,6 @@ Key risks include "dead air" during latent Frappe API queries (which breaks conv
 
 ## Research & Knowledge Enforcement
 
-- **Primäre Datenquelle**: Für alle technischen Implementierungen bezüglich LiveKit (Server-Setup, Agent-Worker-Syntax, Frontend-Hooks) MUSS Cursor vorrangig das angebundene LiveKit-Dokumentations-MCP nutzen.
-- **Vorgehensweise**: Vor dem Schreiben von Code für LiveKit-Komponenten ist ein Suchlauf über das MCP zwingend erforderlich, um sicherzustellen, dass die aktuellsten SDK-Versionen und Best Practices verwendet werden.
-- **Sekundärquellen**: Allgemeines LLM-Wissen darf nur genutzt werden, wenn das MCP keine spezifischen Informationen liefert oder für allgemeine Programmierlogik außerhalb des LiveKit-Ökosystems.
-
-## Research & Knowledge Enforcement
-
 - **Primäre Datenquelle**: Für alle technischen Implementierungen bezüglich LiveKit (Server-Setup, Agent-Worker-Syntax, Frontend-Hooks) MUSS Cursor vorrangig das angebundene **LiveKit-Dokumentations-MCP** nutzen.
 - **Vorgehensweise**: Vor dem Schreiben von Code für LiveKit-Komponenten ist ein Suchlauf über das MCP zwingend erforderlich, um sicherzustellen, dass die aktuellsten SDK-Versionen und Best Practices verwendet werden.
 - **Sekundärquellen**: Allgemeines LLM-Wissen darf nur genutzt werden, wenn das MCP keine spezifischen Informationen liefert oder für allgemeine Programmierlogik außerhalb des LiveKit-Ökosystems.
@@ -68,7 +62,7 @@ The architecture is deeply decoupled from the Frappe internal bench/app structur
 1. **Frontend (Next.js Widget):** User UI, mic capture, and token request/auth exchange.
 2. **Infrastructure (LiveKit & Caddy):** WebRTC room management, SFU, audio routing, and SSL termination.
 3. **Agent Core (Python):** Connects to LiveKit, manages OpenAI Realtime WebSocket, and executes MCP tool calls.
-4. **Integration Layer (Frappe MCP Server):** Exposes Frappe APIs as MCP tools and handles authentication passthrough.
+4. **Integration Layer (Frappe MCP Server):** Exposes Frappe APIs as MCP tools and handles authentication via a dedicated agent user account.
 
 ### Critical Pitfalls
 
@@ -101,10 +95,10 @@ Based on research, suggested phase structure:
 **Uses:** Python 3.12+, `livekit-agents`, `livekit-plugins-openai`.
 **Implements:** Agent Layer logic and VAD configuration.
 
-### Phase 4: Frappe MCP Integration & Auth Passthrough
+### Phase 4: Frappe Integration & Dedicated Agent Auth
 
 **Rationale:** Connects the conversing agent to ERP data securely as the final integration step.
-**Delivers:** Frappe MCP Server with read-only tools and full token passthrough from Frontend to Agent to MCP.
+**Delivers:** Frappe MCP Server with read-only tools and dedicated agent-account authentication.
 **Uses:** MCP v1.27.x.
 **Implements:** Integration Layer and dynamic tool discovery.
 **Avoids:** Auth bypass and "Dead air" during tool calls (implement filler words here).
@@ -112,14 +106,14 @@ Based on research, suggested phase structure:
 ### Phase Ordering Rationale
 
 - Infrastructure must precede clients.
-- The UI must capture tokens before the agent can impersonate the user.
 - Basic conversational AI must work smoothly (VAD/latency) before complicating the LLM with custom tools and structured data retrieval from Frappe.
+- The agent uses dedicated credentials, decoupling its auth from the frontend session.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
 
-- **Phase 4:** Frappe MCP token passthrough and handling Frappe Link-Field Permission errors (Opaque 403s). Needs validation on exact token flow.
+- **Phase 4:** Handling Frappe Link-Field Permission errors (Opaque 403s) for the dedicated agent user. Needs validation on how the agent communicates restricted access.
 
 Phases with standard patterns (skip research-phase):
 
