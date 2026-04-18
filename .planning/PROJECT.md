@@ -12,15 +12,14 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Einrichtung des selbst-gehosteten LiveKit-Servers via Docker (Validiert in Phase 01: infrastructure-setup)
+- [x] Bereitstellung der Infrastruktur über Docker Compose (Validiert in Phase 01: infrastructure-setup)
 
 ### Active
 
-- [ ] Einrichtung des selbst-gehosteten LiveKit-Servers via Docker
 - [ ] Implementierung des Agent-Workers (Typ A - OpenAI Realtime API) für geringe Latenz
 - [ ] Bereitstellung eines Browser-Widgets (Next.js) für Voice-Interaktionen
 - [ ] Anbindung an Frappe über MCP (Read-only Abfragen)
-- [ ] Bereitstellung der Infrastruktur über Docker Compose (Agent, Frontend, Caddy, LiveKit)
 
 ### Out of Scope
 
@@ -74,4 +73,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after initialization*
+*Last updated: 2026-04-18 after Phase 01 completion*
