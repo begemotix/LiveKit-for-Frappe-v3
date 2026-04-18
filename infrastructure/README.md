@@ -14,18 +14,13 @@ Dieses Projekt nutzt Docker Compose für ein einfaches, produktionsbereites Depl
 
 ### Starten der Infrastruktur
 
-Host-Ports werden aus **`docker-compose.template.yml`** über **`scripts/render-compose.sh`** in **`docker-compose.yml`** geschrieben (White-Label / Coolify). Standardwerte:
-
 ```bash
-bash scripts/render-compose.sh
 docker compose up -d
 ```
 
-Details und alle Variablen: **`COOLIFY-KONFIGURATION.md`** im Repository-Root.
+Umgebungsvariablen für LiveKit/Caddy: siehe **`COOLIFY-KONFIGURATION.md`** (Root) und `.env.example`.
 
-### Mehrere LiveKit-Stacks auf demselben Host
-
-Jede Instanz braucht **eigene** Host-Ports in der Umgebung, danach **`render-compose.sh`** ausführen (siehe Coolify-Doku).
+**Hinweis:** Die `docker-compose.yml` nutzt feste Standard-Ports. Eine zweite LiveKit-Instanz auf dem **gleichen** Host kollidiert damit — dann Ports in der Compose-Datei (und ggf. `livekit.yaml`) anpassen oder einen weiteren Server nutzen.
 
 ### Deployment mit Coolify (Alternative)
 

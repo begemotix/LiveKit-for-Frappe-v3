@@ -4,74 +4,15 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 ---
 
-## Gesamtbild: White-Label-Ports und Deploy
-
-| Schicht | Rolle |
-|--------|--------|
-| **Kunde (Coolify)** | Setzt **alle Host-Ports** und Betriebs-Env (`DOMAIN`, Keys, …) als Variablen. |
-| **`scripts/render-compose.sh`** | Liest diese Variablen, validiert sie, erzeugt **`docker-compose.yml`** aus **`docker-compose.template.yml`** mit **literalen** Port-Zeilen (kein `${…}` mehr in `ports:`). |
-| **Docker Compose** | Startet Container mit den erzeugten Mappings; `docker compose build` sieht keine problematischen Build-Args mit `:` in Portstrings. |
-| **`livekit.yaml`** | Definiert die **Container-internen** Ports (7880, 50000–60000, …). Die **rechte** Seite der Compose-`ports:` bleibt daran ausgerichtet — das ist Technik, kein Branding. |
-
-**Warum ein Render-Schritt?** Coolify ruft u. a. `docker compose build` auf und reicht Variablen als **`--build-arg`** durch. Werte mit **`:`** oder zusammengesetzte Portbereiche in der Compose-Datei führen dann zu **`invalid hostPort`** oder abgeschnittenen Werten. **Lösung:** Kunden setzen **nur Zahlen** in Coolify; das Skript schreibt daraus eine **fertige** `docker-compose.yml` **vor** dem eigentlichen Compose-Lauf.
-
-### Ablauf in Coolify (empfohlen)
-
-1. Ressource **Docker Compose**, Repo + Branch wie gewohnt.
-2. Unter **Environment Variables** alle Ports aus der Tabelle unten setzen (oder Defaults nutzen).
-3. **Vor** `docker compose up` / Build muss `bash scripts/render-compose.sh` laufen (gleiches Arbeitsverzeichnis wie die Compose-Datei, mit derselben Env).  
-   - Je nach Coolify-Version: *Pre-deployment command*, *Custom deploy script*, oder in der **Dockerfile/Wrapper**-Dokumentation von Coolify nach „command before compose“ suchen.  
-   - Falls eure Coolify-Instanz **keinen** Pre-Step hat: auf dem Server einmalig deployen, danach in der App einen **eigenen Befehl** / Hook konfigurieren, der nur dieses Skript ausführt — oder die generierte `docker-compose.yml` aus einem CI-Schritt committen (nicht ideal für White-Label).
-4. Clients (`LIVEKIT_URL`, Traefik, Firewall) müssen zu den **gewählten Host-Ports** passen, nicht zwingend zu den Standardwerten.
-
-### Ablauf lokal
-
-```bash
-export LIVEKIT_HOST_PORT_SIGNALING=17880   # Beispiel
-bash scripts/render-compose.sh
-docker compose up -d
-```
-
-Die im Git liegende **`docker-compose.yml`** entspricht dem **Default-Lauf** des Skripts (ohne gesetzte Env) und dient als Referenz; für Kunden mit abweichenden Ports ist die **Quelle der Wahrheit** immer: **Template + Render mit Coolify-Env**.
-
----
-
 ## Überblick
 
 | Thema | Kurzfassung |
 |--------|-------------|
-| **Eine Coolify-App** | Eine Ressource **Docker Compose**; mehrere Container = mehrere Services in **einer** Anwendung. |
-| **Host-Ports** | Über Coolify-Variablen → **`scripts/render-compose.sh`** → `docker-compose.yml`. |
+| **Eine Coolify-App** | Ressource **Docker Compose** auf dieses Repo; mehrere Container = mehrere **Services** in **einer** Anwendung. |
+| **Ports** | Fest in **`docker-compose.yml`** (übliche LiveKit-Ports). Nicht über Coolify-Variablen parametrisiert — bei Bedarf Datei lokal anpassen oder zweiten Server nutzen. |
 | **Reverse Proxy** | Caddy optional; mit Coolify/Traefik oft Caddy weglassen (siehe `infrastructure/README.md`). |
 
-**Aktueller Stack in Compose:** **LiveKit** + optional **Caddy**. Frontend und Python-Agent sind **weitere** Services/Apps — deren Env ist weiter unten beschrieben.
-
----
-
-## Host-Ports (Coolify → Render-Skript)
-
-Auf einem Server darf jeder **Host-Port** nur einmal vorkommen. **Zweite Instanz:** alle Werte auf freie Ports legen; **UDP-Spanne** beachten.
-
-| Variable | Standard | Bedeutung |
-|----------|----------|-----------|
-| `LIVEKIT_HOST_PORT_SIGNALING` | `7880` | Host → Container 7880 (Signaling / WS) |
-| `LIVEKIT_HOST_PORT_RTC_TCP` | `7881` | Host → 7881 (RTC TCP) |
-| `LIVEKIT_HOST_PORT_TURN_UDP` | `3478` | Host → 3478/udp (TURN) |
-| `LIVEKIT_HOST_PORT_TURN_TLS` | `5349` | Host → 5349 (TURN TLS) |
-| `LIVEKIT_HOST_UDP_START` | `50000` | Host-UDP-Bereich **Start** (inkl.) |
-| `LIVEKIT_HOST_UDP_END` | `60000` | Host-UDP-Bereich **Ende** (inkl.); muss **genau** die gleiche Portanzahl wie Container **50000–60000** ergeben (Differenz 10000). |
-| `CADDY_HOST_PORT_HTTP` | `80` | Caddy (falls aktiv) |
-| `CADDY_HOST_PORT_HTTPS` | `443` | Caddy (falls aktiv) |
-
-**Beispiel zweite Instanz:** `LIVEKIT_HOST_PORT_SIGNALING=17880`, …, `LIVEKIT_HOST_UDP_START=60001`, `LIVEKIT_HOST_UDP_END=70001`.
-
-**Caddy:** Zwei Stacks mit Caddy auf einem Host → eigene `CADDY_HOST_PORT_*` oder Caddy weglassen.
-
-**Clients:** `LIVEKIT_URL` / Proxy zu den **tatsächlichen** öffentlichen Ports bzw. zur Domain mit korrektem Routing.
-
-### Fehler `invalid hostPort` / Port abgeschnitten
-
-Tritt typischerweise auf, wenn **`docker-compose.yml` noch Platzhalter** oder **`:`-Strings** aus Build-Args enthält. Abhilfe: **`bash scripts/render-compose.sh`** mit sauberen **numerischen** Coolify-Variablen ausführen, danach Compose starten.
+**Stack in der Compose-Datei:** **LiveKit** + optional **Caddy**. Frontend und Python-Agent sind ggf. weitere Dienste — Env in den folgenden Abschnitten.
 
 ---
 
