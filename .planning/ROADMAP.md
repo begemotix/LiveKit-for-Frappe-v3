@@ -57,7 +57,12 @@
 1. User can speak to the agent and hear AI-generated spoken responses with minimal delay
 2. User can interrupt the agent while it is speaking, and the agent stops and listens
 3. User hears "filler audio" when the agent is thinking for a long time to prevent dead air
-   **Plans**: TBD
+   **Plans**: 3 plans
+   Plans:
+
+- [ ] 03-01-PLAN.md — Setup the foundation for the Python Agent Worker and configuration interface.
+- [ ] 03-02-PLAN.md — Implement the core voice agent logic using OpenAI Realtime and LiveKit.
+- [ ] 03-03-PLAN.md — Verify the implementation through automated tests and partner documentation.
 
 ### Phase 4: Frappe Integration
 
@@ -76,7 +81,7 @@
 
 | Phase                   | Plans Complete | Status      | Completed  |
 | ----------------------- | -------------- | ----------- | ---------- |
-| 1. Infrastructure Setup | 0              | Complete    | 2026-04-18 |
-| 2. Frontend Widget      | 2/5            | In Progress |            |
-| 3. Agent Core           | 0              | Not started | -          |
-| 4. Frappe Integration   | 0              | Not started | -          |
+| 1. Infrastructure Setup | 2/2            | Complete    | 2026-04-18 |
+| 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
+| 3. Agent Core           | 0/3            | In Progress | -          |
+| 4. Frappe Integration   | 0/TBD          | Not started | -          |
