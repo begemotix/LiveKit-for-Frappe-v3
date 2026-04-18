@@ -57,5 +57,6 @@ Progress (Project):
 
 ## Session Continuity
 
-- **Last Action:** Completed Phase 01 Plan 02 (Docker Compose & Reverse Proxy).
-- **Current Goal:** Prepare for Frontend Widget implementation.
+- **Last Action:** Finalized and approved Phase 02 UI-SPEC.md (Embed + shadcn tools).
+- **Current Goal:** Start planning Phase 02 implementation.
+- **Resume File:** .planning/phases/02-frontend-widget/02-UI-SPEC.md
