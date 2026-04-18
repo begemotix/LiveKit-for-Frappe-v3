@@ -3,19 +3,11 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
-from livekit.agents import JobContext, WorkerOptions, cli, llm
+from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.plugins import openai
-from livekit.agents.voice import AgentSession
 
 # Load environment variables
 load_dotenv()
-
-class AssistantFnc(llm.FunctionContext):
-    @llm.ai_callable(description="Lookup mock data in the ERP system")
-    async def mock_data_lookup(self, query: str):
-        logger.info(f"mock_data_lookup called with query: {query}")
-        await asyncio.sleep(3)
-        return {"status": "success", "data": f"Found info for {query}"}
 
 def configure_logging():
     logger = logging.getLogger("agent")
@@ -34,6 +26,16 @@ def configure_logging():
 
 logger = configure_logging()
 
+class Assistant(Agent):
+    def __init__(self, instructions: str):
+        super().__init__(instructions=instructions)
+
+    @llm.function_tool(description="Lookup mock data in the ERP system")
+    async def mock_data_lookup(self, query: str):
+        logger.info(f"mock_data_lookup called with query: {query}")
+        await asyncio.sleep(3)
+        return {"status": "success", "data": f"Found info for {query}"}
+
 async def entrypoint(ctx: JobContext):
     # Derive correlation ID from room name (D-10)
     correlation_id = ctx.room.name
@@ -49,23 +51,24 @@ async def entrypoint(ctx: JobContext):
     # Task 1: Initialize Realtime Model and Server VAD
     filler_instructions = "IMPORTANT: When using a tool, always first say a brief natural filler in the user's language (e.g., 'Einen Moment, ich schaue nach' if German, 'One moment, I'll check that' if English) so the user knows you are working."
     
-    base_instructions = os.getenv("ROLE_DESCRIPTION", "You are a helpful assistant for {COMPANY_NAME}. Your name is {AGENT_NAME}.") \
+    base_instructions = os.getenv("ROLE_DESCRIPTION", "You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.") \
         .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
         .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
     
+    instructions = f"{base_instructions}\n\n{filler_instructions}"
+
     model = openai.realtime.RealtimeModel(
-        instructions=f"{base_instructions}\n\n{filler_instructions}",
         modalities=["audio", "text"],
-        turn_detection=openai.realtime.ServerVADOptions(
-            threshold=float(os.getenv("VAD_THRESHOLD", 0.5)),
-            silence_duration_ms=int(os.getenv("VAD_SILENCE_DURATION_MS", 500))
-        ),
-        fnc_ctx=AssistantFnc()
+        turn_detection={
+            "type": "server_vad",
+            "threshold": float(os.getenv("VAD_THRESHOLD", 0.5)),
+            "silence_duration_ms": int(os.getenv("VAD_SILENCE_DURATION_MS", 500))
+        }
     )
 
-    # Initialize AgentSession with allow_interruptions=True and no separate VAD
+    # Initialize AgentSession
     session = AgentSession(
-        model=model,
+        llm=model,
         allow_interruptions=True,
     )
 
@@ -75,14 +78,22 @@ async def entrypoint(ctx: JobContext):
 
     async def start_agent_session(participant):
         logger.info(f"starting session for participant {participant.identity}")
-        session.start(ctx.room, participant)
+        
+        # Create the agent instance for this session
+        agent = Assistant(instructions=instructions)
+        
+        # Start the session
+        await session.start(room=ctx.room, agent=agent)
         
         # Task 2: DSGVO Announcement (mandatory, non-interruptible)
-        announcement = os.getenv("MANDATORY_ANNOUNCEMENT", "Dieser Anruf kann zu Qualitätszwecken aufgezeichnet werden.")
+        announcement = os.getenv(
+            "MANDATORY_ANNOUNCEMENT",
+            "Hinweis: Sie sprechen mit einem KI-Assistenten. Audio-Daten werden zur Verarbeitung an OpenAI in den USA übertragen. Durch Fortsetzen des Gesprächs willigen Sie ein."
+        )
         await session.say(announcement, allow_interruptions=False)
         
         # Initial greeting (interruptible)
-        greeting = os.getenv("INITIAL_GREETING", "Hallo! Ich bin {AGENT_NAME} von {COMPANY_NAME}. Wie kann ich Ihnen heute helfen?") \
+        greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
             .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
         await session.say(greeting, allow_interruptions=True)
@@ -91,7 +102,7 @@ async def entrypoint(ctx: JobContext):
     def on_participant_joined(participant):
         asyncio.create_task(start_agent_session(participant))
 
-    # Core logic will be added in future plans (03-02 and 03-03)
+    # Core logic will be added in future plans
     logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect()
     logger.info(f"agent connected to room {ctx.room.name}")

@@ -31,8 +31,8 @@ Progress (Project):
 
 ## Performance Metrics
 
-- Phases Completed: 1/4
-- Plans Completed: 2/2
+- Phases Completed: 2/4
+- Plans Completed: 11/12
 - Requirements Mapped: 16/16
 - Known Bugs: 0
 
@@ -52,6 +52,13 @@ Progress (Project):
 - [Phase 02-frontend-widget]: D-05: Branding via CSS variables and environment variables implemented.
 - [Phase 02]: Migrated branding injection logic from orphaned layout.tsx to components/root-layout.tsx
 - [Phase 03]: D-01: Dynamische Persona-Konfiguration via ENV
+- [Phase 03]: D-02: DSGVO-Ansage als separater ENV
+- [Phase 03]: D-03: Filler Prompt-Trick
+- [Phase 03]: D-04: on_function_call_start Hook + Mock-Tool
+- [Phase 03]: D-05: Sofort-Stopp bei Interrupt
+- [Phase 03]: D-06: VAD via ENV
+- [Phase 03]: D-07: Participant-Trigger
+- [Phase 03]: D-08: ENV-Katalog + Markdown-Doku
 - [Phase 03]: D-09: Strukturiertes JSON-Logging
 - [Phase 03]: D-10: Korrelations-ID aus Room-Name
 - [Phase 03-agent-core]: Added pytest-asyncio to enable asynchronous testing of the LiveKit agent.
@@ -62,10 +69,10 @@ Progress (Project):
 
 ### Next Steps
 
-- Transition to Phase 02 (frontend-widget-implementation).
+- Complete Phase 03 (agent-core): Plan 03 pending.
 
 ## Session Continuity
 
-- **Last Action:** Finalized and approved Phase 02 UI-SPEC.md (Embed + shadcn tools).
-- **Current Goal:** Start planning Phase 02 implementation.
-- **Resume File:** None
+- **Last Action:** Completed Phase 03 Plans 00-02 (agent foundation, core logic, server VAD).
+- **Current Goal:** Execute Plan 03 (tests + white-label docs) after gap-closure.
+- **Resume File:** .planning/phases/03-agent-core/03-CP-PLAN.md

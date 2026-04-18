@@ -43,6 +43,7 @@ Setup the foundation for the Python Agent Worker, including directory structure,
 
 ## Deviations from Plan
 - **Template Structure**: The cloned template used a `src/` directory and `pyproject.toml`. I moved `agent.py` to the root and created `requirements.txt` to align strictly with the plan's file structure and requirements.
+- Additional deviation: test_agent.py was expanded from stubs to full implementations during this wave, which was Plan 03 Task 1 scope. This anticipation is explicitly noted so Plan 03 Task 1 becomes 'audit and complete' instead of 'write from scratch'.
 
 ## Self-Check: PASSED
 - [x] Directory `apps/agent` exists.

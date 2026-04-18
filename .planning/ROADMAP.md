@@ -84,5 +84,5 @@
 | ----------------------- | -------------- | ----------- | ---------- |
 | 1. Infrastructure Setup | 2/2            | Complete    | 2026-04-18 |
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
-| 3. Agent Core           | 0/3            | In Progress | -          |
+| 3. Agent Core           | 3/4            | In Progress | -          |
 | 4. Frappe Integration   | 0/TBD          | Not started | -          |

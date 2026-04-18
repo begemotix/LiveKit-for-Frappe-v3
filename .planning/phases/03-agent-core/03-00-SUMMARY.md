@@ -31,7 +31,7 @@ Testing framework installed and initial test stubs created for the Python agent.
 
 ## Key Changes
 - Installed `pytest` and `pytest-asyncio` in the environment.
-- Updated `apps/agent/tests/test_agent.py` with stubs for `test_join`, `test_interruption`, `test_mock_tool`, and `test_persona_injection`.
+- Created `apps/agent/tests/test_agent.py` with test stubs for `test_join`, `test_interruption`, `test_mock_tool`, `test_persona_injection`. Note: Test stubs were later extended into full implementations during Plan 01/02 execution, documented here as deviation.
 - Ensured `pyproject.toml` reflects the development dependencies.
 
 ## Deviations from Plan
