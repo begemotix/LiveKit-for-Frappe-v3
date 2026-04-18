@@ -30,8 +30,14 @@ Plans:
   1. User sees a floating voice/text widget in their browser
   2. User can click the widget to successfully establish a WebRTC connection to the local LiveKit server
   3. Das Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten (Nutzer ist ein anonymer Gast im LiveKit-Kontext)
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
+Plans:
+- [ ] 02-01-PLAN.md — Setup Next.js, shadcn/ui and LiveKit SDKs.
+- [ ] 02-02-PLAN.md — Implement secure Token API and Room Provider.
+- [ ] 02-03-PLAN.md — Build Floating Action Button and Chat Panel UI.
+- [ ] 02-04-PLAN.md — Integrate LiveKit WebRTC and Voice Visualizer.
+- [ ] 02-05-PLAN.md — Finalize Dynamic Styling and Phase Verification.
 
 ### Phase 3: Agent Core
 **Goal**: Users can converse naturally with a voice agent that responds with low latency
