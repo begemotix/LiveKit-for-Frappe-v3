@@ -1,25 +1,23 @@
 ---
 phase: 02-frontend-widget
-verified: 2026-04-18T16:15:00Z
-status: gaps_found
-score: 7/8 must-haves verified
-gaps:
-  - truth: "Farben und Branding sind über Umgebungsvariablen steuerbar (D-05)."
-    status: partial
-    reason: "CSS-Variablen sind in globals.css definiert, aber die Injection der Umgebungsvariablen in das Root-Layout fehlt im aktiven Code-Pfad."
-    artifacts:
-      - path: "components/root-layout.tsx"
-        issue: "Umgebungsvariablen (NEXT_PUBLIC_WIDGET_PRIMARY_COLOR etc.) werden nicht als Inline-Styles an das html-Tag übergeben."
-    missing:
-      - "Injection-Logik für Branding-Styles in components/root-layout.tsx (ähnlich wie in der ungenutzten Datei layout.tsx im Root)."
+verified: 2026-04-18T16:21:00Z
+status: passed
+score: 8/8 must-haves verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 7/8
+  gaps_closed:
+    - "Farben und Branding sind über Umgebungsvariablen steuerbar (D-05)."
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 02: Frontend-Widget Verification Report
+# Phase 02: Frontend-Widget Verification Report (Re-verification)
 
 **Phase Goal:** Frontend-Widget implementiert (Next.js, LiveKit SDK, UI-Komponenten, Branding)
 **Verified:** 2026-04-18
-**Status:** gaps_found
-**Re-verification:** No
+**Status:** passed
+**Re-verification:** Yes — after gap closure (Plan 02-06 completed)
 
 ## Goal Achievement
 
@@ -34,9 +32,9 @@ gaps:
 | 5   | WebRTC-Verbindung wird nach Klick auf 'Gespräch starten' aufgebaut. | ✓ VERIFIED | `ChatPanel.tsx` fetcht Token und nutzt `LiveKitProvider`. |
 | 6   | Audio-Waveforms reagieren auf Spracheingaben (Visualisierung). | ✓ VERIFIED | `VoiceVisualizer.tsx` nutzt `BarVisualizer` von LiveKit. |
 | 7   | Status-Indikatoren zeigen Agenten-Aktivität (listening, speaking). | ✓ VERIFIED | `ChatPanelContent` mappt `agentState` auf deutsche Status-Labels. |
-| 8   | Farben und Branding sind über Umgebungsvariablen steuerbar. | ✗ FAILED   | CSS-Variablen vorhanden, aber die dynamische Injection in das Layout fehlt im aktiven Pfad. |
+| 8   | Farben und Branding sind über Umgebungsvariablen steuerbar. | ✓ VERIFIED | `components/root-layout.tsx` injiziert `process.env` Variablen als Inline-Styles in `<html>`. |
 
-**Score:** 7/8 truths verified
+**Score:** 8/8 truths verified
 
 ### Required Artifacts
 
@@ -48,7 +46,8 @@ gaps:
 | `components/widget/FloatingButton.tsx` | FAB-Icon und Toggle-Logic | ✓ VERIFIED | Korrekt positioniert und funktional. |
 | `components/widget/ChatPanel.tsx` | Interface | ✓ VERIFIED | Vollständiges Interface mit Voice-Fokus. |
 | `components/widget/VoiceVisualizer.tsx` | Visualisierung | ✓ VERIFIED | Nutzt LiveKit BarVisualizer. |
-| `globals.css` | CSS Variablen | ✓ VERIFIED | Definiert `--widget-primary` und andere Branding-Variablen. |
+| `styles/globals.css` | CSS Variablen | ✓ VERIFIED | Definiert `--primary` und andere Branding-Variablen. |
+| `components/root-layout.tsx` | Dynamische Branding-Injection | ✓ VERIFIED | Injiziert Branding-Styles in den DOM-Root. |
 
 ### Key Link Verification
 
@@ -57,7 +56,7 @@ gaps:
 | `app/api/token/route.ts` | `livekit-server-sdk` | AccessToken | ✓ VERIFIED | Korrekte Nutzung der Server SDK. |
 | `components/widget/ChatPanel.tsx` | `/api/token` | fetch | ✓ VERIFIED | Token wird vor Verbindungsaufbau abgerufen. |
 | `components/widget/VoiceVisualizer.tsx` | `@livekit/components-react` | Visualizer | ✓ VERIFIED | Integration der offiziellen Komponenten. |
-| `app/(app)/layout.tsx` | `globals.css` | Import | ✓ VERIFIED | Styles werden geladen. |
+| `components/root-layout.tsx` | `process.env` | styles | ✓ VERIFIED | Branding-Variablen werden aus Environment gelesen. |
 
 ### Data-Flow Trace (Level 4)
 
@@ -65,6 +64,7 @@ gaps:
 | -------- | ------------- | ------ | ------------------ | ------ |
 | `ChatPanel.tsx` | `token` | `/api/token` | Ja (JWT von SDK) | ✓ FLOWING |
 | `VoiceVisualizer.tsx` | `audioTrack` | `useVoiceAssistant` | Ja (WebRTC Stream) | ✓ FLOWING |
+| `root-layout.tsx` | `cleanStyles` | `process.env` | Ja (Branding Werte) | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
@@ -94,7 +94,7 @@ gaps:
 
 **Test:** Setzen von `NEXT_PUBLIC_WIDGET_PRIMARY_COLOR` in der `.env` und Prüfung der UI-Farbe.
 **Expected:** Primäre UI-Elemente (Buttons, Waveforms) ändern ihre Farbe.
-**Why human:** Erfordert visuelle Prüfung der Farbanpassung. *Hinweis: Aktuell wahrscheinlich fehlgeschlagen aufgrund des Gaps in components/root-layout.tsx.*
+**Why human:** Erfordert visuelle Prüfung der Farbanpassung.
 
 ### 2. Audio Interaction
 
@@ -104,8 +104,7 @@ gaps:
 
 ### Gaps Summary
 
-Die Phase ist funktional fast vollständig abgeschlossen. Alle Kern-Anforderungen (WIDG-01 bis WIDG-03) sind im Code vorhanden und durch Tests abgesichert.
-Der einzige signifikante Gap ist die **dynamische Branding-Injection**. Obwohl die CSS-Variablen in `globals.css` vorbereitet sind, werden die Werte aus den Umgebungsvariablen nicht in das aktive Layout (`components/root-layout.tsx`) injiziert. Eine verwaiste Datei `layout.tsx` im Root enthält zwar die richtige Logik, wird aber im aktuellen Projekt-Setup nicht verwendet.
+Alle Gaps wurden erfolgreich geschlossen. Die Branding-Injection erfolgt nun dynamisch im aktiven Pfad über `components/root-layout.tsx`. Das verwaiste `layout.tsx` wurde entfernt. Die Phase 02 ist nun vollständig abgeschlossen und bereit für die Integration mit dem Agent Core in Phase 03.
 
 ---
 
