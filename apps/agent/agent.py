@@ -1,8 +1,11 @@
 import logging
 import os
+import asyncio
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, WorkerOptions, cli
+from livekit.plugins import openai
+from livekit.agents.voice import AgentSession
 
 # Load environment variables
 load_dotenv()
@@ -34,6 +37,24 @@ async def entrypoint(ctx: JobContext):
     logger.info(
         f"starting agent for room {correlation_id}", 
         extra={"correlation_id": correlation_id}
+    )
+
+    # Task 1: Initialize Realtime Model and Server VAD
+    model = openai.realtime.RealtimeModel(
+        instructions=os.getenv("ROLE_DESCRIPTION", "You are a helpful assistant for {COMPANY_NAME}. Your name is {AGENT_NAME}.")
+        .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI"))
+        .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company")),
+        modalities=["audio", "text"],
+        turn_detection=openai.realtime.ServerVADOptions(
+            threshold=float(os.getenv("VAD_THRESHOLD", 0.5)),
+            silence_duration_ms=int(os.getenv("VAD_SILENCE_DURATION_MS", 500))
+        ),
+    )
+
+    # Initialize AgentSession with allow_interruptions=True and no separate VAD
+    session = AgentSession(
+        model=model,
+        allow_interruptions=True,
     )
 
     # Core logic will be added in future plans (03-02 and 03-03)
