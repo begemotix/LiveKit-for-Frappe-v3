@@ -12,7 +12,7 @@
 - [x] **INFR-04**: TURN/STUN-Konfiguration für reibungslose WebRTC-Verbindungen hinter NAT sicherstellen
 
 ### Frontend (Widget)
-- [ ] **WIDG-01**: Next.js-basiertes Voice/Text-Widget als Floating Button bereitstellen
+- [x] **WIDG-01**: Next.js-basiertes Voice/Text-Widget als Floating Button bereitstellen
 - [ ] **WIDG-02**: Button ermöglicht Verbindungsaufbau (WebRTC) zum lokalen LiveKit Server
 - [ ] **WIDG-03**: Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten
 
@@ -60,7 +60,7 @@
 | INFR-02 | Phase 1 | Complete |
 | INFR-03 | Phase 1 | Complete |
 | INFR-04 | Phase 1 | Complete |
-| WIDG-01 | Phase 2 | Pending |
+| WIDG-01 | Phase 2 | Complete |
 | WIDG-02 | Phase 2 | Pending |
 | WIDG-03 | Phase 2 | Pending |
 | AGNT-01 | Phase 3 | Pending |
