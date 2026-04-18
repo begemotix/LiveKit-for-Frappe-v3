@@ -44,6 +44,10 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 - **Lizenz**: Open Source (Apache-2.0, Vorlagen via MIT mit NOTICE).
 - **Deployment**: Regulärer Docker-Container-Stack (z.B. über einfaches Docker-Compose Setup) ohne tiefgreifende Modifikationen an den Standard-Templates.
 
+## Agent Rules & Guidelines
+
+- **Primäre Datenquelle**: Cursor ist zwingend angewiesen, für alle technischen Recherchen und Implementierungsschritte bezüglich LiveKit (Server-Setup, Agent-Worker, Frontend-Hooks) vorrangig das angebundene LiveKit-Dokumentations-MCP zu nutzen. Dies stellt sicher, dass stets die aktuellsten Best Practices für WebRTC, Token-Handling und die Realtime-API verwendet werden. Manuelle Suchen oder allgemeine LLM-Kenntnisse dienen nur als Sekundärquelle, falls das MCP keine spezifische Antwort liefert.
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
