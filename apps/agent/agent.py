@@ -3,12 +3,19 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
-from livekit.agents import JobContext, WorkerOptions, cli
+from livekit.agents import JobContext, WorkerOptions, cli, llm
 from livekit.plugins import openai
 from livekit.agents.voice import AgentSession
 
 # Load environment variables
 load_dotenv()
+
+class AssistantFnc(llm.FunctionContext):
+    @llm.ai_callable(description="Lookup mock data in the ERP system")
+    async def mock_data_lookup(self, query: str):
+        logger.info(f"mock_data_lookup called with query: {query}")
+        await asyncio.sleep(3)
+        return {"status": "success", "data": f"Found info for {query}"}
 
 def configure_logging():
     logger = logging.getLogger("agent")
@@ -40,15 +47,20 @@ async def entrypoint(ctx: JobContext):
     )
 
     # Task 1: Initialize Realtime Model and Server VAD
+    filler_instructions = "IMPORTANT: When using a tool, always first say a brief natural filler in the user's language (e.g., 'Einen Moment, ich schaue nach' if German, 'One moment, I'll check that' if English) so the user knows you are working."
+    
+    base_instructions = os.getenv("ROLE_DESCRIPTION", "You are a helpful assistant for {COMPANY_NAME}. Your name is {AGENT_NAME}.") \
+        .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
+        .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+    
     model = openai.realtime.RealtimeModel(
-        instructions=os.getenv("ROLE_DESCRIPTION", "You are a helpful assistant for {COMPANY_NAME}. Your name is {AGENT_NAME}.")
-        .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI"))
-        .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company")),
+        instructions=f"{base_instructions}\n\n{filler_instructions}",
         modalities=["audio", "text"],
         turn_detection=openai.realtime.ServerVADOptions(
             threshold=float(os.getenv("VAD_THRESHOLD", 0.5)),
             silence_duration_ms=int(os.getenv("VAD_SILENCE_DURATION_MS", 500))
         ),
+        fnc_ctx=AssistantFnc()
     )
 
     # Initialize AgentSession with allow_interruptions=True and no separate VAD
@@ -56,6 +68,10 @@ async def entrypoint(ctx: JobContext):
         model=model,
         allow_interruptions=True,
     )
+
+    @session.on("function_call_start")
+    def on_function_call_start(tool_call):
+        logger.info(f"starting tool call: {tool_call.name}")
 
     async def start_agent_session(participant):
         logger.info(f"starting session for participant {participant.identity}")
