@@ -45,8 +45,27 @@ interface RootLayoutProps {
 }
 
 export async function RootLayout({ children, className }: RootLayoutProps) {
+  const brandingStyles = {
+    '--primary': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_COLOR,
+    '--primary-hover': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_HOVER_COLOR,
+    '--widget-primary': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_COLOR,
+    '--widget-primary-hover': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_HOVER_COLOR,
+    '--widget-primary-dark': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_COLOR_DARK,
+    '--widget-primary-hover-dark': process.env.NEXT_PUBLIC_WIDGET_PRIMARY_HOVER_COLOR_DARK,
+  } as React.CSSProperties;
+
+  // Filter out undefined values to avoid "undefined" string in style attribute
+  const cleanStyles = Object.fromEntries(
+    Object.entries(brandingStyles).filter(([_, v]) => v !== undefined)
+  );
+
   return (
-    <html lang="en" suppressHydrationWarning className={cn('scroll-smooth', className)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn('scroll-smooth', className)}
+      style={cleanStyles}
+    >
       <body
         className={cn(publicSans.variable, commitMono.variable, 'overflow-x-hidden antialiased')}
       >
