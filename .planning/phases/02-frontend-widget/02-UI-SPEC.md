@@ -71,11 +71,24 @@ Accent reserved for: Start/Connect button, active audio waveforms, message statu
 
 | Element | Copy |
 |---------|------|
-| Primary CTA | Start Chat |
+| Primary CTA | Gespräch starten |
 | Empty state heading | Keine Nachrichten |
 | Empty state body | Verbinden Sie sich mit dem Agenten, um das Gespräch zu beginnen. |
-| Error state | Verbindung fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut. |
+| Error state | Verbindung fehlgeschlagen. Bitte versuchen Sie es erneut. |
+| Agent status - listening | Agent hört zu... |
+| Agent status - thinking | Agent denkt nach... |
+| Agent status - speaking | Agent spricht... |
 | Destructive confirmation | Sitzung beenden: Möchten Sie das Gespräch wirklich beenden? |
+
+---
+
+## Visual Focus & Hierarchy
+
+| Priority | Element | Visual Treatment |
+|----------|---------|------------------|
+| **1 (Primary)** | Start/Connect Button | `var(--widget-primary)` background, white text, centered in panel |
+| **2 (Active)** | Audio Waveforms | Animated, `var(--widget-primary)` stroke, high contrast against `var(--widget-bg)` |
+| **3 (History)** | Chat Messages | `var(--widget-secondary)` background bubbles, left/right alignment |
 
 ---
 
@@ -89,11 +102,11 @@ Accent reserved for: Start/Connect button, active audio waveforms, message statu
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending 2026-04-18
+**Approval:** approved 2026-04-18
