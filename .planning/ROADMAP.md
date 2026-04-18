@@ -17,8 +17,10 @@
   1. Administrator can deploy the LiveKit server and Caddy proxy via Docker Compose
   2. WebRTC connections can be established from external networks (via TURN/STUN)
   3. The server is accessible via HTTPS using an automatically provisioned Let's Encrypt certificate
-  4. Deployment can be customized (API keys, labels) via environment variables without code changes
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Create the base LiveKit configuration and environment structure.
+- [ ] 01-02-PLAN.md — Create the Docker Compose and Reverse Proxy setup for deployment.
 
 ### Phase 2: Frontend Widget
 **Goal**: Users can initiate a voice connection to the LiveKit server from their browser
