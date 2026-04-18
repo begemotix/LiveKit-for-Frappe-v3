@@ -1,7 +1,5 @@
-# AUTOGENERIERT — Quelle: docker-compose.template.yml + scripts/render-compose.sh
-# Coolify: vor deploy bash scripts/render-compose.sh (siehe COOLIFY-KONFIGURATION.md)
-# Lokal: bash scripts/render-compose.sh && docker compose up -d
-# Caddy: nur mit Profil — docker compose --profile with-caddy up -d
+# Quelle für docker-compose.yml — wird von scripts/render-compose.sh aus Coolify-/.env-Werten erzeugt.
+# Nur Platzhalter $VAR (Zahlen); keine Doppelpunkt-Strings in einer einzelnen Variable.
 
 version: "3.9"
 
@@ -11,11 +9,11 @@ services:
     restart: unless-stopped
     command: --config /livekit.yaml
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "3478:3478/udp"
-      - "5349:5349/tcp"
-      - "50000-60000:50000-60000/udp"
+      - "$LIVEKIT_HOST_PORT_SIGNALING:7880"
+      - "$LIVEKIT_HOST_PORT_RTC_TCP:7881"
+      - "$LIVEKIT_HOST_PORT_TURN_UDP:3478/udp"
+      - "$LIVEKIT_HOST_PORT_TURN_TLS:5349/tcp"
+      - "$LIVEKIT_HOST_UDP_START-$LIVEKIT_HOST_UDP_END:50000-60000/udp"
     volumes:
       - ./livekit.yaml:/livekit.yaml
     env_file:
@@ -27,8 +25,8 @@ services:
     image: caddy:latest
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "$CADDY_HOST_PORT_HTTP:80"
+      - "$CADDY_HOST_PORT_HTTPS:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data

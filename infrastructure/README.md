@@ -4,44 +4,40 @@ Sicherer, selbst-gehosteter Voice-Assistent für Frappe/ERPNext.
 
 ## LiveKit Deployment
 
-Dieses Projekt nutzt Docker Compose für ein einfaches, produktionsbereites Deployment von LiveKit und Caddy (als Reverse Proxy).
+Docker Compose startet **LiveKit**. **Caddy** ist optional (Profil `with-caddy`) — mit **Coolify/Traefik** typischerweise **ohne** Caddy.
 
 ### Voraussetzungen
 
-- Installiertes Docker und Docker Compose.
-- Eine Domain, die auf diesen Server zeigt.
-- Ausgefüllte `.env` Datei (basierend auf `.env.example`).
+- Docker und Docker Compose.
+- Domain (optional, je nach Proxy).
+- `.env` nach `.env.example`; Host-Ports siehe **`COOLIFY-KONFIGURATION.md`**.
 
-### Starten der Infrastruktur
+### Starten
+
+Aus **`docker-compose.template.yml`** die aktuelle Compose erzeugen (Pflicht bei abweichenden Host-Ports — z. B. mehrere Instanzen auf einem Server):
 
 ```bash
+bash scripts/render-compose.sh
 docker compose up -d
 ```
 
-Umgebungsvariablen für LiveKit/Caddy: siehe **`COOLIFY-KONFIGURATION.md`** (Root) und `.env.example`.
+Nur **LiveKit** (Standard): wie oben. **Mit Caddy** (eigener TLS-Proxy, z. B. ohne Traefik):
 
-**Hinweis:** Die `docker-compose.yml` nutzt feste Standard-Ports. Eine zweite LiveKit-Instanz auf dem **gleichen** Host kollidiert damit — dann Ports in der Compose-Datei (und ggf. `livekit.yaml`) anpassen oder einen weiteren Server nutzen.
+```bash
+bash scripts/render-compose.sh
+docker compose --profile with-caddy up -d
+```
 
-### Deployment mit Coolify (Alternative)
+Details, Mandanten-Ports, Coolify: **`COOLIFY-KONFIGURATION.md`** im Repository-Root.
 
-Wenn Sie das System über [Coolify](https://coolify.io/) deployen, können Sie den Caddy-Container überspringen, da Coolify bereits Traefik als globalen Proxy nutzt.
+### Deployment mit Coolify
 
-1. Erstellen Sie eine neue Ressource in Coolify basierend auf dem `docker-compose.yml`.
-2. Entfernen Sie den `caddy` Service aus der Konfiguration.
-3. Binden Sie den LiveKit Port `7880` in der Coolify UI an Ihre Domain.
-4. Fügen Sie ggf. Traefik-Labels hinzu, falls Sie manuelle Konfigurationen benötigen:
-   ```yaml
-   labels:
-     - 'traefik.http.routers.livekit.rule=Host(`livekit.example.com`)'
-     - 'traefik.http.services.livekit.loadbalancer.server.port=7880'
-   ```
+- Traefik von Coolify nutzen → **kein** Caddy-Profil; vor Deploy **`bash scripts/render-compose.sh`** mit mandantenspezifischen `LIVEKIT_HOST_*`-Variablen.
+- LiveKit-Signaling-Port in Traefik auf den **gewählten Host-Port** (nicht zwingend 7880) mappen.
 
 ### White-Labeling
 
-Farbwerte und Branding-Informationen für das Frontend-Widget werden über die `.env` Datei gesteuert:
-
-- `NEXT_PUBLIC_BRAND_COLOR`: Primärfarbe des Widgets (z.B. `#ff4500`).
-- `NEXT_PUBLIC_APP_NAME`: Name des Assistenten.
+Widget-Farben u. a. über `.env` / Frontend-`NEXT_PUBLIC_*` (siehe Root-`.env.example`).
 
 ## Lizenz
 
