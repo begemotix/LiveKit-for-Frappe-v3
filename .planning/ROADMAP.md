@@ -36,7 +36,7 @@
 1. User sees a floating voice/text widget in their browser
 2. User can click the widget to successfully establish a WebRTC connection to the local LiveKit server
 3. Das Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten (Nutzer ist ein anonymer Gast im LiveKit-Kontext)
-   **Plans**: 5 plans
+   **Plans**: 6 plans
    **UI hint**: yes
    Plans:
 
@@ -45,6 +45,7 @@
 - [x] 02-03-PLAN.md — Build Floating Action Button and Chat Panel UI.
 - [x] 02-04-PLAN.md — Integrate LiveKit WebRTC and Voice Visualizer.
 - [x] 02-05-PLAN.md — Finalize Dynamic Styling and Phase Verification.
+- [ ] 02-06-PLAN.md — Gap Closure: Dynamic Branding Injection.
 
 ### Phase 3: Agent Core
 
