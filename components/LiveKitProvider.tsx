@@ -1,7 +1,7 @@
 'use client';
 
-import { LiveKitRoom } from '@livekit/components-react';
 import { ReactNode } from 'react';
+import { LiveKitRoom } from '@livekit/components-react';
 
 interface LiveKitProviderProps {
   children: ReactNode;
@@ -10,24 +10,18 @@ interface LiveKitProviderProps {
   connect?: boolean;
 }
 
-export function LiveKitProvider({ 
-  children, 
-  token, 
-  serverUrl, 
-  connect = false 
+export function LiveKitProvider({
+  children,
+  token,
+  serverUrl,
+  connect = false,
 }: LiveKitProviderProps) {
   if (!token || !serverUrl) {
     return <>{children}</>;
   }
 
   return (
-    <LiveKitRoom
-      token={token}
-      serverUrl={serverUrl}
-      connect={connect}
-      audio={true}
-      video={false}
-    >
+    <LiveKitRoom token={token} serverUrl={serverUrl} connect={connect} audio={true} video={false}>
       {children}
     </LiveKitRoom>
   );

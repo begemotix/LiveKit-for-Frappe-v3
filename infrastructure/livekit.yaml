@@ -13,11 +13,11 @@ rtc:
 
 turn:
   enabled: true
-  domain: "${DOMAIN}"
+  domain: '${DOMAIN}'
   tls_port: 5349
   udp_port: 3478
   # set external_tls to true if using a L4 load balancer to terminate TLS
   external_tls: true
 
 keys:
-  "${LIVEKIT_API_KEY}": "${LIVEKIT_API_SECRET}"
+  '${LIVEKIT_API_KEY}': '${LIVEKIT_API_SECRET}'

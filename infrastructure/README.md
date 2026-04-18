@@ -30,8 +30,8 @@ Wenn Sie das System über [Coolify](https://coolify.io/) deployen, können Sie d
 4. Fügen Sie ggf. Traefik-Labels hinzu, falls Sie manuelle Konfigurationen benötigen:
    ```yaml
    labels:
-     - "traefik.http.routers.livekit.rule=Host(`livekit.example.com`)"
-     - "traefik.http.services.livekit.loadbalancer.server.port=7880"
+     - 'traefik.http.routers.livekit.rule=Host(`livekit.example.com`)'
+     - 'traefik.http.services.livekit.loadbalancer.server.port=7880'
    ```
 
 ### White-Labeling

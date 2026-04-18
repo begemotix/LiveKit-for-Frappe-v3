@@ -34,14 +34,14 @@
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Next.js Browser Widget | User UI, mic capture, audio playback, token request (auth exchange) | Next.js with `@livekit/components-react` |
-| Caddy / Ingress | Reverse proxy, SSL termination for Next.js and LiveKit | `caddy` Docker container |
-| LiveKit Server | WebRTC room management, SFU, routing audio tracks | Official `livekit/livekit-server` |
-| Python LiveKit Agent | Connects to LiveKit, manages OpenAI Realtime WebSocket, executes MCP tool calls | Python with `livekit-agents` and `livekit.agents.llm.mcp` |
-| Frappe MCP Server | Exposes Frappe REST APIs as MCP tools, handles Frappe authentication | Node.js or Python MCP SDK |
-| Frappe / ERPNext | Actual ERP backend, processes business logic, enforces permissions | Frappe Framework |
+| Component              | Responsibility                                                                  | Typical Implementation                                    |
+| ---------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Next.js Browser Widget | User UI, mic capture, audio playback, token request (auth exchange)             | Next.js with `@livekit/components-react`                  |
+| Caddy / Ingress        | Reverse proxy, SSL termination for Next.js and LiveKit                          | `caddy` Docker container                                  |
+| LiveKit Server         | WebRTC room management, SFU, routing audio tracks                               | Official `livekit/livekit-server`                         |
+| Python LiveKit Agent   | Connects to LiveKit, manages OpenAI Realtime WebSocket, executes MCP tool calls | Python with `livekit-agents` and `livekit.agents.llm.mcp` |
+| Frappe MCP Server      | Exposes Frappe REST APIs as MCP tools, handles Frappe authentication            | Node.js or Python MCP SDK                                 |
+| Frappe / ERPNext       | Actual ERP backend, processes business logic, enforces permissions              | Frappe Framework                                          |
 
 ## Recommended Project Structure
 
@@ -79,6 +79,7 @@ src/
 **Trade-offs:** Requires secure transport of Frappe tokens. Keeps the Agent Worker completely stateless regarding user identity.
 
 **Example:**
+
 ```python
 # In agent.py when handling a new room connection
 @worker.on("room_joined")
@@ -129,11 +130,11 @@ async def on_room_joined(room: rtc.Room):
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 1-50 concurrent calls | Single Docker Compose host (monolith deployment) is perfectly fine. |
-| 50-500 concurrent calls | Split Agent Workers to multiple replicas. LiveKit can stay on a single robust node. |
-| 500+ concurrent calls | LiveKit distributed deployment backed by Redis. Agent Workers auto-scaled based on active rooms. |
+| Scale                   | Architecture Adjustments                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| 1-50 concurrent calls   | Single Docker Compose host (monolith deployment) is perfectly fine.                              |
+| 50-500 concurrent calls | Split Agent Workers to multiple replicas. LiveKit can stay on a single robust node.              |
+| 500+ concurrent calls   | LiveKit distributed deployment backed by Redis. Agent Workers auto-scaled based on active rooms. |
 
 ### Scaling Priorities
 
@@ -158,18 +159,18 @@ async def on_room_joined(room: rtc.Room):
 
 ### External Services
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
+| Service         | Integration Pattern                      | Notes                     |
+| --------------- | ---------------------------------------- | ------------------------- |
 | OpenAI Realtime | WebSocket streaming via `livekit.agents` | Requires `OPENAI_API_KEY` |
 
 ### Internal Boundaries
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Frontend ↔ LiveKit | WebRTC | Handled by LiveKit React SDK |
-| Agent ↔ LiveKit | WebRTC / Server SDK | Handled by LiveKit Python SDK |
-| Agent ↔ MCP Server | HTTP / SSE (JSON-RPC) | Standardized via `MCPServerHTTP` |
-| MCP Server ↔ Frappe | HTTP REST | Requires passing the Frappe Auth token |
+| Boundary            | Communication         | Notes                                  |
+| ------------------- | --------------------- | -------------------------------------- |
+| Frontend ↔ LiveKit  | WebRTC                | Handled by LiveKit React SDK           |
+| Agent ↔ LiveKit     | WebRTC / Server SDK   | Handled by LiveKit Python SDK          |
+| Agent ↔ MCP Server  | HTTP / SSE (JSON-RPC) | Standardized via `MCPServerHTTP`       |
+| MCP Server ↔ Frappe | HTTP REST             | Requires passing the Frappe Auth token |
 
 ## Sources
 
@@ -178,5 +179,6 @@ async def on_room_joined(room: rtc.Room):
 - OpenAI Realtime API Documentation
 
 ---
-*Architecture research for: Voice-Assistent für Frappe*
-*Researched: 2026-04-18*
+
+_Architecture research for: Voice-Assistent für Frappe_
+_Researched: 2026-04-18_

@@ -19,7 +19,6 @@ Key risks include "dead air" during latent Frappe API queries (which breaks conv
 - **Vorgehensweise**: Vor dem Schreiben von Code für LiveKit-Komponenten ist ein Suchlauf über das MCP zwingend erforderlich, um sicherzustellen, dass die aktuellsten SDK-Versionen und Best Practices verwendet werden.
 - **Sekundärquellen**: Allgemeines LLM-Wissen darf nur genutzt werden, wenn das MCP keine spezifischen Informationen liefert oder für allgemeine Programmierlogik außerhalb des LiveKit-Ökosystems.
 
-
 ## Research & Knowledge Enforcement
 
 - **Primäre Datenquelle**: Für alle technischen Implementierungen bezüglich LiveKit (Server-Setup, Agent-Worker-Syntax, Frontend-Hooks) MUSS Cursor vorrangig das angebundene **LiveKit-Dokumentations-MCP** nutzen.
@@ -33,6 +32,7 @@ Key risks include "dead air" during latent Frappe API queries (which breaks conv
 The architecture is built around a robust, self-hosted WebRTC stack and modern Python AI orchestration, connected to Frappe via standardized protocols rather than direct REST integrations.
 
 **Core technologies:**
+
 - **Python 3.12+ & `livekit-agents`:** Agent Worker (Type A) - Standard language/framework for orchestration and OpenAI Realtime integration.
 - **Next.js (App Router) 15.x:** Web-Frontend - Easiest way to build a scalable, embeddable floating voice widget.
 - **LiveKit Server v1.10.x & Caddy:** Realtime Infra & Ingress - Self-hosted WebRTC backend with auto-HTTPS, fulfilling the core self-hosting requirement.
@@ -41,17 +41,20 @@ The architecture is built around a robust, self-hosted WebRTC stack and modern P
 ### Expected Features
 
 **Must have (table stakes):**
+
 - Low-Latency Voice Interaction (<1s delay via OpenAI Realtime API)
 - Strict Permission Passthrough (RBAC from Frappe)
 - Interruption Handling (VAD - native to LiveKit)
 - Natural Language ERP Queries via MCP tools
 
 **Should have (competitive):**
+
 - 100% Self-Hosted & White-Label deployment
 - Dynamic Tooling via MCP (decoupled from ERP schema)
 - External Embeddability (B2B customer self-service outside Frappe Desk)
 
 **Defer (v2+):**
+
 - Direct SIP/Phone trunking
 - Write operations (Start with read-only to validate architecture)
 - Local LLM/TTS integration (Type B/C pipelines)
@@ -61,6 +64,7 @@ The architecture is built around a robust, self-hosted WebRTC stack and modern P
 The architecture is deeply decoupled from the Frappe internal bench/app structure, enforcing the "external Standalone-Lösung" constraint through a 4-tier model.
 
 **Major components:**
+
 1. **Frontend (Next.js Widget):** User UI, mic capture, and token request/auth exchange.
 2. **Infrastructure (LiveKit & Caddy):** WebRTC room management, SFU, audio routing, and SSL termination.
 3. **Agent Core (Python):** Connects to LiveKit, manages OpenAI Realtime WebSocket, and executes MCP tool calls.
@@ -77,24 +81,28 @@ The architecture is deeply decoupled from the Frappe internal bench/app structur
 Based on research, suggested phase structure:
 
 ### Phase 1: Self-Hosted Infrastructure & LiveKit Setup
+
 **Rationale:** The foundational WebRTC engine and proxy layer are prerequisites for any frontend or agent connection.
 **Delivers:** Docker Compose setup running Caddy and LiveKit Server.
 **Addresses:** 100% Self-Hosted & White-Label deployment.
 **Avoids:** WebRTC/TURN routing issues in Docker setups.
 
 ### Phase 2: Next.js Frontend Voice Widget
+
 **Rationale:** Validates WebRTC connectivity and Frappe token capture before introducing AI complexity.
 **Delivers:** Embeddable floating button (`agent-starter-embed`) capable of joining a LiveKit room.
 **Uses:** Next.js 15.x, `@livekit/components-react`.
 **Implements:** Client Layer and Auth token extraction.
 
 ### Phase 3: Agent Core (Type A Voice Response)
+
 **Rationale:** Introduces the AI layer (OpenAI Realtime) for low-latency STT/TTS without yet integrating Frappe data.
 **Delivers:** Python Agent Worker able to converse with the user and handle interruptions.
 **Uses:** Python 3.12+, `livekit-agents`, `livekit-plugins-openai`.
 **Implements:** Agent Layer logic and VAD configuration.
 
 ### Phase 4: Frappe MCP Integration & Auth Passthrough
+
 **Rationale:** Connects the conversing agent to ERP data securely as the final integration step.
 **Delivers:** Frappe MCP Server with read-only tools and full token passthrough from Frontend to Agent to MCP.
 **Uses:** MCP v1.27.x.
@@ -110,20 +118,22 @@ Based on research, suggested phase structure:
 ### Research Flags
 
 Phases likely needing deeper research during planning:
+
 - **Phase 4:** Frappe MCP token passthrough and handling Frappe Link-Field Permission errors (Opaque 403s). Needs validation on exact token flow.
 
 Phases with standard patterns (skip research-phase):
+
 - **Phase 1 & 2:** Standard LiveKit Docker & React UI patterns are well-documented and established.
 - **Phase 3:** Standard OpenAI Realtime API implementation via `livekit-agents`.
 
 ## Confidence Assessment
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | HIGH | Verified with LiveKit official docs and standard MCP specifications |
-| Features | HIGH | Table stakes match standard voice AI and Frappe requirements |
-| Architecture | HIGH | Standard decoupled multi-container pattern for LiveKit |
-| Pitfalls | HIGH | Sourced from LiveKit GitHub issues and typical Frappe auth patterns |
+| Area         | Confidence | Notes                                                               |
+| ------------ | ---------- | ------------------------------------------------------------------- |
+| Stack        | HIGH       | Verified with LiveKit official docs and standard MCP specifications |
+| Features     | HIGH       | Table stakes match standard voice AI and Frappe requirements        |
+| Architecture | HIGH       | Standard decoupled multi-container pattern for LiveKit              |
+| Pitfalls     | HIGH       | Sourced from LiveKit GitHub issues and typical Frappe auth patterns |
 
 **Overall confidence:** HIGH
 
@@ -135,15 +145,18 @@ Phases with standard patterns (skip research-phase):
 ## Sources
 
 ### Primary (HIGH confidence)
+
 - [LiveKit Agents Python SDK](https://github.com/livekit/agents) - Core framework & MCP integration
 - [Model Context Protocol Python SDK](https://github.com/modelcontextprotocol/python-sdk) - Tool calling architecture
 - [.planning/PROJECT.md] - Authoritative requirements
 - Frappe Forum & Docs - Authentication mechanisms and Link Field architecture
 
 ### Secondary (MEDIUM confidence)
+
 - Frappe Cloud Marketplace - ChatNext & Frappe Assistant Core comparisons
 - OpenAI Developer Forums - Realtime API VAD issues and truncation handling
 
 ---
-*Research completed: 2026-04-18*
-*Ready for roadmap: yes*
+
+_Research completed: 2026-04-18_
+_Ready for roadmap: yes_

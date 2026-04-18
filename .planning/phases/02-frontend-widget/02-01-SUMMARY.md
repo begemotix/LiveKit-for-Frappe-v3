@@ -24,9 +24,11 @@ metrics:
 # Phase 02 Plan 01: Initialisierung & Basis-Setup Summary
 
 ## Objective
+
 Initialisierung der Next.js Projektstruktur mit shadcn/ui und Installation der LiveKit SDKs.
 
 ## substantive one-liner
+
 Lauffähige Next.js Basis basierend auf dem official LiveKit `agent-starter-embed` Template mit integriertem shadcn/ui und Vitest Test-Infrastruktur.
 
 ## Deviations from Plan
@@ -34,6 +36,7 @@ Lauffähige Next.js Basis basierend auf dem official LiveKit `agent-starter-embe
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocker] Git Clone in non-empty directory**
+
 - **Found during:** Task 1
 - **Issue:** `git clone` funktioniert nicht in einem Verzeichnis mit Dateien aus Phase 01.
 - **Fix:** Bestehende Infrastruktur-Dateien nach `infrastructure/` verschoben und Template via temporärem Ordner geklont.
@@ -41,6 +44,7 @@ Lauffähige Next.js Basis basierend auf dem official LiveKit `agent-starter-embe
 - **Commit:** `feat(02-01): clone agent-starter-embed template and install dependencies`
 
 **2. [Rule 3 - Blocker] Shadcn/ui Scan Permissions**
+
 - **Found during:** Task 2
 - **Issue:** Shadcn CLI versuchte Windows-Systemverzeichnisse zu scannen (EPERM).
 - **Fix:** `components.json` Aliase korrigiert und `pnpm` Blockade durch Löschen der `pnpm-lock.yaml` behoben.
@@ -48,6 +52,7 @@ Lauffähige Next.js Basis basierend auf dem official LiveKit `agent-starter-embe
 - **Commit:** `feat(02-01): integrate shadcn/ui and add base components`
 
 **3. [Rule 1 - Bug] Accidental deletion of template components**
+
 - **Found during:** Task 2 Cleanup
 - **Issue:** Zu aggressives Löschen des `components` Ordners entfernte Template-eigene Komponenten.
 - **Fix:** Ordner via Git wiederhergestellt und UI-Komponenten in `components/ui` konsolidiert.

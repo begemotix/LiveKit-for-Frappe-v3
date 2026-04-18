@@ -17,56 +17,56 @@ requirements: [INFR-01, INFR-02, INFR-03, INFR-04]
 
 ### Observable Truths
 
-| #   | Truth   | Status     | Evidence       |
-| --- | ------- | ---------- | -------------- |
+| #   | Truth                                 | Status     | Evidence                                                                        |
+| --- | ------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
 | 1   | Deployment can be customized via .env | ✓ VERIFIED | `.env.example` vorhanden, Substitution in `livekit.yaml` & `docker-compose.yml` |
-| 2   | Integrated TURN supported | ✓ VERIFIED | `turn: enabled: true` in `livekit.yaml`, Port mapping in `docker-compose.yml` |
-| 3   | Docker Compose Deployment | ✓ VERIFIED | `docker-compose.yml` mit `livekit` und `caddy` Services |
-| 4   | Automatic SSL via Caddy | ✓ VERIFIED | `Caddyfile` mit `tls` und `reverse_proxy` konfiguriert |
-| 5   | UDP Ports accessible | ✓ VERIFIED | Port mapping `3478/udp` und `50000-60000/udp` in `docker-compose.yml` |
+| 2   | Integrated TURN supported             | ✓ VERIFIED | `turn: enabled: true` in `livekit.yaml`, Port mapping in `docker-compose.yml`   |
+| 3   | Docker Compose Deployment             | ✓ VERIFIED | `docker-compose.yml` mit `livekit` und `caddy` Services                         |
+| 4   | Automatic SSL via Caddy               | ✓ VERIFIED | `Caddyfile` mit `tls` und `reverse_proxy` konfiguriert                          |
+| 5   | UDP Ports accessible                  | ✓ VERIFIED | Port mapping `3478/udp` und `50000-60000/udp` in `docker-compose.yml`           |
 
 **Score:** 5/5 truths verified
 
 ### Required Artifacts
 
-| Artifact | Expected    | Status | Details |
-| -------- | ----------- | ------ | ------- |
-| `.env.example` | ENV Template | ✓ VERIFIED | Enthält Keys, Domain und White-Labeling Variablen |
-| `livekit.yaml` | LK Config | ✓ VERIFIED | Single-node, integrated TURN, ENV substitution |
-| `docker-compose.yml` | Orchestration | ✓ VERIFIED | livekit/caddy stack mit korrektem Port-Mapping |
-| `Caddyfile` | Proxy Config | ✓ VERIFIED | Automatisches TLS und Routing zu port 7880 |
-| `README.md` | Instructions | ✓ VERIFIED | Deployment-Befehle und Coolify-Alternativen dokumentiert |
+| Artifact             | Expected      | Status     | Details                                                  |
+| -------------------- | ------------- | ---------- | -------------------------------------------------------- |
+| `.env.example`       | ENV Template  | ✓ VERIFIED | Enthält Keys, Domain und White-Labeling Variablen        |
+| `livekit.yaml`       | LK Config     | ✓ VERIFIED | Single-node, integrated TURN, ENV substitution           |
+| `docker-compose.yml` | Orchestration | ✓ VERIFIED | livekit/caddy stack mit korrektem Port-Mapping           |
+| `Caddyfile`          | Proxy Config  | ✓ VERIFIED | Automatisches TLS und Routing zu port 7880               |
+| `README.md`          | Instructions  | ✓ VERIFIED | Deployment-Befehle und Coolify-Alternativen dokumentiert |
 
 ### Key Link Verification
 
-| From | To  | Via | Status | Details |
-| ---- | --- | --- | ------ | ------- |
-| `livekit.yaml` | `.env.example` | Env mapping | ✓ WIRED | `${LIVEKIT_API_KEY}` etc. |
-| `Caddyfile` | `livekit` service | `reverse_proxy` | ✓ WIRED | Routing auf `livekit:7880` |
-| `docker-compose` | host | Port mapping | ✓ WIRED | UDP/TCP WebRTC Ports gemappt |
+| From             | To                | Via             | Status  | Details                      |
+| ---------------- | ----------------- | --------------- | ------- | ---------------------------- |
+| `livekit.yaml`   | `.env.example`    | Env mapping     | ✓ WIRED | `${LIVEKIT_API_KEY}` etc.    |
+| `Caddyfile`      | `livekit` service | `reverse_proxy` | ✓ WIRED | Routing auf `livekit:7880`   |
+| `docker-compose` | host              | Port mapping    | ✓ WIRED | UDP/TCP WebRTC Ports gemappt |
 
 ### Data-Flow Trace (Level 4)
 
-| Artifact | Data Variable | Source | Produces Real Data | Status |
-| -------- | ------------- | ------ | ------------------ | ------ |
-| `livekit.yaml` | `keys` | Environment | ✓ FLOWING | Nutzt Env-Variablen für API-Secrets |
-| `Caddyfile` | `domain` | Environment | ✓ FLOWING | Nutzt `{$DOMAIN}` Variable |
+| Artifact       | Data Variable | Source      | Produces Real Data | Status                              |
+| -------------- | ------------- | ----------- | ------------------ | ----------------------------------- |
+| `livekit.yaml` | `keys`        | Environment | ✓ FLOWING          | Nutzt Env-Variablen für API-Secrets |
+| `Caddyfile`    | `domain`      | Environment | ✓ FLOWING          | Nutzt `{$DOMAIN}` Variable          |
 
 ### Behavioral Spot-Checks
 
-| Behavior | Command | Result | Status |
-| -------- | ------- | ------ | ------ |
-| LK Config Syntax | `livekit --config livekit.yaml --check` | N/A | ? SKIP |
-| Docker Compose Syntax | `docker compose config` | Valid YAML | ✓ PASS |
+| Behavior              | Command                                 | Result     | Status |
+| --------------------- | --------------------------------------- | ---------- | ------ |
+| LK Config Syntax      | `livekit --config livekit.yaml --check` | N/A        | ? SKIP |
+| Docker Compose Syntax | `docker compose config`                 | Valid YAML | ✓ PASS |
 
 ### Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
-| ----------- | ---------- | ----------- | ------ | -------- |
-| INFR-01 | 01-02 | Docker Compose Setup | ✓ SATISFIED | `docker-compose.yml` erstellt |
-| INFR-02 | 01-02 | Reverse Proxy (Caddy) | ✓ SATISFIED | `Caddyfile` erstellt |
-| INFR-03 | 01-01 | Environment-Variablen | ✓ SATISFIED | `.env.example` erstellt |
-| INFR-04 | 01-01 | TURN/STUN-Konfiguration | ✓ SATISFIED | `livekit.yaml` TURN block |
+| Requirement | Source Plan | Description             | Status      | Evidence                      |
+| ----------- | ----------- | ----------------------- | ----------- | ----------------------------- |
+| INFR-01     | 01-02       | Docker Compose Setup    | ✓ SATISFIED | `docker-compose.yml` erstellt |
+| INFR-02     | 01-02       | Reverse Proxy (Caddy)   | ✓ SATISFIED | `Caddyfile` erstellt          |
+| INFR-03     | 01-01       | Environment-Variablen   | ✓ SATISFIED | `.env.example` erstellt       |
+| INFR-04     | 01-01       | TURN/STUN-Konfiguration | ✓ SATISFIED | `livekit.yaml` TURN block     |
 
 ### Anti-Patterns Found
 

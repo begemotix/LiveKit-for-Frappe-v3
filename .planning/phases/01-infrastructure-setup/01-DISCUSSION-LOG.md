@@ -11,53 +11,53 @@
 
 ## LiveKit Basis-Setup
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Standard | Standard (Single Node) — Einfachstes Setup, völlig ausreichend für V1 | ✓ |
-| Redis | Mit Redis — Bereitet Multi-Node-Skalierung vor, erhöht aber Komplexität | |
-| Andere | Andere | |
+| Option   | Description                                                             | Selected |
+| -------- | ----------------------------------------------------------------------- | -------- |
+| Standard | Standard (Single Node) — Einfachstes Setup, völlig ausreichend für V1   | ✓        |
+| Redis    | Mit Redis — Bereitet Multi-Node-Skalierung vor, erhöht aber Komplexität |          |
+| Andere   | Andere                                                                  |          |
 
 **User's choice:** standard
-**Notes:** 
+**Notes:**
 
 ---
 
 ## Reverse Proxy
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Caddy | Caddy — Automatische SSL-Zertifikate, einfache Caddyfile | |
-| Traefik | Traefik — Sehr mächtig, erfordert aber mehr Konfigurationsaufwand | |
-| Andere | Andere | ✓ |
+| Option  | Description                                                       | Selected |
+| ------- | ----------------------------------------------------------------- | -------- |
+| Caddy   | Caddy — Automatische SSL-Zertifikate, einfache Caddyfile          |          |
+| Traefik | Traefik — Sehr mächtig, erfordert aber mehr Konfigurationsaufwand |          |
+| Andere  | Andere                                                            | ✓        |
 
 **User's choice:** LiveKit empfiehlt für Media-Traffic direkte Host-Anbindung. Erstelle die docker-compose.yml so, dass LiveKit die UDP-Ports direkt nach außen öffnet. Für das HTTPS-Signaling nutzen wir Caddy als Standard-Proxy im Stack, dokumentieren aber in der .env, wie Coolify-Nutzer ihren globalen Traefik-Proxy stattdessen direkt anbinden können.
-**Notes:** 
+**Notes:**
 
 ---
 
 ## TURN-Server
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Internal | Integrierter LiveKit TURN — Kein extra Container, einfache Config | ✓ |
-| Coturn | Externer Coturn — Extra Service, aber mehr Kontrolle | |
-| Andere | Andere | |
+| Option   | Description                                                       | Selected |
+| -------- | ----------------------------------------------------------------- | -------- |
+| Internal | Integrierter LiveKit TURN — Kein extra Container, einfache Config | ✓        |
+| Coturn   | Externer Coturn — Extra Service, aber mehr Kontrolle              |          |
+| Andere   | Andere                                                            |          |
 
 **User's choice:** internal
-**Notes:** 
+**Notes:**
 
 ---
 
 ## Environment Variables
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Central | Zentrale .env — Eine Datei für alles | |
-| Split | Aufgeteilt — Z.B. .env.livekit, .env.agent, etc. | |
-| Andere | Andere | ✓ |
+| Option  | Description                                      | Selected |
+| ------- | ------------------------------------------------ | -------- |
+| Central | Zentrale .env — Eine Datei für alles             |          |
+| Split   | Aufgeteilt — Z.B. .env.livekit, .env.agent, etc. |          |
+| Andere  | Andere                                           | ✓        |
 
 **User's choice:** Zentrale Struktur, aber da wir coolify nutzen, muss sie über die coolify-variablen-maske anpassbar sein (und nicht hardcoded in einer datei im repo).
-**Notes:** 
+**Notes:**
 
 ---
 

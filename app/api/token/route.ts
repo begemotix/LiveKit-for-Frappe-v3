@@ -1,5 +1,5 @@
-import { AccessToken } from 'livekit-server-sdk';
 import { NextResponse } from 'next/server';
+import { AccessToken } from 'livekit-server-sdk';
 
 export async function POST(req: Request) {
   try {
@@ -27,10 +27,10 @@ export async function POST(req: Request) {
       canSubscribe: true,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       token: await at.toJwt(),
       identity,
-      roomName
+      roomName,
     });
   } catch (error) {
     console.error('Error generating token:', error);

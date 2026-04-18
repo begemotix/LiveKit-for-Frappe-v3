@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   livekit:
@@ -7,11 +7,11 @@ services:
     restart: unless-stopped
     command: --config /livekit.yaml
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "3478:3478/udp"
-      - "5349:5349/tcp"
-      - "50000-60000:50000-60000/udp"
+      - '7880:7880'
+      - '7881:7881'
+      - '3478:3478/udp'
+      - '5349:5349/tcp'
+      - '50000-60000:50000-60000/udp'
     volumes:
       - ./livekit.yaml:/livekit.yaml
     env_file:
@@ -22,8 +22,8 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data

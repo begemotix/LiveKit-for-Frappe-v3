@@ -13,7 +13,7 @@ export const VoiceVisualizer = ({ className }: VoiceVisualizerProps) => {
   // Hinweis: AgentAudioVisualizerWave wäre die polierte Version aus @agents-ui.
   // Wir nutzen hier den verfügbaren BarVisualizer.
   return (
-    <div className={cn("flex h-32 items-center justify-center rounded-lg bg-muted/20", className)}>
+    <div className={cn('bg-muted/20 flex h-32 items-center justify-center rounded-lg', className)}>
       <BarVisualizer
         state={state}
         trackRef={audioTrack}

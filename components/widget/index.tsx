@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FloatingButton } from './FloatingButton';
 import { ChatPanel } from './ChatPanel';
+import { FloatingButton } from './FloatingButton';
 
 export const VoiceWidget = () => {
   const [isOpen, setIsOpen] = useState(false);

@@ -15,17 +15,13 @@ export const FloatingButton = ({ isOpen, onClick }: FloatingButtonProps) => {
       variant="primary"
       size="icon"
       className={cn(
-        'fixed bottom-6 right-6 z-50 size-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95',
+        'fixed right-6 bottom-6 z-50 size-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95',
         isOpen ? 'rotate-90' : 'rotate-0'
       )}
       onClick={onClick}
       aria-label={isOpen ? 'Chat schließen' : 'Chat öffnen'}
     >
-      {isOpen ? (
-        <X className="size-6" />
-      ) : (
-        <MessageCircle className="size-6" />
-      )}
+      {isOpen ? <X className="size-6" /> : <MessageCircle className="size-6" />}
     </Button>
   );
 };
