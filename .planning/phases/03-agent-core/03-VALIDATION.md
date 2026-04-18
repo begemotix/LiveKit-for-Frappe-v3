@@ -2,7 +2,7 @@
 phase: 03
 slug: agent-core
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-18
 ---
@@ -40,9 +40,9 @@ created: 2026-04-18
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | AGNT-01 | integration | `pytest -k test_join` | ❌ W0 | ⬜ pending |
-| 03-01-02 | 01 | 1 | AGNT-03 | smoke test | `pytest -k test_interruption` | ❌ W0 | ⬜ pending |
-| 03-01-03 | 01 | 1 | AGNT-04 | unit | `pytest -k test_mock_tool` | ❌ W0 | ⬜ pending |
+| 03-01-01 | 01 | 1 | AGNT-01 | integration | `pytest -k test_join` | ✅ W0 | ⬜ pending |
+| 03-01-02 | 01 | 1 | AGNT-03 | smoke test | `pytest -k test_interruption` | ✅ W0 | ⬜ pending |
+| 03-01-03 | 01 | 1 | AGNT-04 | unit | `pytest -k test_mock_tool` | ✅ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

@@ -57,9 +57,10 @@
 1. User can speak to the agent and hear AI-generated spoken responses with minimal delay
 2. User can interrupt the agent while it is speaking, and the agent stops and listens
 3. User hears "filler audio" when the agent is thinking for a long time to prevent dead air
-   **Plans**: 3 plans
+   **Plans**: 4 plans
    Plans:
 
+- [ ] 03-00-PLAN.md — Initialize the testing infrastructure and framework.
 - [ ] 03-01-PLAN.md — Setup the foundation for the Python Agent Worker and configuration interface.
 - [ ] 03-02-PLAN.md — Implement the core voice agent logic using OpenAI Realtime and LiveKit.
 - [ ] 03-03-PLAN.md — Verify the implementation through automated tests and partner documentation.
