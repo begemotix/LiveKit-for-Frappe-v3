@@ -13,9 +13,9 @@ services:
       - "${LIVEKIT_HOST_PORT_RTC_TCP:-7881}:7881"
       - "${LIVEKIT_HOST_PORT_TURN_UDP:-3478}:3478/udp"
       - "${LIVEKIT_HOST_PORT_TURN_TLS:-5349}:5349/tcp"
-      # Ein String pro Zeile: "${START}-${END}:…" löst bei Compose/Docker teils "invalid hostPort" aus.
-      # Zweite Instanz z. B.: LIVEKIT_HOST_UDP_PORT_PUBLISH=60001-70001:50000-60000/udp
-      - "${LIVEKIT_HOST_UDP_PORT_PUBLISH:-50000-60000:50000-60000/udp}"
+      # UDP-Medienbereich: literal (wie livekit.yaml). Env/Build-Args mit ":" scheitern oft in Coolify.
+      # Zweite Instanz: docker-compose.ports-alt.example.yml mergen oder UDP-Zeile in Coolify anpassen.
+      - "50000-60000:50000-60000/udp"
     volumes:
       - ./livekit.yaml:/livekit.yaml
     env_file:

@@ -20,7 +20,17 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 Auf dem **gleichen Server** darf jeder **öffentliche** (Host-)Port nur **einmal** belegt sein. Zwei Compose-Deployments mit den Standardwerten würden sich z. B. um **7880** streiten.
 
-Die `docker-compose.yml` mappt deshalb alle relevanten **Host-**Ports über Variablen mit sinnvollen Defaults. **Pro zusätzlicher Instanz** in Coolify (eigenes Projekt / eigene App) setzen Sie **eine eigene, freie Portkombination**.
+Die `docker-compose.yml` mappt **TCP/TURN**-Host-Ports über Variablen; den **UDP-Medienbereich** (`50000–60000` auf dem Host) legt sie **fest** (wie `livekit.yaml`), weil Docker Compose in Kombination mit Coolify **`docker compose build` / Build-Args** Werte mit **`:`** und **Portbereichen** oft kaputt parst (`invalid hostPort`, abgeschnittene Werte).
+
+**Pro zusätzlicher Instanz** auf demselben Host:
+
+1. **TCP/TURN:** weiterhin eigene `LIVEKIT_HOST_PORT_*` setzen (z. B. `17880:7880` über Variable `LIVEKIT_HOST_PORT_SIGNALING=17880`).
+2. **UDP-Medien:** eine der folgenden Optionen:
+   - **Empfohlen:** zweite Compose-Datei mergen — Vorlage `docker-compose.ports-alt.example.yml` (Werte anpassen), Aufruf z. B.  
+     `docker compose -f docker-compose.yml -f docker-compose.ports-alt.example.yml up -d`  
+ (in Coolify nur, falls die UI **mehrere** Compose-Dateien unterstützt).
+   - **Coolify nur eine Datei:** In der Compose-Vorschau bei `services.livekit.ports` die Zeile  
+     `50000-60000:50000-60000/udp` durch z. B. `60001-70001:50000-60000/udp` ersetzen **und** die übrigen Host-Ports dort ebenfalls auf freie Werte setzen (siehe Beispieldatei).
 
 | Variable | Standard (Host) | Bedeutung |
 |----------|-----------------|-----------|
@@ -28,15 +38,19 @@ Die `docker-compose.yml` mappt deshalb alle relevanten **Host-**Ports über Vari
 | `LIVEKIT_HOST_PORT_RTC_TCP` | `7881` | RTC TCP (Host → 7881) |
 | `LIVEKIT_HOST_PORT_TURN_UDP` | `3478` | TURN UDP (Host → 3478) |
 | `LIVEKIT_HOST_PORT_TURN_TLS` | `5349` | TURN TLS (Host → 5349) |
-| `LIVEKIT_HOST_UDP_PORT_PUBLISH` | `50000-60000:50000-60000/udp` | **Komplette** UDP-Publish-Zeile (Host-Bereich → Container 50000–60000, wie `livekit.yaml`) |
+| *(UDP-Range)* | *(in YAML literal)* | Host **50000–60000** → Container **50000–60000** (`/udp`); siehe Oben für zweite Instanz |
 | `CADDY_HOST_PORT_HTTP` | `80` | Caddy HTTP (nur wenn Service aktiv) |
 | `CADDY_HOST_PORT_HTTPS` | `443` | Caddy HTTPS (nur wenn Service aktiv) |
 
-**Wichtig (UDP-Range):** Im Container bleibt der Medienbereich **50000–60000** (wie in `livekit.yaml`). Setzen Sie **`LIVEKIT_HOST_UDP_PORT_PUBLISH`** auf eine vollständige Zeile `HOST_START-HOST_END:50000-60000/udp`. Die Spanne auf dem Host muss **dieselbe Anzahl Ports** haben wie 50000–60000 (10001 Ports). Beispiel zweite Instanz: `60001-70001:50000-60000/udp`. *(Zwei separate Variablen für Start/Ende werden wegen eines Docker-Compose-Parsers nicht verwendet.)*
+**Wichtig (UDP-Range):** Auf dem Host muss die Spanne **dieselbe Anzahl Ports** haben wie im Container **50000–60000** (10001 Ports). Beispiel: Host `60001–70001` → Container `50000–60000`.
 
 **Caddy:** Läuft eine zweite Instanz **mit** Caddy auf demselben Host, kollidieren auch **80/443** — dort andere `CADDY_HOST_PORT_*` wählen oder Caddy weglassen (Coolify/Traefik).
 
 **Clients:** Wenn Signaling nicht mehr über Standard-7880 von außen erreichbar ist, müssen `LIVEKIT_URL` / Firewall / Reverse-Proxy zum **tatsächlichen** Host-Port passieren.
+
+### Fehler `invalid hostPort: 60001-70001` (o. Ä.)
+
+Coolify führt u. a. `docker compose build` mit `--build-arg` aus. Enthält eine Variable einen **Doppelpunkt** (wie bei `HOST:CONTAINER/udp`), wird der Wert oft **abgeschnitten** oder falsch geparst — Compose validiert dann nur noch `60001-70001` und bricht mit **invalid hostPort** ab. **Lösung:** Medien-UDP **literal** in der Compose-YAML halten oder `docker-compose.ports-alt.example.yml` mergen / in Coolify die `ports:`-Liste direkt bearbeiten — **nicht** als eine Env-Variable mit `:`.
 
 ---
 
