@@ -38,10 +38,11 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 
 ## Constraints
 
-- **Hosting**: Self-hosted, hardware-agnostisch (ab KVM2-VPS, keine GPU-Pflicht für Standard).
-- **White-Label**: Keine fest einkodierten begemotix-Logos, URLs oder spezifischen Modelle. Konfiguration über Environment-Variablen.
+- **Hardware-Agnostik**: Die App bleibt hardware-agnostisch und wird als regulärer Docker-Container-Stack deployed. Hardware-Profile sind reine Deployment-Empfehlungen für Endkunden; es gibt keine festen Bindungen an spezifische VPS-Klassen.
+- **White-Label & Identität**: Keine Hardcodings der Firma (begemotix) oder spezifischer Frappe-Instanzen. LiveKit darf als zugrundeliegende Technologie erkennbar bleiben. Farbwerte und Verbindungs-URLs im Frontend-Widget werden ausschließlich generisch über `.env` gesteuert.
+- **Strikte MCP-Reinheit**: Keine direkten Aufrufe von Frappe-APIs. Die App agiert ausschließlich als MCP-Client. Der Agent entdeckt Tools dynamisch über den MCP-Server der Kunden-Instanz (Introspection). Es wird keine Frappe-spezifische Geschäftslogik oder Doctype-Struktur im Python-Agenten hardcoded.
 - **Lizenz**: Open Source (Apache-2.0, Vorlagen via MIT mit NOTICE).
-- **Deployment**: Regulärer Node-Container über Coolify oder einfaches Docker-Compose Setup ohne tiefgreifende Modifikationen an Next.js-Templates.
+- **Deployment**: Regulärer Docker-Container-Stack (z.B. über einfaches Docker-Compose Setup) ohne tiefgreifende Modifikationen an den Standard-Templates.
 
 ## Key Decisions
 

@@ -8,7 +8,7 @@
 ### Infrastructure
 - [ ] **INFR-01**: Docker Compose Setup für LiveKit Server bereitstellen
 - [ ] **INFR-02**: Reverse Proxy (Caddy) für automatische SSL-Zertifikate (Let's Encrypt) integrieren
-- [ ] **INFR-03**: Environment-Variablen für White-Labeling und API-Keys definieren
+- [ ] **INFR-03**: Environment-Variablen für White-Labeling (Farbwerte im UI), Verbindungs-URLs und API-Keys generisch definieren
 - [ ] **INFR-04**: TURN/STUN-Konfiguration für reibungslose WebRTC-Verbindungen hinter NAT sicherstellen
 
 ### Frontend (Widget)
@@ -26,7 +26,7 @@
 - [ ] **INTG-01**: `mcp` Python SDK in den Agent Worker integrieren
 - [ ] **INTG-02**: Agent baut Verbindung zum externen Frappe MCP-Server auf und authentifiziert sich mit eigenen, fest hinterlegten Agenten-Credentials (z.B. API-Key aus der .env)
 - [ ] **INTG-03**: Agent nutzt die übergebenen Credentials, um im eigenen Namen als authentifizierter "Agenten-User" in Frappe zu agieren
-- [ ] **INTG-04**: Agent nutzt Frappe MCP-Tools ausschließlich lesend (Read-only)
+- [ ] **INTG-04**: Agent entdeckt Tools dynamisch über den MCP-Server (Introspection) und nutzt diese ausschließlich lesend (Read-only). Keine direkten Frappe-API-Aufrufe oder hardcoded Doctypes.
 - [ ] **INTG-05**: Graceful Error Handling für fehlgeschlagene Frappe-Rechte (403/Opaque Errors) implementieren
 
 ## v2 Requirements
