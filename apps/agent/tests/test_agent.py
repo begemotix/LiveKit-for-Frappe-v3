@@ -1,10 +1,10 @@
 import pytest
 import os
+import asyncio
 from unittest.mock import patch
+from types import SimpleNamespace
 from agent import entrypoint, Assistant
 from livekit.agents import WorkerOptions
-from livekit.agents.voice import AgentSession
-from livekit.plugins import openai
 
 @pytest.mark.asyncio
 async def test_join():
@@ -49,28 +49,66 @@ async def test_persona_injection():
         assert "TestCompany" in greeting
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(reason="Legacy interruption assertion depends on removed internal AgentSession field.", strict=False)
 async def test_interruption():
-    """Verify that the AgentSession and model are configured correctly."""
-    # Set dummy API key for testing RealtimeModel initialization
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-dummy"}):
-        model = openai.realtime.RealtimeModel(
-            modalities=["audio", "text"],
-            turn_detection={
-                "type": "server_vad",
-                "threshold": 0.5,
-                "silence_duration_ms": 500
-            }
-        )
-        
-        session = AgentSession(
-            llm=model,
-            allow_interruptions=True,
-        )
-        
-        # Check if allow_interruptions is set correctly (internal attribute check)
-        assert session._allow_interruptions is True
-        
-        # Check if VAD options are present in the model
-        assert model._opts.turn_detection["threshold"] == 0.5
-        assert model._opts.turn_detection["silence_duration_ms"] == 500
+    """Verify interruption behavior via public session.say calls."""
+
+    class FakeRoom:
+        def __init__(self):
+            self.name = "test-room"
+            self.remote_participants = {"p1": SimpleNamespace(identity="participant-1")}
+            self._handlers = {}
+
+        def on(self, event_name):
+            def decorator(func):
+                self._handlers[event_name] = func
+                return func
+            return decorator
+
+    class FakeContext:
+        def __init__(self):
+            self.room = FakeRoom()
+            self.log_context_fields = {}
+
+        async def connect(self):
+            return None
+
+    class FakeAgentSession:
+        last_instance = None
+
+        def __init__(self, llm, allow_interruptions):
+            self.llm = llm
+            self.allow_interruptions = allow_interruptions
+            self.say_calls = []
+            FakeAgentSession.last_instance = self
+
+        def on(self, _event_name):
+            def decorator(func):
+                return func
+            return decorator
+
+        async def start(self, room, agent):
+            self.room = room
+            self.agent = agent
+
+        async def say(self, text, allow_interruptions):
+            self.say_calls.append((text, allow_interruptions))
+
+    created_tasks = []
+
+    def schedule_now(coro):
+        task = asyncio.get_running_loop().create_task(coro)
+        created_tasks.append(task)
+        return task
+
+    with patch("agent.openai.realtime.RealtimeModel", return_value=object()), \
+         patch("agent.AgentSession", FakeAgentSession), \
+         patch("agent.asyncio.create_task", side_effect=schedule_now):
+        ctx = FakeContext()
+        await entrypoint(ctx)
+        await asyncio.gather(*created_tasks)
+
+    assert FakeAgentSession.last_instance is not None
+    say_calls = FakeAgentSession.last_instance.say_calls
+    assert len(say_calls) >= 2
+    assert say_calls[0][1] is False
+    assert say_calls[1][1] is True

@@ -2,8 +2,8 @@
 phase: 03
 slug: agent-core
 status: draft
-nyquist_compliant: true
-wave_0_complete: false
+nyquist_compliant: false
+wave_0_complete: true
 created: 2026-04-18
 ---
 
@@ -40,11 +40,11 @@ created: 2026-04-18
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | AGNT-01 | integration | `test -f apps/agent/agent.py` | ✅ | ⬜ pending |
-| 03-01-02 | 01 | 1 | D-02 | compliance | `grep "OpenAI in den USA" apps/agent/.env.example` | ✅ | ⬜ pending |
-| 03-02-01 | 02 | 2 | AGNT-03 | smoke test | `grep "ServerVADOptions" apps/agent/agent.py` | ✅ | ⬜ pending |
-| 03-02-03 | 02 | 2 | AGNT-04 | unit | `grep "mock_data_lookup" apps/agent/agent.py` | ✅ | ⬜ pending |
-| 03-03-01 | 03 | 3 | AGNT-01/04 | automated | `pytest apps/agent/tests/test_agent.py` | ✅ | ⬜ pending |
+| 03-01-01 | 01 | 1 | AGNT-01 | integration | `test -f apps/agent/agent.py` | ✅ | ✅ green |
+| 03-01-02 | 01 | 1 | D-02 | compliance | `grep "OpenAI in den USA" apps/agent/.env.example` | ✅ | ✅ green |
+| 03-02-01 | 02 | 2 | AGNT-03 | smoke test | `grep "ServerVADOptions" apps/agent/agent.py` | ✅ | ⚠️ partial (manual timing) |
+| 03-02-03 | 02 | 2 | AGNT-04 | unit | `grep "mock_data_lookup" apps/agent/agent.py` | ✅ | ✅ green |
+| 03-03-01 | 03 | 3 | AGNT-01/04 | automated | `pytest apps/agent/tests/test_agent.py` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,8 +52,8 @@ created: 2026-04-18
 
 ## Wave 0 Requirements
 
-- [ ] `apps/agent/tests/test_agent.py` — stubs for AGNT-01, AGNT-03, AGNT-04
-- [ ] `pip install pytest pytest-asyncio` — if no framework detected
+- [x] `apps/agent/tests/test_agent.py` — stubs for AGNT-01, AGNT-03, AGNT-04
+- [x] `pip install pytest pytest-asyncio` — if no framework detected
 
 ---
 
@@ -68,11 +68,18 @@ created: 2026-04-18
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
+
+## Validation Audit 2026-04-18
+| Metric | Count |
+|--------|-------|
+| Gaps found | 2 |
+| Resolved | 0 |
+| Escalated (manual-only by decision) | 2 |
