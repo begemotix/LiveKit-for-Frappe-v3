@@ -36,7 +36,7 @@ Plans:
 - [x] 02-01-PLAN.md — Setup Next.js, shadcn/ui and LiveKit SDKs.
 - [x] 02-02-PLAN.md — Implement secure Token API and Room Provider.
 - [x] 02-03-PLAN.md — Build Floating Action Button and Chat Panel UI.
-- [ ] 02-04-PLAN.md — Integrate LiveKit WebRTC and Voice Visualizer.
+- [x] 02-04-PLAN.md — Integrate LiveKit WebRTC and Voice Visualizer.
 - [ ] 02-05-PLAN.md — Finalize Dynamic Styling and Phase Verification.
 
 ### Phase 3: Agent Core
