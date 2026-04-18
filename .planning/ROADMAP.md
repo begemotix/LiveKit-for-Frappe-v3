@@ -3,7 +3,7 @@
 ## Phases
 
 - [ ] **Phase 1: Infrastructure Setup** - Self-hosted LiveKit WebRTC engine and proxy deployment
-- [ ] **Phase 2: Frontend Widget** - Next.js voice widget with Frappe session capture
+- [ ] **Phase 2: Frontend Widget** - Next.js voice widget mit unauthentifiziertem Gast-Token
 - [ ] **Phase 3: Agent Core** - Low-latency OpenAI Realtime voice agent with interruption handling
 - [ ] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
 
@@ -27,7 +27,7 @@
 **Success Criteria** (what must be TRUE):
   1. User sees a floating voice/text widget in their browser
   2. User can click the widget to successfully establish a WebRTC connection to the local LiveKit server
-  3. The widget automatically captures the user's active Frappe session and passes it as Room Metadata to the connection
+  3. Das Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten (Nutzer ist ein anonymer Gast im LiveKit-Kontext)
 **Plans**: TBD
 **UI hint**: yes
 
@@ -42,14 +42,14 @@
 **Plans**: TBD
 
 ### Phase 4: Frappe Integration
-**Goal**: The voice agent can securely read and relay the user's Frappe data based on their permissions
+**Goal**: The voice agent connects to Frappe using its own dedicated credentials and securely relays read-only data
 **Depends on**: Phase 3
 **Requirements**: INTG-01, INTG-02, INTG-03, INTG-04, INTG-05
 **Success Criteria** (what must be TRUE):
   1. The agent connects to the Frappe MCP server and dynamically discovers available read-only tools
-  2. The agent successfully authenticates its MCP requests using the Frappe session token provided by the widget
-  3. User can ask the agent about their Frappe data, and the agent retrieves and speaks the correct information
-  4. If a user asks for data they lack permissions for, the agent gracefully informs them of the restriction instead of crashing
+  2. The agent successfully authenticates its MCP requests using its own fixed credentials (e.g. API-Key from .env)
+  3. User can ask the agent about Frappe data, and the agent retrieves and speaks information accessible to the agent user
+  4. If the agent asks for data it lacks permissions for, it gracefully informs the user of the restriction instead of crashing
 **Plans**: TBD
 
 ## Progress

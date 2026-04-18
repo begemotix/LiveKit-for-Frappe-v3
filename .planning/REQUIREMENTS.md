@@ -14,7 +14,7 @@
 ### Frontend (Widget)
 - [ ] **WIDG-01**: Next.js-basiertes Voice/Text-Widget als Floating Button bereitstellen
 - [ ] **WIDG-02**: Button ermöglicht Verbindungsaufbau (WebRTC) zum lokalen LiveKit Server
-- [ ] **WIDG-03**: Widget erfasst die aktive Frappe-Session und übergibt sie als Room Metadata an LiveKit
+- [ ] **WIDG-03**: Widget generiert einen unauthentifizierten Gast-Token, um dem Raum beizutreten
 
 ### Agent Core (Type A)
 - [ ] **AGNT-01**: Python Agent Worker mit `livekit-agents` implementieren
@@ -24,8 +24,8 @@
 
 ### Integration (Frappe MCP)
 - [ ] **INTG-01**: `mcp` Python SDK in den Agent Worker integrieren
-- [ ] **INTG-02**: Agent baut Verbindung zum externen Frappe MCP-Server auf
-- [ ] **INTG-03**: Authentifizierungstoken (aus Frontend Metadata) wird sicher an MCP-Server weitergeleitet
+- [ ] **INTG-02**: Agent baut Verbindung zum externen Frappe MCP-Server auf und authentifiziert sich mit eigenen, fest hinterlegten Agenten-Credentials (z.B. API-Key aus der .env)
+- [ ] **INTG-03**: Agent nutzt die übergebenen Credentials, um im eigenen Namen als authentifizierter "Agenten-User" in Frappe zu agieren
 - [ ] **INTG-04**: Agent nutzt Frappe MCP-Tools ausschließlich lesend (Read-only)
 - [ ] **INTG-05**: Graceful Error Handling für fehlgeschlagene Frappe-Rechte (403/Opaque Errors) implementieren
 
