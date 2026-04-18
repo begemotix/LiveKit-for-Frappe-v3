@@ -20,6 +20,10 @@ Um den LiveKit Server und den Caddy Proxy zu starten, führen Sie folgenden Befe
 docker compose up -d
 ```
 
+### Mehrere LiveKit-Stacks auf demselben Host
+
+Sollen **mehrere** Deployments parallel laufen (z. B. mehrere Kunden-Apps auf einem Server), dürfen sich die **Host-Ports** nicht überschneiden. Die `docker-compose.yml` erlaubt dafür überschreibbare Variablen (siehe `COOLIFY-KONFIGURATION.md` im Repository-Root).
+
 ### Deployment mit Coolify (Alternative)
 
 Wenn Sie das System über [Coolify](https://coolify.io/) deployen, können Sie den Caddy-Container überspringen, da Coolify bereits Traefik als globalen Proxy nutzt.

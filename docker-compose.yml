@@ -1,17 +1,19 @@
 version: "3.9"
 
+# Host-Ports sind per Env überschreibbar, damit mehrere Stacks auf einem Server
+# parallel laufen (z. B. mehrere Coolify-Apps). Container-Ports bleiben unverändert
+# und müssen zu livekit.yaml (rtc port_range, turn ports) passen.
 services:
   livekit:
     image: livekit/livekit-server:latest
-    container_name: livekit
     restart: unless-stopped
     command: --config /livekit.yaml
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "3478:3478/udp"
-      - "5349:5349/tcp"
-      - "50000-60000:50000-60000/udp"
+      - "${LIVEKIT_HOST_PORT_SIGNALING:-7880}:7880"
+      - "${LIVEKIT_HOST_PORT_RTC_TCP:-7881}:7881"
+      - "${LIVEKIT_HOST_PORT_TURN_UDP:-3478}:3478/udp"
+      - "${LIVEKIT_HOST_PORT_TURN_TLS:-5349}:5349/tcp"
+      - "${LIVEKIT_HOST_UDP_RANGE_START:-50000}-${LIVEKIT_HOST_UDP_RANGE_END:-60000}:50000-60000/udp"
     volumes:
       - ./livekit.yaml:/livekit.yaml
     env_file:
@@ -19,11 +21,10 @@ services:
 
   caddy:
     image: caddy:latest
-    container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${CADDY_HOST_PORT_HTTP:-80}:80"
+      - "${CADDY_HOST_PORT_HTTPS:-443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
