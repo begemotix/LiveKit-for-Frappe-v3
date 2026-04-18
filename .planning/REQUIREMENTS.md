@@ -20,7 +20,7 @@
 
 ### Agent Core (Type A)
 
-- [ ] **AGNT-01**: Python Agent Worker mit `livekit-agents` implementieren
+- [x] **AGNT-01**: Python Agent Worker mit `livekit-agents` implementieren
 - [ ] **AGNT-02**: OpenAI Realtime API für STT/TTS (Speech-to-Speech) mit geringer Latenz integrieren
 - [ ] **AGNT-03**: Voice Activity Detection (VAD) für nahtlose Unterbrechungen durch den User konfigurieren
 - [ ] **AGNT-04**: Filler-Audio bei langen Ladezeiten/Tool-Calls implementieren (Vermeidung von "Dead Air")
@@ -70,7 +70,7 @@
 | WIDG-01     | Phase 2 | Complete |
 | WIDG-02     | Phase 2 | Complete |
 | WIDG-03     | Phase 2 | Complete |
-| AGNT-01     | Phase 3 | Pending  |
+| AGNT-01     | Phase 3 | Complete |
 | AGNT-02     | Phase 3 | Pending  |
 | AGNT-03     | Phase 3 | Pending  |
 | AGNT-04     | Phase 3 | Pending  |

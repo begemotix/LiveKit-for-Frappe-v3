@@ -60,8 +60,8 @@
    **Plans**: 4 plans
    Plans:
 
-- [ ] 03-00-PLAN.md — Initialize the testing infrastructure and framework.
-- [ ] 03-01-PLAN.md — Setup the foundation for the Python Agent Worker and configuration interface.
+- [x] 03-00-PLAN.md — Initialize the testing infrastructure and framework.
+- [x] 03-01-PLAN.md — Setup the foundation for the Python Agent Worker and configuration interface.
 - [ ] 03-02-PLAN.md — Implement the core voice agent logic using OpenAI Realtime and LiveKit.
 - [ ] 03-03-PLAN.md — Verify the implementation through automated tests and partner documentation.
 

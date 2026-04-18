@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-18T14:47:39.978Z"
+status: executing
+last_updated: "2026-04-18T15:15:58.807Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -16,13 +16,13 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 02 — frontend-widget
+**Current Focus:** Phase 03 — agent-core
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-**Status:** Ready to plan
+Phase: 03 (agent-core) — EXECUTING
+Plan: 3 of 4
+**Status:** Ready to execute
 
 ```
 Progress (Project):
@@ -51,6 +51,10 @@ Progress (Project):
 - [Phase 02-frontend-widget]: D-07: Gast-Identitäten werden zufällig generiert, um unauthentifizierten Zugang zu ermöglichen.
 - [Phase 02-frontend-widget]: D-05: Branding via CSS variables and environment variables implemented.
 - [Phase 02]: Migrated branding injection logic from orphaned layout.tsx to components/root-layout.tsx
+- [Phase 03]: D-01: Dynamische Persona-Konfiguration via ENV
+- [Phase 03]: D-09: Strukturiertes JSON-Logging
+- [Phase 03]: D-10: Korrelations-ID aus Room-Name
+- [Phase 03-agent-core]: Added pytest-asyncio to enable asynchronous testing of the LiveKit agent.
 
 ### Blockers
 
@@ -64,4 +68,4 @@ Progress (Project):
 
 - **Last Action:** Finalized and approved Phase 02 UI-SPEC.md (Embed + shadcn tools).
 - **Current Goal:** Start planning Phase 02 implementation.
-- **Resume File:** .planning/phases/03-agent-core/03-CONTEXT.md
+- **Resume File:** None
