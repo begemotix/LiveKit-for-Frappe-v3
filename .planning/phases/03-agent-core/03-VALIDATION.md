@@ -29,7 +29,7 @@ created: 2026-04-18
 
 | Frequency | Action |
 |-----------|--------|
-| **After every task commit** | Run `pytest apps/agent/tests/test_agent.py` |
+| **After every task commit** | Run `grep` verification (Wave 1/2) or `pytest` (Wave 3+) |
 | **After every plan wave** | Run `pytest apps/agent/tests/` |
 | **Before `/gsd-verify-work`** | Full suite must be green |
 | **Max feedback latency** | 15 seconds |
@@ -40,9 +40,11 @@ created: 2026-04-18
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | AGNT-01 | integration | `pytest -k test_join` | ✅ W0 | ⬜ pending |
-| 03-01-02 | 01 | 1 | AGNT-03 | smoke test | `pytest -k test_interruption` | ✅ W0 | ⬜ pending |
-| 03-01-03 | 01 | 1 | AGNT-04 | unit | `pytest -k test_mock_tool` | ✅ W0 | ⬜ pending |
+| 03-01-01 | 01 | 1 | AGNT-01 | integration | `test -f apps/agent/agent.py` | ✅ | ⬜ pending |
+| 03-01-02 | 01 | 1 | D-02 | compliance | `grep "OpenAI in den USA" apps/agent/.env.example` | ✅ | ⬜ pending |
+| 03-02-01 | 02 | 2 | AGNT-03 | smoke test | `grep "ServerVADOptions" apps/agent/agent.py` | ✅ | ⬜ pending |
+| 03-02-03 | 02 | 2 | AGNT-04 | unit | `grep "mock_data_lookup" apps/agent/agent.py` | ✅ | ⬜ pending |
+| 03-03-01 | 03 | 3 | AGNT-01/04 | automated | `pytest apps/agent/tests/test_agent.py` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
