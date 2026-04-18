@@ -1,127 +1,46 @@
 import logging
-
+import os
 from dotenv import load_dotenv
-from livekit.agents import (
-    Agent,
-    AgentServer,
-    AgentSession,
-    JobContext,
-    JobProcess,
-    cli,
-    inference,
-    room_io,
-)
-from livekit.plugins import ai_coustics, silero
-from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from pythonjsonlogger import jsonlogger
+from livekit.agents import JobContext, WorkerOptions, cli
 
-logger = logging.getLogger("agent")
+# Load environment variables
+load_dotenv()
 
-load_dotenv(".env.local")
-
-AGENT_MODEL = "openai/gpt-5.3-chat-latest"
-
-
-class Assistant(Agent):
-    def __init__(self) -> None:
-        super().__init__(
-            instructions="""You are a helpful voice AI assistant. The user is interacting with you via voice, even if you perceive the conversation as text.
-            You eagerly assist users with their questions by providing information from your extensive knowledge.
-            Your responses are concise, to the point, and without any complex formatting or punctuation including emojis, asterisks, or other symbols.
-            You are curious, friendly, and have a sense of humor.""",
+def configure_logging():
+    logger = logging.getLogger("agent")
+    logger.setLevel(logging.INFO)
+    
+    # Avoid duplicate handlers if re-initialized
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        # Use JSON formatter as per D-09
+        formatter = jsonlogger.JsonFormatter(
+            fmt='%(asctime)s %(levelname)s %(name)s %(message)s'
         )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    return logger
 
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+logger = configure_logging()
 
-
-server = AgentServer()
-
-
-def prewarm(proc: JobProcess):
-    proc.userdata["vad"] = silero.VAD.load()
-
-
-server.setup_fnc = prewarm
-
-
-@server.rtc_session(agent_name="my-agent")
-async def my_agent(ctx: JobContext):
-    # Logging setup
-    # Add any other context you want in all log entries here
-    ctx.log_context_fields = {
-        "room": ctx.room.name,
-    }
-
-    # Set up a voice AI pipeline using OpenAI, Cartesia, Deepgram, and the LiveKit turn detector
-    session = AgentSession(
-        # Speech-to-text (STT) is your agent's ears, turning the user's speech into text that the LLM can understand
-        # See all available models at https://docs.livekit.io/agents/models/stt/
-        stt=inference.STT(model="deepgram/nova-3", language="multi"),
-        # A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
-        # See all available models at https://docs.livekit.io/agents/models/llm/
-        llm=inference.LLM(model=AGENT_MODEL),
-        # Text-to-speech (TTS) is your agent's voice, turning the LLM's text into speech that the user can hear
-        # See all available models as well as voice selections at https://docs.livekit.io/agents/models/tts/
-        tts=inference.TTS(
-            model="cartesia/sonic-3", voice="9626c31c-bec5-4cca-baa8-f8ba9e84c8bc"
-        ),
-        # VAD and turn detection are used to determine when the user is speaking and when the agent should respond
-        # See more at https://docs.livekit.io/agents/build/turns
-        turn_detection=MultilingualModel(),
-        vad=ctx.proc.userdata["vad"],
-        # allow the LLM to generate a response while waiting for the end of turn
-        # See more at https://docs.livekit.io/agents/build/audio/#preemptive-generation
-        preemptive_generation=True,
+async def entrypoint(ctx: JobContext):
+    # Derive correlation ID from room name (D-10)
+    correlation_id = ctx.room.name
+    
+    # Add correlation context to logging
+    ctx.log_context_fields["correlation_id"] = correlation_id
+    
+    logger.info(
+        f"starting agent for room {correlation_id}", 
+        extra={"correlation_id": correlation_id}
     )
 
-    # To use a realtime model instead of a voice pipeline, use the following session setup instead.
-    # (Note: This is for the OpenAI Realtime API. For other providers, see https://docs.livekit.io/agents/models/realtime/))
-    # 1. Install livekit-agents[openai]
-    # 2. Set OPENAI_API_KEY in .env.local
-    # 3. Add `from livekit.plugins import openai` to the top of this file
-    # 4. Use the following session setup instead of the version above
-    # session = AgentSession(
-    #     llm=openai.realtime.RealtimeModel(voice="marin")
-    # )
-
-    # # Add a virtual avatar to the session, if desired
-    # # For other providers, see https://docs.livekit.io/agents/models/avatar/
-    # avatar = hedra.AvatarSession(
-    #   avatar_id="...",  # See https://docs.livekit.io/agents/models/avatar/plugins/hedra
-    # )
-    # # Start the avatar and wait for it to join
-    # await avatar.start(session, room=ctx.room)
-
-    # Start the session, which initializes the voice pipeline and warms up the models
-    await session.start(
-        agent=Assistant(),
-        room=ctx.room,
-        room_options=room_io.RoomOptions(
-            audio_input=room_io.AudioInputOptions(
-                noise_cancellation=ai_coustics.audio_enhancement(
-                    model=ai_coustics.EnhancerModel.QUAIL_VF_L
-                ),
-            ),
-        ),
-    )
-
-    # Join the room and connect to the user
+    # Core logic will be added in future plans (03-02 and 03-03)
+    # For now, we just connect to verify the skeleton
+    logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect()
-
+    logger.info(f"agent connected to room {ctx.room.name}")
 
 if __name__ == "__main__":
-    cli.run_app(server)
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
