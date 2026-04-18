@@ -49,17 +49,18 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| MCP für Frappe-Integration | Keine eigene API nötig; standardisierte Anbindung, Tools werden dynamisch vom Frappe-MCP-Server bezogen. | — Pending |
+| Decision                       | Rationale                                                                                                                                 | Outcome   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| MCP für Frappe-Integration     | Keine eigene API nötig; standardisierte Anbindung, Tools werden dynamisch vom Frappe-MCP-Server bezogen.                                  | — Pending |
 | OpenAI Realtime (Typ A) für V1 | Schnelles Feedback, geringe Latenz, keine separaten STT/TTS-Module nötig. Eignet sich für Evaluationen ohne harte EU-DSGVO Anforderungen. | — Pending |
-| Template-Nutzung | Orientierung an offiziellen LiveKit-Repos für hohe Wartbarkeit und Kompatibilität. | — Pending |
+| Template-Nutzung               | Orientierung an offiziellen LiveKit-Repos für hohe Wartbarkeit und Kompatibilität.                                                        | — Pending |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd-transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -67,10 +68,12 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after Phase 01 completion*
+
+_Last updated: 2026-04-18 after Phase 01 completion_

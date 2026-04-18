@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-04-18T12:08:22.953Z"
+last_updated: "2026-04-18T14:20:24.319Z"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -16,11 +16,11 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 02 — frontend-widget-implementation
+**Current Focus:** Phase 02 — frontend-widget
 
 ## Current Position
 
-Phase: 2
+Phase: 3
 Plan: Not started
 **Status:** Ready to plan
 
@@ -46,6 +46,11 @@ Progress (Project):
 - [Phase 01]: Redis omitted to simplify single-node setup
 - [Phase 01-infrastructure-setup]: Explicit port mapping used in docker-compose for standard compatibility
 - [Phase 01-infrastructure-setup]: Caddy selected for automatic Let's Encrypt certificates and simplicity
+- [Phase 02]: Consolidate UI components in components/ui to match shadcn standard while keeping template compatibility.
+- [Phase 02-frontend-widget]: D-06: Tokens werden ausschließlich serverseitig über /api/token generiert.
+- [Phase 02-frontend-widget]: D-07: Gast-Identitäten werden zufällig generiert, um unauthentifizierten Zugang zu ermöglichen.
+- [Phase 02-frontend-widget]: D-05: Branding via CSS variables and environment variables implemented.
+- [Phase 02]: Migrated branding injection logic from orphaned layout.tsx to components/root-layout.tsx
 
 ### Blockers
 
@@ -59,4 +64,4 @@ Progress (Project):
 
 - **Last Action:** Finalized and approved Phase 02 UI-SPEC.md (Embed + shadcn tools).
 - **Current Goal:** Start planning Phase 02 implementation.
-- **Resume File:** .planning/phases/02-frontend-widget/02-UI-SPEC.md
+- **Resume File:** None

@@ -15,13 +15,13 @@ created: 2026-04-18
 
 ## Test Infrastructure
 
-| Property | Value |
-|----------|-------|
-| **Framework** | {jest 29.x / vitest / playwright} |
-| **Config file** | {path or "none — Wave 0 installs"} |
-| **Quick run command** | `npm test` |
-| **Full suite command** | `npm test -- --coverage` |
-| **Estimated runtime** | ~30 seconds |
+| Property               | Value                              |
+| ---------------------- | ---------------------------------- |
+| **Framework**          | {jest 29.x / vitest / playwright}  |
+| **Config file**        | {path or "none — Wave 0 installs"} |
+| **Quick run command**  | `npm test`                         |
+| **Full suite command** | `npm test -- --coverage`           |
+| **Estimated runtime**  | ~30 seconds                        |
 
 ---
 
@@ -36,13 +36,13 @@ created: 2026-04-18
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | WIDG-01 | unit | `npm test` | ❌ W0 | ⬜ pending |
-| 02-01-02 | 01 | 1 | WIDG-02 | unit | `npm test` | ❌ W0 | ⬜ pending |
-| 02-01-03 | 01 | 1 | WIDG-03 | integration | `npm test` | ❌ W0 | ⬜ pending |
+| Task ID  | Plan | Wave | Requirement | Test Type   | Automated Command | File Exists | Status     |
+| -------- | ---- | ---- | ----------- | ----------- | ----------------- | ----------- | ---------- |
+| 02-01-01 | 01   | 1    | WIDG-01     | unit        | `npm test`        | ❌ W0       | ⬜ pending |
+| 02-01-02 | 01   | 1    | WIDG-02     | unit        | `npm test`        | ❌ W0       | ⬜ pending |
+| 02-01-03 | 01   | 1    | WIDG-03     | integration | `npm test`        | ❌ W0       | ⬜ pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+_Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky_
 
 ---
 
@@ -52,17 +52,17 @@ created: 2026-04-18
 - [ ] `tests/api-token.test.ts` — stubs for WIDG-03
 - [ ] `npm install --save-dev jest @types/jest` — if no framework detected
 
-*If none: "Existing infrastructure covers all phase requirements."*
+_If none: "Existing infrastructure covers all phase requirements."_
 
 ---
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Audio visualization | WIDG-02 | Requires browser audio context | Open widget, speak, verify wave animation |
+| Behavior            | Requirement | Why Manual                     | Test Instructions                         |
+| ------------------- | ----------- | ------------------------------ | ----------------------------------------- |
+| Audio visualization | WIDG-02     | Requires browser audio context | Open widget, speak, verify wave animation |
 
-*If none: "All phase behaviors have automated verification."*
+_If none: "All phase behaviors have automated verification."_
 
 ---
 

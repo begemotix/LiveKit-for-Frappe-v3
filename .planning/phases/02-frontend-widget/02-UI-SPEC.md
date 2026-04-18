@@ -15,13 +15,13 @@ created: 2026-04-18
 
 ## Design System
 
-| Property | Value |
-|----------|-------|
-| Tool | shadcn |
-| Preset | not applicable |
-| Component library | radix |
-| Icon library | lucide-react |
-| Font | Geist (Next.js default) |
+| Property          | Value                   |
+| ----------------- | ----------------------- |
+| Tool              | shadcn                  |
+| Preset            | not applicable          |
+| Component library | radix                   |
+| Icon library      | lucide-react            |
+| Font              | Geist (Next.js default) |
 
 ---
 
@@ -29,15 +29,15 @@ created: 2026-04-18
 
 Declared values (multiples of 4):
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| xs | 4px | Icon gaps, inline padding |
-| sm | 8px | Compact element spacing (Grid Base) |
-| md | 16px | Default element spacing |
-| lg | 24px | Section padding |
-| xl | 32px | Layout gaps |
-| 2xl | 48px | Major section breaks |
-| 3xl | 64px | Page-level spacing |
+| Token | Value | Usage                               |
+| ----- | ----- | ----------------------------------- |
+| xs    | 4px   | Icon gaps, inline padding           |
+| sm    | 8px   | Compact element spacing (Grid Base) |
+| md    | 16px  | Default element spacing             |
+| lg    | 24px  | Section padding                     |
+| xl    | 32px  | Layout gaps                         |
+| 2xl   | 48px  | Major section breaks                |
+| 3xl   | 64px  | Page-level spacing                  |
 
 Exceptions: none
 
@@ -45,23 +45,23 @@ Exceptions: none
 
 ## Typography
 
-| Role | Size | Weight | Line Height |
-|------|------|--------|-------------|
-| Body | 14px | 400 | 1.5 |
-| Label | 12px | 600 | 1.2 |
-| Heading | 18px | 600 | 1.2 |
-| Display | 24px | 600 | 1.1 |
+| Role    | Size | Weight | Line Height |
+| ------- | ---- | ------ | ----------- |
+| Body    | 14px | 400    | 1.5         |
+| Label   | 12px | 600    | 1.2         |
+| Heading | 18px | 600    | 1.2         |
+| Display | 24px | 600    | 1.1         |
 
 ---
 
 ## Color
 
-| Role | Value | Usage |
-|------|-------|-------|
-| Dominant (60%) | var(--widget-bg, #ffffff) | Background, surfaces |
-| Secondary (30%) | var(--widget-secondary, #f3f4f6) | Cards, sidebar, nav |
-| Accent (10%) | var(--widget-primary, #3b82f6) | Start/Connect button, active waveforms, user icons |
-| Destructive | var(--widget-destructive, #ef4444) | End session button |
+| Role            | Value                              | Usage                                              |
+| --------------- | ---------------------------------- | -------------------------------------------------- |
+| Dominant (60%)  | var(--widget-bg, #ffffff)          | Background, surfaces                               |
+| Secondary (30%) | var(--widget-secondary, #f3f4f6)   | Cards, sidebar, nav                                |
+| Accent (10%)    | var(--widget-primary, #3b82f6)     | Start/Connect button, active waveforms, user icons |
+| Destructive     | var(--widget-destructive, #ef4444) | End session button                                 |
 
 Accent reserved for: Start/Connect button, active audio waveforms, message status indicators.
 
@@ -69,33 +69,33 @@ Accent reserved for: Start/Connect button, active audio waveforms, message statu
 
 ## Copywriting Contract
 
-| Element | Copy |
-|---------|------|
-| Primary CTA | Gespräch starten |
-| Empty state heading | Keine Nachrichten |
-| Empty state body | Verbinden Sie sich mit dem Agenten, um das Gespräch zu beginnen. |
-| Error state | Verbindung fehlgeschlagen. Bitte versuchen Sie es erneut. |
-| Agent status - listening | Agent hört zu... |
-| Agent status - thinking | Agent denkt nach... |
-| Agent status - speaking | Agent spricht... |
-| Destructive confirmation | Sitzung beenden: Möchten Sie das Gespräch wirklich beenden? |
+| Element                  | Copy                                                             |
+| ------------------------ | ---------------------------------------------------------------- |
+| Primary CTA              | Gespräch starten                                                 |
+| Empty state heading      | Keine Nachrichten                                                |
+| Empty state body         | Verbinden Sie sich mit dem Agenten, um das Gespräch zu beginnen. |
+| Error state              | Verbindung fehlgeschlagen. Bitte versuchen Sie es erneut.        |
+| Agent status - listening | Agent hört zu...                                                 |
+| Agent status - thinking  | Agent denkt nach...                                              |
+| Agent status - speaking  | Agent spricht...                                                 |
+| Destructive confirmation | Sitzung beenden: Möchten Sie das Gespräch wirklich beenden?      |
 
 ---
 
 ## Visual Focus & Hierarchy
 
-| Priority | Element | Visual Treatment |
-|----------|---------|------------------|
-| **1 (Primary)** | Start/Connect Button | `var(--widget-primary)` background, white text, centered in panel |
-| **2 (Active)** | Audio Waveforms | Animated, `var(--widget-primary)` stroke, high contrast against `var(--widget-bg)` |
-| **3 (History)** | Chat Messages | `var(--widget-secondary)` background bubbles, left/right alignment |
+| Priority        | Element              | Visual Treatment                                                                   |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| **1 (Primary)** | Start/Connect Button | `var(--widget-primary)` background, white text, centered in panel                  |
+| **2 (Active)**  | Audio Waveforms      | Animated, `var(--widget-primary)` stroke, high contrast against `var(--widget-bg)` |
+| **3 (History)** | Chat Messages        | `var(--widget-secondary)` background bubbles, left/right alignment                 |
 
 ---
 
 ## Registry Safety
 
-| Registry | Blocks Used | Safety Gate |
-|----------|-------------|-------------|
+| Registry        | Blocks Used                       | Safety Gate  |
+| --------------- | --------------------------------- | ------------ |
 | shadcn official | button, card, scroll-area, avatar | not required |
 
 ---
