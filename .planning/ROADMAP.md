@@ -2,7 +2,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Infrastructure Setup** - Self-hosted LiveKit WebRTC engine and proxy deployment
+- [x] **Phase 1: Infrastructure Setup** - Self-hosted LiveKit WebRTC engine and proxy deployment (completed 2026-04-18)
 - [ ] **Phase 2: Frontend Widget** - Next.js voice widget mit unauthentifiziertem Gast-Token
 - [ ] **Phase 3: Agent Core** - Low-latency OpenAI Realtime voice agent with interruption handling
 - [ ] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
@@ -17,7 +17,7 @@
   1. Administrator can deploy the LiveKit server and Caddy proxy via Docker Compose
   2. WebRTC connections can be established from external networks (via TURN/STUN)
   3. The server is accessible via HTTPS using an automatically provisioned Let's Encrypt certificate
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 01-01-PLAN.md — Create the base LiveKit configuration and environment structure.
 - [x] 01-02-PLAN.md — Create the Docker Compose and Reverse Proxy setup for deployment.
@@ -58,7 +58,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure Setup | 0 | Not started | - |
+| 1. Infrastructure Setup | 0 | Complete    | 2026-04-18 |
 | 2. Frontend Widget | 0 | Not started | - |
 | 3. Agent Core | 0 | Not started | - |
 | 4. Frappe Integration | 0 | Not started | - |

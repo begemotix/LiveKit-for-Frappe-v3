@@ -13,6 +13,19 @@ The recommended approach relies on a multi-container Docker Compose setup with C
 
 Key risks include "dead air" during latent Frappe API queries (which breaks conversational UX) and the temptation to use global API keys that bypass user permissions. To mitigate these risks, the Agent must employ asynchronous "filler words" before blocking tool calls and strictly enforce token-based impersonation for all MCP requests.
 
+## Research & Knowledge Enforcement
+
+- **Primäre Datenquelle**: Für alle technischen Implementierungen bezüglich LiveKit (Server-Setup, Agent-Worker-Syntax, Frontend-Hooks) MUSS Cursor vorrangig das angebundene LiveKit-Dokumentations-MCP nutzen.
+- **Vorgehensweise**: Vor dem Schreiben von Code für LiveKit-Komponenten ist ein Suchlauf über das MCP zwingend erforderlich, um sicherzustellen, dass die aktuellsten SDK-Versionen und Best Practices verwendet werden.
+- **Sekundärquellen**: Allgemeines LLM-Wissen darf nur genutzt werden, wenn das MCP keine spezifischen Informationen liefert oder für allgemeine Programmierlogik außerhalb des LiveKit-Ökosystems.
+
+
+## Research & Knowledge Enforcement
+
+- **Primäre Datenquelle**: Für alle technischen Implementierungen bezüglich LiveKit (Server-Setup, Agent-Worker-Syntax, Frontend-Hooks) MUSS Cursor vorrangig das angebundene **LiveKit-Dokumentations-MCP** nutzen.
+- **Vorgehensweise**: Vor dem Schreiben von Code für LiveKit-Komponenten ist ein Suchlauf über das MCP zwingend erforderlich, um sicherzustellen, dass die aktuellsten SDK-Versionen und Best Practices verwendet werden.
+- **Sekundärquellen**: Allgemeines LLM-Wissen darf nur genutzt werden, wenn das MCP keine spezifischen Informationen liefert oder für allgemeine Programmierlogik außerhalb des LiveKit-Ökosystems.
+
 ## Key Findings
 
 ### Recommended Stack
