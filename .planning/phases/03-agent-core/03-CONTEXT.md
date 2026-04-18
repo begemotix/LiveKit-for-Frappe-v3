@@ -44,6 +44,7 @@ Implementierung des zentralen Voice-Agenten (Typ A) basierend auf der OpenAI Rea
 - `https://docs.livekit.io/agents/models/realtime/plugins/openai/` — OpenAI Realtime Plugin Guide
 - `https://docs.livekit.io/agents/logic/turns/` — Turn detection & Interruption handling
 - `https://docs.livekit.io/agents/logic/dispatch/` — Agent Dispatching & Lifecycle
+- `https://github.com/livekit-examples/agent-starter-python` — Official Template (Basis der Implementierung)
 
 </canonical_refs>
 
@@ -51,7 +52,7 @@ Implementierung des zentralen Voice-Agenten (Typ A) basierend auf der OpenAI Rea
 ## Existing Code Insights
 
 ### Reusable Assets
-- Keine — Der Python Agent Worker wird als neuer Service aufgesetzt.
+- Basis-Template: livekit-examples/agent-starter-python (GitHub-Repo). Muss nach apps/agent geklont werden, .git entfernen, strikt template-nah bleiben — keine architektonischen Code-Änderungen außerhalb der explizit notwendigen Erweiterungen (Persona-ENV, Filler-Hook, Logging). Die Basis-Konversationslogik und der LiveKit-Worker-Lifecycle kommen unverändert aus dem Template.
 
 ### Integration Points
 - LiveKit Server (Phase 1) — Ziel für das WebRTC Signaling und Dispatching.
@@ -63,6 +64,7 @@ Implementierung des zentralen Voice-Agenten (Typ A) basierend auf der OpenAI Rea
 ## Specific Ideas
 - Der Verifier für Phase 3 muss explizit prüfen, ob der Agent bei Unterbrechungen sofort schweigt.
 - Die Mock-Tool Implementierung dient als "Smoke Test" für die spätere Frappe-Integration.
+- Der Verifier prüft, dass die Template-Struktur erkennbar bleibt (z. B. agent.py als Entry-Point, keine eigene Orchestrierung neben livekit-agents).
 
 </specifics>
 
