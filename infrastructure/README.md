@@ -14,15 +14,18 @@ Dieses Projekt nutzt Docker Compose für ein einfaches, produktionsbereites Depl
 
 ### Starten der Infrastruktur
 
-Um den LiveKit Server und den Caddy Proxy zu starten, führen Sie folgenden Befehl im Hauptverzeichnis aus:
+Host-Ports werden aus **`docker-compose.template.yml`** über **`scripts/render-compose.sh`** in **`docker-compose.yml`** geschrieben (White-Label / Coolify). Standardwerte:
 
 ```bash
+bash scripts/render-compose.sh
 docker compose up -d
 ```
 
+Details und alle Variablen: **`COOLIFY-KONFIGURATION.md`** im Repository-Root.
+
 ### Mehrere LiveKit-Stacks auf demselben Host
 
-Sollen **mehrere** Deployments parallel laufen (z. B. mehrere Kunden-Apps auf einem Server), dürfen sich die **Host-Ports** nicht überschneiden. Die `docker-compose.yml` erlaubt dafür überschreibbare Variablen (siehe `COOLIFY-KONFIGURATION.md` im Repository-Root).
+Jede Instanz braucht **eigene** Host-Ports in der Umgebung, danach **`render-compose.sh`** ausführen (siehe Coolify-Doku).
 
 ### Deployment mit Coolify (Alternative)
 
