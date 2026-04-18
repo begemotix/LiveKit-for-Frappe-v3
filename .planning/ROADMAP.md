@@ -35,7 +35,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Setup Next.js, shadcn/ui and LiveKit SDKs.
 - [ ] 02-02-PLAN.md — Implement secure Token API and Room Provider.
-- [ ] 02-03-PLAN.md — Build Floating Action Button and Chat Panel UI.
+- [x] 02-03-PLAN.md — Build Floating Action Button and Chat Panel UI.
 - [ ] 02-04-PLAN.md — Integrate LiveKit WebRTC and Voice Visualizer.
 - [ ] 02-05-PLAN.md — Finalize Dynamic Styling and Phase Verification.
 
@@ -65,6 +65,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure Setup | 0 | Complete    | 2026-04-18 |
-| 2. Frontend Widget | 0 | Not started | - |
+| 2. Frontend Widget | 2/5 | In Progress|  |
 | 3. Agent Core | 0 | Not started | - |
 | 4. Frappe Integration | 0 | Not started | - |
