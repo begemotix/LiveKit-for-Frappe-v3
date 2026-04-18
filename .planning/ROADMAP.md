@@ -19,7 +19,7 @@
   3. The server is accessible via HTTPS using an automatically provisioned Let's Encrypt certificate
 **Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Create the base LiveKit configuration and environment structure.
+- [x] 01-01-PLAN.md — Create the base LiveKit configuration and environment structure.
 - [ ] 01-02-PLAN.md — Create the Docker Compose and Reverse Proxy setup for deployment.
 
 ### Phase 2: Frontend Widget
