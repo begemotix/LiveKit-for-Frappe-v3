@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-19T20:31:35.429Z"
+last_updated: "2026-04-19T20:34:20.503Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 24
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 ## Current Position
 
 Phase: 04 (frappe-integration) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 **Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
@@ -83,6 +83,8 @@ Progress (Project):
 - [Phase 04]: Folgeschritte 04-06 bis 04-10 bleiben formal an die dokumentierte Reihenfolge D -> A -> B -> E -> C -> F gekoppelt.
 - [Phase 04]: INTG-01/INTG-02 are tied to explicit Wave-A UAT evidence for stdio-sidecar and ENV-only credentials.
 - [Phase 04]: Verification now repeats architecture guardrails explicitly to prevent drift in follow-up waves.
+- [Phase 04]: Wave-B-Abschluss verlangt konsistente room-basierte Session-Grenze in UAT und Verification mit Referenzkette bis OPERATOR-HANDOVER.
+- [Phase 04]: Scope-Guardrails bleiben unveraendert: stdio-sidecar, kein HTTP Agent-zu-MCP, keine lokale Bridge, kein REST-Fallback, keine lokale Tool-Allowlist.
 
 ### Blockers
 
