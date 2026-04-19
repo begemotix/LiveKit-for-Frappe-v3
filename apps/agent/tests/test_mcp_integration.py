@@ -46,3 +46,10 @@ def test_build_frappe_mcp_server_missing_env_raises():
         except ValueError as exc:
             assert "Missing required MCP env vars:" in str(exc)
             assert "FRAPPE_API_SECRET" in str(exc)
+
+
+def test_session_has_mcp_server():
+    with open("apps/agent/agent.py", "r", encoding="utf-8") as source_file:
+        source = source_file.read()
+
+    assert "mcp_servers=[build_frappe_mcp_server()]" in source
