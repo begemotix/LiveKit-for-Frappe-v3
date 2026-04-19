@@ -4,7 +4,8 @@
 FROM node:22-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# Install pnpm and dependencies
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:22-slim AS builder
@@ -12,13 +13,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Install pnpm in builder stage too for the build script
+RUN npm install -g pnpm
+
 # Build-Args für Next.js Client-Side Variablen
 ARG NEXT_PUBLIC_LIVEKIT_URL
 ARG NEXT_PUBLIC_APP_CONFIG_ENDPOINT
 ENV NEXT_PUBLIC_LIVEKIT_URL=$NEXT_PUBLIC_LIVEKIT_URL
 ENV NEXT_PUBLIC_APP_CONFIG_ENDPOINT=$NEXT_PUBLIC_APP_CONFIG_ENDPOINT
 
-RUN npm run build
+# Run build (this will run 'next build' and then 'webpack' via pnpm)
+RUN pnpm build
 
 # Stage 3: Runner
 FROM node:22-slim AS runner
@@ -41,4 +46,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Use npm start to run the Next.js app
 CMD ["npm", "start"]
