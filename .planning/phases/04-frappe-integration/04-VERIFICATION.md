@@ -1,8 +1,8 @@
 ---
 phase: 04-frappe-integration
-verified: 2026-04-19T22:27:46Z
-status: gate_d_approved
-score: "wave-d gate evidence documented and approved via human checkpoint signal"
+verified: 2026-04-19T22:49:00Z
+status: wave_e_approved
+score: "wave-e live evidence approved via human checkpoint signal approved-wave-e"
 human_verification:
   - test: "Gate G1: Fachliche Session-Grenze verbindlich dokumentiert"
     expected: "D-01/D-02 sind eindeutig gegen eine schriftliche Session-Definition verifizierbar"
@@ -19,7 +19,7 @@ human_verification:
 
 **Phase Goal:** Hardening der MCP-Integration per stdio-Sidecar im Agent-Container (per D-05/D-06).  
 **Verification Mode:** Pre-Implementation Decision Gate.  
-**Status:** **WAVE-D BLOCKING GATE APPROVED (`approved-wave-d`)**.
+**Status:** **WAVE-E LIVE EVIDENCE APPROVED (`approved-wave-e`)**.
 
 ## Binding Scope Guard (Phase 4)
 
@@ -57,8 +57,8 @@ human_verification:
 | INTG-01 | ✓ PASS | Wave-A-Nachweis dokumentiert in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-a` (stdio-sidecar + ENV-Contract). |
 | INTG-02 | ✓ PASS | Wave-A-Nachweis bestaetigt ausschliessliche Credential-Quelle `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` ohne Runtime-Switch. |
 | INTG-03 | ✓ PASS | Agent-Credential-Identitaet umgesetzt und fuer Wave B mit Session-Grenze/Cleanup-Nachweis verknuepft (`04-HUMAN-UAT.md#wave-b`) |
-| INTG-04 | ~ PARTIAL | Live-Toolinventar + read-only Nachweis fehlen |
-| INTG-05 | ~ PARTIAL | 403-Produktverhalten live noch nicht abgeschlossen |
+| INTG-04 | ✓ GO | Wave-E-Live-Nachweis fuer Discovery + Read-only E2E ist in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#live-testfaelle-wave-e` als `result: pass` dokumentiert und freigegeben (`approved-wave-e`). |
+| INTG-05 | ~ PARTIAL | INTG-05: pending Wave C (Plan 04-08) bis 403-Produktnachweis |
 
 ## Verbindliche Hardening-Waves (Reihenfolge fix)
 
@@ -113,9 +113,11 @@ human_verification:
 
 ## Freigabeentscheidung
 
-- **Aktuell:** Wave D als blockierendes Gate dokumentarisch abgeschlossen; Freigabe der Folgewellen erfolgt ausschliesslich nach `approved-wave-d`.
+- **Aktuell:** Wave E ist als Live-Evidenz freigegeben; Discovery und Read-only E2E stehen auf pass in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#live-testfaelle-wave-e`.
 - **Freigabepfad:** `D -> A -> B -> E -> C -> F` bleibt verbindlich.
-- **Checkpoint Outcome:** Human-Verify abgeschlossen mit Signal `approved-wave-d` am 2026-04-19T22:27:46+02:00.
+- **Checkpoint Outcome:** Human-Verify abgeschlossen mit Signal `approved-wave-e` am 2026-04-19T22:49:00+02:00.
+- **INTG-04:** GO auf Basis der freigegebenen Wave-E-UAT-Evidenz (Discovery + Read-only E2E in `04-HUMAN-UAT.md`).
+- **INTG-05:** pending Wave C (Plan 04-08) bis 403-Produktnachweis.
 
 ## Wave-D Gate Evidence (G1/G2/G3)
 
