@@ -153,7 +153,9 @@ async def entrypoint(ctx: JobContext):
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(_participant):
-        if not ctx.room.remote_participants:
+        # Some transports dispatch the disconnect callback before the participant
+        # map is fully updated. Treat <=1 as terminal for deterministic cleanup.
+        if len(ctx.room.remote_participants) <= 1:
             asyncio.create_task(cleanup_session_mcp())
 
     @ctx.room.on("participant_joined")
