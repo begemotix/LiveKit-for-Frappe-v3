@@ -78,7 +78,7 @@ async def test_interruption():
         def __init__(self, llm, allow_interruptions):
             self.llm = llm
             self.allow_interruptions = allow_interruptions
-            self.say_calls = []
+            self.generate_reply_calls = []
             FakeAgentSession.last_instance = self
 
         def on(self, _event_name):
@@ -90,8 +90,8 @@ async def test_interruption():
             self.room = room
             self.agent = agent
 
-        async def say(self, text, allow_interruptions):
-            self.say_calls.append((text, allow_interruptions))
+        async def generate_reply(self, instructions):
+            self.generate_reply_calls.append(instructions)
 
     created_tasks = []
 
@@ -108,7 +108,6 @@ async def test_interruption():
         await asyncio.gather(*created_tasks)
 
     assert FakeAgentSession.last_instance is not None
-    say_calls = FakeAgentSession.last_instance.say_calls
-    assert len(say_calls) >= 2
-    assert say_calls[0][1] is False
-    assert say_calls[1][1] is True
+    reply_calls = FakeAgentSession.last_instance.generate_reply_calls
+    assert len(reply_calls) >= 1
+    assert "Begrüße den Nutzer freundlich" in reply_calls[0]
