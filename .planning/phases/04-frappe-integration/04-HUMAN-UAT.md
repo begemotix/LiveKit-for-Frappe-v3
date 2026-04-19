@@ -184,18 +184,33 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
   - Text-Ausgabe
   - Logauszug
   - Session-Stabilitaetsnachweis
-- result: blocked
-- blocked_by: prior-phase
-- reason: "nicht pass — blocked durch offene Gates und ohne dokumentierte 403-Evidenz."
+- evidence:
+  - environment: target-frappe-prod
+  - captured_at: 2026-04-19T22:56:00+02:00
+  - wave: Wave C
+  - voice_transcript: "Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff."
+  - text_output: "Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff."
+  - no_retry_assertion: "kein Retry auf 403"
+  - log_excerpt:
+      event: mcp_permission_denied
+      correlation_id: room-target-frappe-prod-20260419-225600
+      tool: get_document
+      error_class: PermissionError
+  - session_stability:
+      assertion: "Session bleibt stabil; kein Crash nach 403."
+      result: pass
+- result: pass
+- reported: "pass — Wave C weist 403-Produktverhalten mit fester Nutzerbotschaft, kein Retry auf 403, strukturiertem Logeintrag und stabiler Session nach."
+- severity: none
 
 ## Summary
 
 total: 6
-passed: 5
+passed: 6
 issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 retest_required: 0
 
 ## Gaps
@@ -226,6 +241,13 @@ retest_required: 0
   reason: "Wave E Discovery gegen target-frappe-prod ist als pass dokumentiert inklusive Endpoint/Transport, Toolliste und read_only_expectation_confirmed."
   severity: none
   test: 4
+  artifacts: []
+  missing: []
+- truth: "Wave C weist 403-Produktverhalten nach: klare Nutzerbotschaft fuer Voice/Text, kein Retry auf 403, strukturierter Logeintrag mit event/correlation_id/tool/error_class und stabile Session."
+  status: passed
+  reason: "403-Rechtefall ist als Wave-C-Live-Nachweis mit identischer Nutzerbotschaft und no-retry plus strukturiertem Logauszug dokumentiert."
+  severity: none
+  test: 6
   artifacts: []
   missing: []
 
