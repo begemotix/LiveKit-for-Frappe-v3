@@ -75,9 +75,10 @@ async def test_interruption():
     class FakeAgentSession:
         last_instance = None
 
-        def __init__(self, llm, allow_interruptions, mcp_servers=None):
+        def __init__(self, llm, allow_interruptions, tools=None, mcp_servers=None):
             self.llm = llm
             self.allow_interruptions = allow_interruptions
+            self.tools = tools or []
             self.mcp_servers = mcp_servers or []
             self.generate_reply_calls = []
             FakeAgentSession.last_instance = self

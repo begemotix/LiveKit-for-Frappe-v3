@@ -1,10 +1,10 @@
 import logging
 import os
 import asyncio
-import inspect
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
+from livekit.agents.llm import mcp
 from livekit.plugins import openai
 from src.frappe_mcp import build_frappe_mcp_server
 from src.mcp_errors import is_permission_error, user_facing_permission_message
@@ -39,22 +39,6 @@ def map_mcp_error_to_user_message(err: Exception, correlation_id: str, tool_name
         return user_facing_permission_message()
     return None
 
-
-async def _cleanup_mcp_server(mcp_server):
-    for method_name in ("aclose", "close", "shutdown"):
-        method = getattr(mcp_server, method_name, None)
-        if method is None:
-            continue
-        try:
-            result = method()
-            if inspect.isawaitable(result):
-                await result
-            return
-        except Exception as cleanup_error:
-            logger.error(f"MCP cleanup via {method_name} failed: {cleanup_error}")
-            return
-
-    logger.warning("MCP cleanup skipped: no supported close method found")
 
 def load_agent_instructions():
     try:
@@ -133,33 +117,41 @@ async def entrypoint(ctx: JobContext):
         }
     )
 
-    # Initialize AgentSession
+    frappe_server = build_frappe_mcp_server()
+    frappe_toolset = mcp.MCPToolset(id="frappe_mcp", mcp_server=frappe_server)
+
     session = AgentSession(
         llm=model,
         allow_interruptions=True,
-        mcp_servers=[build_frappe_mcp_server()],
+        tools=[frappe_toolset],
     )
-    frappe_mcp_server = None
-    if hasattr(session, "mcp_servers") and session.mcp_servers:
-        frappe_mcp_server = session.mcp_servers[0]
     mcp_cleanup_done = False
+    session_started = False
+    session_start_lock = asyncio.Lock()
 
     @session.on("function_call_start")
     def on_function_call_start(tool_call):
         logger.info(f"starting tool call: {tool_call.name}")
 
     async def start_agent_session(participant):
+        nonlocal session_started
+        async with session_start_lock:
+            if session_started:
+                logger.info(
+                    "skip duplicate session start",
+                    extra={"correlation_id": correlation_id, "participant": participant.identity},
+                )
+                return
+            session_started = True
+
         logger.info(f"starting session for participant {participant.identity}")
-        
-        # Create the agent instance for this session
+
         agent = Assistant(instructions=instructions, correlation_id=correlation_id)
-        
-        # Start the session
+
         await session.start(room=ctx.room, agent=agent)
-        
+
         logger.info(f"session started for {participant.identity}")
 
-        # Task: Initial greeting (via generate_reply to use native speech-to-speech)
         greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
             .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
@@ -170,8 +162,7 @@ async def entrypoint(ctx: JobContext):
         if mcp_cleanup_done:
             return
         mcp_cleanup_done = True
-        if frappe_mcp_server is not None:
-            await _cleanup_mcp_server(frappe_mcp_server)
+        await frappe_toolset.aclose()
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(_participant):

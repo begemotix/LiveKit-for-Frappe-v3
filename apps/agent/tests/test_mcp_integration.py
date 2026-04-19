@@ -121,11 +121,13 @@ def test_build_frappe_mcp_server_missing_env_raises():
         assert "FRAPPE_API_SECRET" in str(exc_info.value)
 
 
-def test_session_has_mcp_server():
+def test_session_has_mcp_toolset():
     with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
-    assert "mcp_servers=[build_frappe_mcp_server()]" in source
+    assert "MCPToolset" in source
+    assert "tools=[frappe_toolset]" in source
+    assert "mcp_servers=" not in source
 
 
 def test_no_runtime_credential_switch():
@@ -142,7 +144,8 @@ def test_dynamic_tool_discovery_runtime_evidence():
     with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
-    assert "mcp_servers=[build_frappe_mcp_server()]" in source
+    assert "MCPToolset" in source
+    assert "tools=[frappe_toolset]" in source
     assert "allowed_tools" not in source
     assert "tool_allowlist" not in source
 
@@ -189,9 +192,10 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
             return None
 
     class FakeAgentSession:
-        def __init__(self, llm, allow_interruptions, mcp_servers):
+        def __init__(self, llm, allow_interruptions, tools=None, mcp_servers=None):
             self.llm = llm
             self.allow_interruptions = allow_interruptions
+            self.tools = tools or []
             self.mcp_servers = mcp_servers
 
         def on(self, _event_name):
