@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
     // Return connection details
     const data: ConnectionDetails = {
-      serverUrl: LIVEKIT_URL,
+      serverUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL || LIVEKIT_URL,
       roomName,
       participantToken: participantToken,
       participantName,
