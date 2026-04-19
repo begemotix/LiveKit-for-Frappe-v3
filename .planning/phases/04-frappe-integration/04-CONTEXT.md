@@ -34,7 +34,7 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 - **D-12:** Fehlerpfade werden strukturiert geloggt mit festen Feldern (`event`, `correlation_id`, `tool`, `error_class`) ohne Session-Crash.
 
 ### Gate and UAT Sequence
-- **D-13:** Verbindliche Reihenfolge: `G1 -> G2 -> G3 -> Live-MCP Discovery -> End-to-End Read-only Datenabfrage -> 403-Rechtefall als Produktverhalten -> Final Handover/Verification`.
+- **D-13:** Verbindliche Reihenfolge: `G1 -> G2 -> G3 -> Wave A (endpoint-/ENV-gebundener Auth-Vertrag, belastbar dokumentiert) -> Wave B (Session-Grenze und Cleanup-Verhalten, belastbar dokumentiert) -> Live-MCP Discovery -> End-to-End Read-only Datenabfrage -> 403-Rechtefall als Produktverhalten -> Final Handover/Verification`.
 
 ### Claude's Discretion
 - Konkrete technische Hook-Struktur fuer den room-basierten Session-Lifecycle.

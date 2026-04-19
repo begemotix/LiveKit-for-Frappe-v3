@@ -1,7 +1,7 @@
 # Phase 4: Frappe Integration - Research
 
-**Researched:** 2026-04-19  
-**Domain:** LiveKit Agent MCP-Client-Integration mit Frappe MCP Server  
+**Researched:** 2026-04-19
+**Domain:** LiveKit Agent + Frappe MCP (read-only voice data relay)
 **Confidence:** HIGH
 
 <user_constraints>
@@ -27,16 +27,16 @@
 - **D-10:** Fehlerpfade werden strukturiert geloggt (inkl. Korrelationsbezug), ohne Crash der Session.
 
 ### Prompt Source from Frappe Notes
-- **D-11:** Beim Session-Start werden Prompt-Bausteine via MCP aus Frappe Notes geladen.
-- **D-12:** Der System-Prompt wird aus zwei Quellen zusammengefuehrt: Public Notes der Instanz plus Notes, die dem Agent-Frappe-User zugewiesen sind.
-- **D-13:** Falls Frappe/MCP nicht erreichbar ist, nutzt der Agent eine ENV-Baseline als Notfall-Persona.
-- **D-14:** Pro Deployment gibt es genau eine Agent-Frappe-User-Identitaet und damit genau ein Persona-Set.
-- **D-15:** Phase 4 startet mit Lazy Load ohne Cache; Session-Caching ist nur als spaetere Optimierung bei realem Bedarf vorgesehen.
+- **D-11 (deferred to Phase 5):** Beim Session-Start werden Prompt-Bausteine via MCP aus Frappe Notes geladen.
+- **D-12 (deferred to Phase 5):** Der System-Prompt wird aus zwei Quellen zusammengefuehrt: Public Notes der Instanz plus Notes, die dem Agent-Frappe-User zugewiesen sind.
+- **D-13 (deferred to Phase 5):** Falls Frappe/MCP nicht erreichbar ist, nutzt der Agent eine ENV-Baseline als Notfall-Persona.
+- **D-14 (deferred to Phase 5):** Pro Deployment gibt es genau eine Agent-Frappe-User-Identitaet und damit genau ein Persona-Set.
+- **D-15 (deferred to Phase 5):** Phase 4 startet mit Lazy Load ohne Cache; Session-Caching ist nur als spaetere Optimierung bei realem Bedarf vorgesehen.
 
 ### Claude's Discretion
 - Konkrete technische Struktur fuer Session-Lifecycle-Hooks (solange D-01/D-02 eingehalten werden).
 - Konkretes Wording der Permission-Fehlermeldungen je Kanal (Voice/Text), solange sie klar und nicht-technisch sind.
-- Technische Umsetzung des Prompt-Merge (Reihenfolge/Trennformat), solange Public + Assigned Notes enthalten sind.
+- Prompting-Implementierung bleibt in Phase 4 unveraendert (Phase-3-Stand via Python-Konstanten/ENV); Details zu Notes-Merge werden in Phase 5 entschieden.
 
 ### Deferred Ideas (OUT OF SCOPE)
 - Voice-Safety-Bestaetigung fuer potenziell schreibende Tool-Calls wird separat diskutiert (eigener Punkt/Topic 6).
@@ -49,158 +49,156 @@
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| INTG-01 | `mcp` Python SDK in den Agent Worker integrieren | Standard Stack (mcp + livekit-agents[mcp]), Codebeispiele fuer `mcp.MCPServerHTTP` |
-| INTG-02 | Verbindung zum externen Frappe MCP-Server + Auth mit festen Agent-Credentials | Auth-Pattern via `headers` auf `MCPServerHTTP`, ENV-only Credential-Strategie |
-| INTG-03 | Agent agiert mit uebergebenen Credentials als eigener Agenten-User | Architekturmuster "dedicated MCP identity", keine Frontend/User-Credential-Umschaltung |
-| INTG-04 | Dynamische Tool-Discovery, read-only, keine direkten Frappe-API-Aufrufe/hardcoded Doctypes | MCP-Discovery nativ in LiveKit, Verzicht auf lokale Doctype-Logik, Delegation an Frappe-Server-Rollen |
-| INTG-05 | Graceful Error Handling fuer 403/Opaque Errors | Pitfall-/Pattern-Abschnitt fuer 403 ohne Retry, userfreundliche Antwort + strukturiertes Logging |
+| INTG-01 | `mcp` Python SDK in den Agent Worker integrieren | Standard Stack + LiveKit MCP Pattern (`mcp.MCPServerHTTP`) |
+| INTG-02 | Verbindung zum externen Frappe MCP-Server + Auth mit festen Agent-Credentials | ENV-only Credential Pattern + Auth Header Pattern |
+| INTG-03 | Agent agiert mit uebergebenen Credentials als eigener Agenten-User | Architekturpattern "dedicated agent credentials only" |
+| INTG-04 | Dynamische Tool-Discovery, read-only, keine direkten Frappe-API-Aufrufe/hardcoded Doctypes | MCP native discovery, keine lokale Allowlist, serverseitige read-only Policy |
+| INTG-05 | Graceful Error Handling fuer 403/Opaque Errors | Permission marker mapping + no-retry + structured logging |
 </phase_requirements>
 
 ## Project Constraints (from .cursor/rules/)
 
-- Vor Commits gilt ein verpflichtender Anti-Drift-Check (`ls -la`, Dateianzahl, kritische Git-Dateien pruefen); bei Treffern Commit abbrechen.
-- Bei jeder Phase vor Transition muss eine `OPERATOR-HANDOVER.md` mit Pflichtabschnitten vorhanden sein.
-- Aktive Architekturentscheidungen aus `.planning/PROJECT.md` (Key Decisions) und `.planning/STATE.md` (Accumulated Decisions) sind bindend.
-- Dokumentation darf keine veralteten/abgeschalteten ENV-Funktionen als aktiv darstellen; auf jeweilige Decision verweisen.
-- Uebergangsloesungen muessen explizit als temporaer markiert werden.
+- Vor jedem Commit ist ein Anti-Drift-Reality-Check im Terminal Pflicht (`ls -la`, Dateianzahl, kritische Git-Dateien prüfen); bei Treffern Commit abbrechen.
+- Vor Phase-Transition ist `OPERATOR-HANDOVER.md` in der Phase verpflichtend.
+- Aktive Entscheidungen aus `.planning/PROJECT.md` und `.planning/STATE.md` gelten als bindend.
+- Dokumentation darf keine laut Decision deaktivierten/späteren ENV-Funktionen als aktiv darstellen.
+- Übergangslösungen müssen explizit als Übergang markiert werden.
 
 ## Summary
 
-Phase 4 sollte als saubere Erweiterung des bereits bestehenden `AgentSession`-Lifecycles in `apps/agent/agent.py` umgesetzt werden: MCP-Verbindung wird pro Session aufgebaut, Tools werden zur Laufzeit vom Frappe MCP Server entdeckt, und Authentifizierung erfolgt ausschliesslich ueber feste Agent-Credentials aus ENV. Die LiveKit-Dokumentation bestaetigt, dass MCP in Python nativ ueber `mcp.MCPServerHTTP(...)` in `AgentSession`/`Agent` integriert wird und Discovery automatisch erfolgt.
+Die Kernfrage fuer diese Phase ist nicht mehr "ob MCP", sondern "wie strikt die vorhandenen Decisions operationalisiert werden". Der aktuelle Code in `apps/agent/agent.py` und `apps/agent/src/frappe_mcp.py` ist bereits nah am Zielbild: Session-scoped `mcp_servers`, feste ENV-Credentials, und zentrale Permission-Mapping-Logik. Die Planung sollte daher auf Luecken zwischen "funktioniert technisch" und "planbar/robust/verifizierbar in Betrieb" fokussieren.
 
-Die read-only-Anforderung darf nicht lokal per Toolnamen gefiltert werden (entsprechend D-06), sondern muss serverseitig durch Frappe-Rollen/Allowlist erzwungen werden. Recherche zu realen Frappe-MCP-Servern zeigt: etablierte Implementierungen bieten explizite Doctype-/Operation-Allowlists und liefern 403 bei unzulaessigen Zugriffen. Das passt direkt zu INTG-05: 403 wird als erwartete Fachgrenze behandelt (kein Retry), sprachlich nutzerfreundlich kommuniziert und strukturiert mit Korrelation geloggt.
+LiveKit dokumentiert, dass MCP-Tools automatisch discovered werden, wenn `mcp.MCPServerHTTP(...)` auf `AgentSession` oder `Agent` gesetzt ist, inklusive Header-basierter Auth und optionaler Tool-Filter. Fuer dieses Projekt sind lokale Filter aber explizit unerwuenscht (D-05/D-06): read-only muss serverseitig ueber den Frappe-Agent-User und dessen Rechte erzwungen werden. Clientseitig bleibt nur saubere Fehleruebersetzung (403 -> nutzerfreundliche Antwort, kein Retry, korrelierter Log).
 
-Prompt-Ladung aus Frappe Notes kann in denselben Session-Init-Pfad gelegt werden wie MCP-Verbindungsaufbau; bei Ausfall muss ein ENV-basierter Fallback aktiv bleiben. Damit bleiben Phase-3-Funktionalitaet und Session-Stabilitaet erhalten, waehrend Phase-4-Ziele ohne Architekturbruch erreicht werden.
+Da Prompt-Notes laut Context auf Phase 5 verschoben wurden, bleibt Phase 4 bewusst beim Phase-3-Promptpfad (Datei/ENV-Fallback). Das reduziert Scope-Risiko und erlaubt einen klaren Plan mit Fokus auf MCP-Verbindungs- und Berechtigungsverhalten.
 
-**Primary recommendation:** MCP-Integration direkt in `AgentSession` mit `mcp.MCPServerHTTP(url, headers=...)` implementieren, 403 als nicht-retrybaren Berechtigungsfall behandeln, und Read-only strikt an Frappe-MCP-Server-Policies delegieren.
+**Primary recommendation:** Plane Phase 4 als Hardening-Phase der bereits vorhandenen MCP-Integration: Session-Lifecycle absichern, Dedicated-Credential-Vertrag fixieren, 403/opaque Fehlerpfade testbar machen und E2E gegen einen realen Frappe-MCP-Endpunkt verifizieren.
 
 ## Standard Stack
 
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| `livekit-agents[mcp]` | 1.5.4 (published 2026-04-16) | Native MCP client support im LiveKit Agent | Offizielle LiveKit-Doku fuer MCP-Tooling und Session-Integration |
-| `mcp` | 1.27.0 (published 2026-04-02) | MCP Protokoll-SDK (Python) | Referenz-SDK des MCP-Standards; transport-/lifecycle-konform |
-| `livekit-plugins-openai` | 1.5.4 (published 2026-04-16) | Realtime LLM/TTS/STT Plugin-Kompatibilitaet | Version-synchron zu `livekit-agents` 1.5.x |
+| `livekit-agents[mcp]` | 1.5.4 | MCP-Client in `AgentSession`/`Agent`, Tool Discovery | Offizielle LiveKit MCP-Integration |
+| `mcp` | 1.27.0 | MCP-Protokoll-Layer fuer HTTP/SSE/streamable transport | Referenzimplementierung des Protokolls |
+| `livekit-plugins-openai` | 1.5.4 | Realtime-LMM/TTS/STT plugin alignment zu LiveKit 1.5.x | Vermeidet Plugin-Core Drift |
 
 ### Supporting
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `python-dotenv` | vorhandene Projektdependency | Laden fixer Agent-Credentials aus ENV | Immer fuer lokale/dev/runtime ENV-Konfiguration |
-| `pytest` + `pytest-asyncio` | vorhanden (`pytest 9.0.3`) | Async Tests fuer MCP/Auth/Fehlerpfade | Fuer INTG-02..05 Testabdeckung |
+| `python-dotenv` | installed (project dependency) | Laden fixer ENV-Credentials | Immer beim Worker-Start |
+| `python-json-logger` | 2.0.7 installed (`4.1.0` latest) | Strukturierte Logs fuer Korrelation/Fehlerpfade | Bei allen MCP-Errorpfaden |
+| `pytest` + `pytest-asyncio` | 9.0.3 / 1.3.0 | Async-Verifikation von Session/MCP/Cleanup | Fuer alle INTG-Reqs und Gate |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| `AgentSession` MCP-Einbindung | MCP nur auf `Agent` setzen | `Agent`-Wert ueberschreibt Session-Wert; hoehere Verwechslungsgefahr im Workflow |
-| Serverseitige Read-only-Policy | Client-seitige lokale Tool-Allowlist | Widerspricht D-05/D-06 und driftet von realen Serverrechten weg |
-| Feste MCP-URL mit auto transport | Explizit `transport_type` forcieren | Nur noetig bei nicht-standardisierten Endpunkten (`/mcp` vs `/sse`) |
+| `mcp_servers` auf `AgentSession` | `mcp_servers` direkt auf `Agent` | `Agent` ueberschreibt Session-Defaults; hoehere Verwechslungsgefahr |
+| Serverseitige read-only Policy | Lokale `allowed_tools` Filterung | Widerspricht D-06, verschiebt Security ins falsche System |
+| Kein custom error mapping | Raw Exception an Nutzer weitergeben | Schlechtere UX, unklare Fachgrenze |
 
 **Installation:**
 ```bash
 pip install "livekit-agents[mcp]==1.5.4" "livekit-plugins-openai==1.5.4" "mcp==1.27.0"
 ```
 
-**Version verification:**  
-- `livekit-agents`: 1.5.4 (PyPI upload: 2026-04-16T04:50:43Z)  
-- `livekit-plugins-openai`: 1.5.4 (PyPI upload: 2026-04-16T04:52:11Z)  
-- `mcp`: 1.27.0 (PyPI upload: 2026-04-02T14:48:07Z)
+**Version verification:** per `python -m pip index versions ...` und PyPI (`2026-04-19`):
+- `livekit-agents` latest `1.5.4` (PyPI release date: 2026-04-16)
+- `mcp` latest `1.27.0`
+- `livekit-plugins-ai-coustics` latest `0.2.7` (Projekt nutzt `~=0.2`)
+- Projektstand lokal: `livekit-agents 1.5.2` installiert -> Upgrade ist planbar, aber nicht zwingend fuer Phase-4-Planung
 
 ## Architecture Patterns
 
 ### Recommended Project Structure
 ```text
 apps/agent/
-├── agent.py                 # Session lifecycle + MCP wiring + error mapping
-├── src/                     # Optional extraction for MCP/prompt services
-├── tests/
-│   ├── test_agent.py        # Existing baseline
-│   └── test_mcp_integration.py  # New INTG coverage
-└── .env.example             # Agent credential contract
+├── agent.py                     # AgentSession lifecycle + event hooks
+├── src/frappe_mcp.py            # ENV contract + MCPServerHTTP builder
+├── src/mcp_errors.py            # Permission marker/mapping
+├── tests/test_mcp_integration.py
+└── .env.example                 # Runtime contract fuer dedicated creds
 ```
 
-### Pattern 1: Session-scoped MCP lifecycle
-**What:** MCP server objekt pro Agent-Session erzeugen, Session-Ende = implizites Cleanup.  
-**When to use:** Immer fuer D-01/D-02 und zur Vermeidung globaler Verbindungsteilung.  
+### Pattern 1: Session-scoped MCP server
+**What:** MCP server wird pro Session erzeugt und beim Session-Ende geschlossen.  
+**When to use:** Immer (D-01/D-02).  
 **Example:**
 ```python
 # Source: https://docs.livekit.io/agents/logic/tools/mcp.md
 from livekit.agents import AgentSession, mcp
 
 session = AgentSession(
-    llm=model,
     mcp_servers=[
         mcp.MCPServerHTTP(
             "https://frappe.example.com/mcp",
             headers={"Authorization": f"token {api_key}:{api_secret}"},
         )
-    ],
+    ]
 )
 ```
 
-### Pattern 2: Dynamic discovery, no app-side doctype logic
-**What:** MCP Tools werden vom Server geladen; Client kodiert keine Doctype-Spezifika.  
-**When to use:** Fuer INTG-04 und D-05/D-07 durchgehend.  
+### Pattern 2: Dynamic MCP discovery without app-side allowlist
+**What:** Toolset kommt zur Laufzeit vom Server; Client kodiert keine festen Toolnamen.  
+**When to use:** Immer fuer INTG-04 / D-05.  
 **Example:**
 ```python
 # Source: https://docs.livekit.io/agents/logic/tools/mcp.md
-# Tools are automatically loaded from MCP server and combined with function tools.
-session = AgentSession(mcp_servers=[mcp.MCPServerHTTP("https://.../mcp")])
+session = AgentSession(mcp_servers=[mcp.MCPServerHTTP("https://frappe.example.com/mcp")])
+# Tools are auto-discovered by LiveKit.
 ```
 
-### Pattern 3: Permission-aware error translation
-**What:** 403/Permission/Opaque-Error auf nutzerfreundliche Einschrankungsantwort mappen; kein Retry.  
-**When to use:** Bei Tool-Fehlern in INTG-05.  
+### Pattern 3: Permission-aware error UX
+**What:** Permissionfehler werden als fachliche Grenze kommuniziert, nicht als technischer Absturz.  
+**When to use:** INTG-05 Fehlerpfad.  
 **Example:**
 ```python
-# Source: project requirement INTG-05 + MCP lifecycle/error guidance
-if is_permission_error(err):  # status == 403 or permission marker
+if is_permission_error(err):
     logger.warning("mcp_permission_denied", extra={"correlation_id": cid, "tool": tool_name})
     return "Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff."
 ```
 
 ### Anti-Patterns to Avoid
-- **Lokale Read-only Heuristik:** Toolnamen wie `create_*` clientseitig filtern statt serverseitiger Allowlist.
-- **Credential mixing:** Frontend- oder User-Credentials fuer denselben Agent nutzen (widerspricht D-03/D-04).
-- **Retry auf 403:** fuehrt zu unnutzbarer Latenz und schlechter UX ohne fachlichen Mehrwert.
-- **Direkter REST-Fallback zu Frappe:** verletzt MCP-Reinheit (D-07).
+- **Credential-Switching zur Laufzeit:** verletzt D-03/D-04.
+- **Direkte Frappe REST Calls im Agent:** verletzt D-07 (MCP purity).
+- **Retry auf 403:** erzeugt Latenz ohne Erfolg und degradiert UX.
+- **Lokale read-only Heuristik:** driftet gegen serverseitige Rechtequelle.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| MCP Handshake/Tool discovery | Eigene JSON-RPC Discovery-Engine | `livekit.agents.mcp.MCPServerHTTP` | Lifecycle/Capabilities sind spezifiziert und bereits robust implementiert |
-| Read-only enforcement | Lokale Toolname-Filter | Frappe MCP Allowlist + Rollen | Berechtigungswahrheit liegt am Datenrand, nicht im Voice-Agent |
-| Credential orchestration | Per-Request dynamische User-Token-Switches | Feste Agent-Credentials via ENV | Entspricht D-03/D-04 und reduziert Sicherheits-/State-Komplexitaet |
-| Retry-Strategie fuer 403 | Generisches Exponential Backoff auf alle Fehler | 403 als terminale Fachgrenze behandeln | Schnellere, klarere UX; keine sinnlosen Wiederholungen |
+| MCP Discovery + Invocation | Eigene JSON-RPC Tool-Broker-Schicht | `mcp.MCPServerHTTP` in LiveKit | Standardisiert, stabil, weniger Wartung |
+| Read-only enforcement | Lokale Regex/Allowlist fuer Toolnamen | Frappe-MCP Rollen/Permissions | Rechtehoheit bleibt am Datenrand |
+| Fehlerklassifizierung | Ad-hoc Exception parsing in mehreren Files | Zentrales `is_permission_error` + message mapping | Konsistente UX + testbar |
 
-**Key insight:** In dieser Domäne ist Zuverlaessigkeit primär ein Protokoll-/Policy-Thema. Eigene Zwischenlogik erzeugt Drift gegen MCP/Frappe-Policies.
+**Key insight:** Das Risiko liegt weniger im Coding als in inkonsistenter Policy-Verteilung. MCP + Frappe-Rechte müssen die einzige Wahrheit bleiben.
 
 ## Common Pitfalls
 
-### Pitfall 1: MCP endpoint/transport mismatch
-**What goes wrong:** Verbindung klappt nicht, obwohl URL erreichbar wirkt.  
-**Why it happens:** Endpunktpfad (`/mcp` vs `/sse`) passt nicht zum erwarteten Transport.  
-**How to avoid:** Standardisierte Pfade verwenden oder `transport_type` explizit setzen.  
-**Warning signs:** Init-Fehler vor erstem Tool-Call, keine Tools im Session-Context.
+### Pitfall 1: Transport mismatch (`/sse` vs `/mcp`)
+**What goes wrong:** Server erreichbar, aber keine nutzbare MCP-Session.  
+**Why it happens:** URL/Transport passt nicht zur Serverkonfiguration.  
+**How to avoid:** Endpoint klar dokumentieren; ggf. `transport_type` explizit setzen.  
+**Warning signs:** Toolliste leer, Setup-/Connect-Fehler vor erstem Call.
 
-### Pitfall 2: 403 als technischer statt fachlicher Fehler behandelt
-**What goes wrong:** Agent klingt "kaputt" oder bleibt stumm statt Rechtegrenze zu erklaeren.  
-**Why it happens:** Fehlerbehandlung auf Exceptions-only statt UX-orientierter Mapping-Logik.  
-**How to avoid:** 403 explizit abfangen, userfreundliche Antwort, kein Retry, strukturierter Logeintrag.  
-**Warning signs:** Wiederholte identische Tool-Calls, lange Pausen, technische Fehlermeldungen im Voice-Kanal.
+### Pitfall 2: Permissionfehler nicht als Produktverhalten modelliert
+**What goes wrong:** Agent wirkt defekt statt limitiert.  
+**Why it happens:** 403 wird als generischer technischer Fehler behandelt.  
+**How to avoid:** 403 Marker zentral erkennen, klare Nutzerantwort, kein Retry, structured log.  
+**Warning signs:** Wiederholte identische Aufrufe, technische Fehltexte in Voice-Antworten.
 
-### Pitfall 3: Prompt source race at session start
-**What goes wrong:** Persona ist inkonsistent oder leer beim ersten Turn.  
-**Why it happens:** Prompt-Note-Laden laeuft parallel/zu spaet zum Session-Start.  
-**How to avoid:** Deterministische Reihenfolge: MCP init -> Notes laden/mergen -> Session starten; fallback auf ENV.  
-**Warning signs:** Erstantwort ohne erwartete Persona oder wechselnde Tonalitaet zwischen Sessions.
+### Pitfall 3: Session cleanup race
+**What goes wrong:** Offene MCP-Verbindung oder doppelte Cleanup-Aufrufe.  
+**Why it happens:** Event-Reihenfolge bei `participant_disconnected` variiert.  
+**How to avoid:** idempotentes Cleanup + terminale Bedingung (`<=1 participants`) wie im aktuellen Code.  
+**Warning signs:** Intermittierende Flakes in Disconnect-Tests.
 
 ## Code Examples
 
 Verified patterns from official sources:
 
-### MCP server with auth headers
+### Authenticated MCP HTTP server
 ```python
 # Source: https://docs.livekit.io/agents/logic/tools/mcp.md
 from livekit.agents import AgentSession, mcp
@@ -215,11 +213,10 @@ session = AgentSession(
 )
 ```
 
-### MCP in session entrypoint (reference recipe)
+### Session entrypoint with MCP server
 ```python
-# Source: https://docs.livekit.io/reference/recipes/http_mcp_client.md
+# Source: https://docs.livekit.io/recipes/http_mcp_client.md
 session = AgentSession(
-    vad=ctx.proc.userdata["vad"],
     stt="deepgram/nova-3-general",
     llm="openai/gpt-5.3-chat-latest",
     tts="cartesia/sonic-2:6f84f4b8-58a2-430c-8c79-688dad597532",
@@ -231,49 +228,44 @@ session = AgentSession(
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| Eigene Tool-Bridge pro Datenquelle | MCP-native tool discovery direkt in Agent SDK | LiveKit Agents 1.4+ MCP support | Weniger Glue-Code, schnelleres Onboarding neuer MCP Server |
-| Statische Prompt-Dateien als Hauptquelle | Laufzeit-Prompt aus Systemquelle (hier: Frappe Notes) mit Fallback | Projektentscheidung D-A + Phase-4 scope | Persona zentral administrierbar ohne Redeploy |
-| "Retry everything" auf Toolfehler | Fehlerklassenspezifische Behandlung (insb. 403 terminal) | Reife von Agent-Observability + UX patterns | Niedrigere Latenz, bessere Nutzerkommunikation |
+| Eigene Tool-Bridges je Datenquelle | MCP-native discovery in Agent SDK | LiveKit Agents 1.4+ | Weniger Glue-Code, klarere Verantwortung |
+| SSE als impliziter Standard | streamable HTTP (`/mcp`) bevorzugt, SSE deprecating | In LiveKit MCP docs markiert | Endpoint-Design sollte `/mcp` priorisieren |
+| Generische Retry-Strategie | Fehlerklassenspezifisch (403 terminal) | Observability/UX Reife in Agent-Systemen | Schnellere und verständlichere Nutzerantworten |
 
 **Deprecated/outdated:**
-- Direkte Frappe-REST-Aufrufe im Agenten fuer Fachdaten (nicht mehr vereinbar mit D-07).
-- App-seitige Doctype-Hardcodings statt serverseitiger MCP-Policies.
+- Direkte Datenzugriffe am MCP vorbei fuer Business-Queries.
+- Lokale Tool-Allowlist als Security-Hauptmechanismus (in diesem Projekt-Setup).
 
 ## Open Questions
 
-1. **Welcher konkrete MCP Endpoint (Path + Transport) wird pro Deployment genutzt?**
-   - What we know: LiveKit kann `/mcp` und `/sse` automatisch erkennen.
-   - What's unclear: Zielserver-URL/Path ist noch nicht als ENV-Vertrag dokumentiert.
-   - Recommendation: In Wave 0 einen verbindlichen ENV-Key (`FRAPPE_MCP_URL`) plus Beispieldefault definieren.
+1. **Welche konkreten Toolnamen liefert der Ziel-Frappe-MCP-Server im Deployment?**
+   - What we know: Discovery ist dynamisch und automatisch.
+   - What's unclear: Reale Tool-Inventarliste der Zielinstanz.
+   - Recommendation: In Wave 0 einmalige Tool-Inventory-Validierung gegen Zielsystem.
 
-2. **Welche Frappe-Tools liefern die "public + assigned notes" exakt?**
-   - What we know: Decision D-11/D-12 fordert beide Quellen via MCP.
-   - What's unclear: Konkrete Toolnamen/Filtersyntax des Zielservers.
-   - Recommendation: Vor Implementierung mit `tools/list` gegen Zielserver inventarisieren und in Tests fixieren.
-
-3. **Wie wird "read-only trotz write-tools im Server" policy-seitig garantiert?**
-   - What we know: Reale Frappe-MCP-Server bieten operation-level Allowlist.
-   - What's unclear: Konfiguration der Zielinstanz fuer Agent-User.
-   - Recommendation: Operator-Checkliste um expliziten Allowlist-Audit fuer Agent-User erweitern.
+2. **Ist der produktive Endpoint als `/mcp` oder `/sse` konfiguriert?**
+   - What we know: LiveKit erkennt automatisch.
+   - What's unclear: Ziel-URL-Konvention im Operator-Setup.
+   - Recommendation: In ENV-Dokumentation verbindlich festlegen.
 
 ## Environment Availability
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| Python | Agent worker + MCP SDK | ✓ | 3.13.7 | — |
-| pip | Dependency install | ✓ | 25.2 | uv/pipx optional |
-| Node.js | Optional MCP ecosystem tooling | ✓ | 22.22.0 | — |
-| npm | Optional toolchain | ✓ | 11.5.1 | — |
-| pytest | Nyquist tests | ✓ | 9.0.3 | — |
-| Docker | Containerized local validation | ✗ | — | Lokal ohne Docker testen; CI/Operator fuer container-run |
-| Frappe MCP endpoint URL | INTG-02 runtime connection | ✗ (nicht konfiguriert) | — | Blocker fuer echte E2E-Integration |
-| Agent Frappe credentials in env | INTG-02/03 auth | ✗ (nicht in .env.example) | — | Wave-0 ENV-Erweiterung erforderlich |
+| Python | Agent Worker Runtime | ✓ | 3.13.7 | — |
+| pip | Package installation | ✓ | 25.2 | `uv pip` |
+| uv | dependency workflow | ✓ | 0.11.7 | pip |
+| pytest | Validation architecture | ✓ | 9.0.3 | — |
+| Node.js/npm | optional MCP tooling ecosystem | ✓ | 22.22.0 / 11.5.1 | — |
+| Docker | containerized local smoke checks | ✗ | — | lokale Python-Tests ohne Container |
+| `FRAPPE_MCP_URL` | INTG-02 runtime connection | ⚠ (key vorhanden, Wert runtime-offen) | — | keine echte E2E ohne Ziel-URL |
+| `FRAPPE_API_KEY` / `FRAPPE_API_SECRET` | INTG-02/03 authentication | ⚠ (keys vorhanden, Werte runtime-offen) | — | keine echte E2E ohne Secrets |
 
 **Missing dependencies with no fallback:**
-- Konkrete MCP Ziel-URL + produktive Agent-Credentials fuer echtes Integrations-E2E.
+- Produktive Frappe-MCP-URL plus Agent-Credentials fuer echtes Integrations-E2E.
 
 **Missing dependencies with fallback:**
-- Docker lokal fehlt; Unit-/Integrationstests koennen dennoch direkt in Python laufen.
+- Docker fehlt lokal; Unit/Integrationstests laufen direkt via `pytest`.
 
 ## Validation Architecture
 
@@ -281,51 +273,49 @@ session = AgentSession(
 | Property | Value |
 |----------|-------|
 | Framework | `pytest` + `pytest-asyncio` |
-| Config file | `apps/agent/pyproject.toml` (`[tool.pytest.ini_options]`) |
+| Config file | `apps/agent/pyproject.toml` |
 | Quick run command | `pytest apps/agent/tests/test_mcp_integration.py -x -q` |
 | Full suite command | `pytest apps/agent/tests -q` |
 
 ### Phase Requirements → Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| INTG-01 | MCP SDK wired into agent session | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_session_has_mcp_server -x -q` | ❌ Wave 0 |
-| INTG-02 | MCP HTTP connection uses fixed env credentials | unit/integration | `pytest apps/agent/tests/test_mcp_integration.py::test_mcp_headers_from_env -x -q` | ❌ Wave 0 |
-| INTG-03 | Agent acts with dedicated identity only | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_no_runtime_credential_switch -x -q` | ❌ Wave 0 |
-| INTG-04 | Dynamic tool discovery, no direct Frappe API fallback | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_no_direct_frappe_api_calls -x -q` | ❌ Wave 0 |
-| INTG-05 | 403 handled gracefully without crash/retry | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_permission_error_user_friendly_no_retry -x -q` | ❌ Wave 0 |
+| INTG-01 | MCP SDK wiring vorhanden | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_mcp_module_import_available -x -q` | ✅ |
+| INTG-02 | ENV-basierte Auth-Header | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_build_frappe_mcp_server_uses_env_headers -x -q` | ✅ |
+| INTG-03 | dedicated credentials, kein runtime switch | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_no_runtime_credential_switch -x -q` | ✅ |
+| INTG-04 | dynamic discovery + no direct API fallback | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_dynamic_tool_discovery_runtime_evidence -x -q` | ✅ |
+| INTG-05 | graceful permission handling | unit | `pytest apps/agent/tests/test_mcp_integration.py::test_permission_error_user_friendly_no_retry -x -q` | ✅ |
 
 ### Sampling Rate
 - **Per task commit:** `pytest apps/agent/tests/test_mcp_integration.py -x -q`
 - **Per wave merge:** `pytest apps/agent/tests -q`
-- **Phase gate:** Full suite green before `/gsd-verify-work`
+- **Phase gate:** Full suite green vor `/gsd-verify-work`
 
 ### Wave 0 Gaps
-- [ ] `apps/agent/tests/test_mcp_integration.py` — deckt INTG-01..05 ab
-- [ ] `apps/agent/.env.example` — MCP-spezifische ENV keys (`FRAPPE_MCP_URL`, Credentials)
-- [ ] Fehlerklassifikation helper (z. B. `is_permission_error`) + Tests fuer 403/Opaque
+- [ ] E2E-Test gegen echten Frappe-MCP-Endpunkt (inkl. absichtlichem 403-Fall) fehlt.
+- [ ] Optional: contract test fuer leere Toolliste (Server erreichbar, aber keine freigegebenen Tools).
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- LiveKit docs: MCP integration (`https://docs.livekit.io/agents/logic/tools/mcp.md`) - `MCPServerHTTP`, headers, tool discovery, placement semantics
-- LiveKit recipe (`https://docs.livekit.io/reference/recipes/http_mcp_client.md`) - end-to-end session wiring pattern
-- MCP lifecycle spec (`https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle`) - initialization/capability/shutdown rules
-- PyPI JSON + index (`https://pypi.org/pypi/livekit-agents/json`, `https://pypi.org/pypi/mcp/json`) - current package versions/dates
-- Local project artifacts (`.planning/phases/04-frappe-integration/04-CONTEXT.md`, `.planning/REQUIREMENTS.md`, `.planning/PROJECT.md`, `apps/agent/agent.py`)
+- [LiveKit MCP docs](https://docs.livekit.io/agents/logic/tools/mcp.md) - MCPServerHTTP, Auth-Header, Discovery, Placement rules.
+- [LiveKit MCP recipe](https://docs.livekit.io/recipes/http_mcp_client.md) - End-to-end Session-Wiring.
+- [LiveKit Python MCP API reference](https://docs.livekit.io/reference/python/livekit/agents/llm/mcp.html) - Klassenparameter, Transportverhalten, `allowed_tools`.
+- [PyPI livekit-agents](https://pypi.org/project/livekit-agents/) - aktuelle Version und Veröffentlichungsdatum.
+- Lokale Projektquellen: `.planning/phases/04-frappe-integration/04-CONTEXT.md`, `.planning/REQUIREMENTS.md`, `.planning/STATE.md`, `apps/agent/agent.py`, `apps/agent/src/frappe_mcp.py`, `apps/agent/tests/test_mcp_integration.py`.
 
 ### Secondary (MEDIUM confidence)
-- `https://raw.githubusercontent.com/appliedrelevance/frappe-mcp-server/main/README.md` - Frappe MCP server capabilities/auth patterns
-- `https://raw.githubusercontent.com/mascor/frappe-mcp-server/main/README.md` - allowlist/read-only/403 behavior in production-like setup
+- [PyPI mcp](https://pypi.org/project/mcp/) - Versionsabgleich für MCP-Protokollbibliothek.
 
 ### Tertiary (LOW confidence)
-- Web search result aggregation for Frappe MCP auth patterns (nur als Seed, anschliessend durch README-Quellen verifiziert)
+- Keine unverifizierten Tertiärquellen genutzt.
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH - verifiziert via LiveKit + PyPI live data
-- Architecture: HIGH - direkt aus LiveKit MCP docs + bestehenden Projektentscheidungen
-- Pitfalls: MEDIUM - Mischung aus Spezifikation, Praxisquellen und Projektspezifika
+- Standard stack: HIGH - offizielle LiveKit-Doku + PyPI live verifiziert.
+- Architecture: HIGH - deckungsgleich mit lock decisions und aktuellem Code.
+- Pitfalls: MEDIUM - teils aus Produktionsmustern abgeleitet, aber plausibel und testbar.
 
-**Research date:** 2026-04-19  
+**Research date:** 2026-04-19
 **Valid until:** 2026-05-19
