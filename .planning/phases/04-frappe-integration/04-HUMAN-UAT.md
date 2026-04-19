@@ -82,7 +82,7 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
   - Rollen-/Rechtebezug (serverseitig)
 - result: blocked
 - blocked_by: prior-phase
-- reason: "nicht pass — blocked, weil G1/G2/G3 offen sind und der konkrete E2E-Nachweis noch fehlt."
+- reason: "blocked bis `approved-wave-d`; konkreter E2E-Nachweis (Wave E) folgt erst nach checkpointbasierter Freigabe."
 
 ### 3) 403-Rechtefall als Produktverhalten
 
@@ -135,7 +135,7 @@ retest_required: 0
   missing: []
 - truth: "Agent sieht zur Laufzeit reale MCP-Tools des Zielsystems mit dokumentiertem Endpoint/Transport, vollstaendiger Discovery-Toolliste und Nachweis, dass keine lokale Tool-Allowlist beteiligt ist."
   status: failed
-  reason: "User reported: Nicht pass — verfrüht / prozessual ungültig."
+  reason: "Noch nicht ausgefuehrt: Live-E2E bleibt bis `approved-wave-d` prozessual gesperrt."
   severity: major
   test: 4
   artifacts: []
