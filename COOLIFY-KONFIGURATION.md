@@ -22,7 +22,7 @@ Wir nutzen ein spezialisiertes **Hybrid-Netzwerk**, um WebRTC-Performance mit ei
 
 ## Komponenten-Verdrahtung (Wiring)
 
-- **Agent -> LiveKit**: Der Agent verbindet sich intern über `ws://host.docker.internal:7880`. 
+- **Agent -> LiveKit**: Der Agent verbindet sich intern über `ws://host.docker.internal:7880`. Dies wird automatisch durch die `extra_hosts` Konfiguration in der `docker-compose.yml` auf die IP des Docker-Gateways (meist `172.17.0.1`) aufgelöst.
 - **Browser -> LiveKit**: Der Client im Browser verbindet sich verschlüsselt über `wss://live.begemotix.cloud`. Traefik routet dies intern an den Host-Port 7880 weiter.
 - **Agent -> Frappe-MCP**: Der Agent greift als Client auf Ihren externen Frappe-Server zu (HTTPS). Dies erfordert keine speziellen Inbound-Ports am VPS, da es sich um eine ausgehende Verbindung handelt.
 
@@ -48,7 +48,7 @@ Diese Variablen müssen in Coolify gesetzt werden:
 | `LIVEKIT_API_KEY` | **Ja** | API-Key. | `devkey` |
 | `LIVEKIT_API_SECRET` | **Ja** | API-Secret (Hidden). | `secret` |
 | `OPENAI_API_KEY` | **Ja** | Für den Agenten (Hidden). | `sk-...` |
-| `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten (Docker-Gateway). | `ws://host.docker.internal:7880` |
+| `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten (wird in compose überschrieben). | `ws://host.docker.internal:7880` |
 | `NEXT_PUBLIC_LIVEKIT_URL` | **Ja** | Öffentliche URL für den Browser (via Traefik). | `wss://live.begemotix.cloud` |
 
 ---
