@@ -91,6 +91,10 @@ const ChatPanelContent = () => {
 export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
   const [token, setToken] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isGdprAccepted, setIsGdprAccepted] = useState(false);
+
+  const gdprNotice =
+    'Ich stimme zu, dass meine Voice-Daten zur Verarbeitung an den KI-Dienst übertragen werden.';
 
   const startConversation = useCallback(async () => {
     setIsConnecting(true);
@@ -139,7 +143,11 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
             </div>
           </CardContent>
           <CardFooter className="border-t p-4">
-            <Button className="w-full" onClick={startConversation} disabled={isConnecting}>
+            <Button
+              className="w-full"
+              onClick={startConversation}
+              disabled={isConnecting || !isGdprAccepted}
+            >
               {isConnecting ? 'Verbindung wird aufgebaut...' : 'Gespräch starten'}
             </Button>
           </CardFooter>
