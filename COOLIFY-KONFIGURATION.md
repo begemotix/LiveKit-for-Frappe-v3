@@ -48,7 +48,7 @@ Diese Variablen müssen in Coolify gesetzt werden:
 | `LIVEKIT_API_KEY` | **Ja** | API-Key. | `devkey` |
 | `LIVEKIT_API_SECRET` | **Ja** | API-Secret (Hidden). | `secret` |
 | `OPENAI_API_KEY` | **Ja** | Für den Agenten (Hidden). | `sk-...` |
-| `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten (Docker-Gateway). | `ws://172.17.0.1:7880` |
+| `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten (Docker-Gateway). | `ws://host.docker.internal:7880` |
 | `NEXT_PUBLIC_LIVEKIT_URL` | **Ja** | Öffentliche URL für den Browser (via Traefik). | `wss://live.begemotix.cloud` |
 
 ---

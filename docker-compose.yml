@@ -35,7 +35,7 @@ services:
       - "traefik.http.routers.livekit.entrypoints=websecure"
       - "traefik.http.routers.livekit.tls=true"
       - "traefik.http.routers.livekit.tls.certresolver=letsencrypt"
-      - "traefik.http.services.livekit.loadbalancer.server.url=http://172.17.0.1:7880"
+      - "traefik.http.services.livekit.loadbalancer.server.url=http://host.docker.internal:7880"
 
   agent:
     build:
@@ -46,7 +46,7 @@ services:
     env_file:
       - .env
     environment:
-      - LIVEKIT_URL=ws://172.17.0.1:7880
+      - LIVEKIT_URL=ws://host.docker.internal:7880
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
