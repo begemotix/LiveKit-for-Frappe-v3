@@ -15,7 +15,7 @@ async def test_join():
 @pytest.mark.asyncio
 async def test_mock_tool():
     """Verify mock_data_lookup is reachable and returns the expected JSON structure."""
-    assistant = Assistant(instructions="test")
+    assistant = Assistant(instructions="test", correlation_id="test-correlation")
     # Mocking logger to avoid actual log output during test
     with patch('agent.logger'):
         result = await assistant.mock_data_lookup(query="Frappe ERP")
@@ -75,9 +75,10 @@ async def test_interruption():
     class FakeAgentSession:
         last_instance = None
 
-        def __init__(self, llm, allow_interruptions):
+        def __init__(self, llm, allow_interruptions, mcp_servers=None):
             self.llm = llm
             self.allow_interruptions = allow_interruptions
+            self.mcp_servers = mcp_servers or []
             self.generate_reply_calls = []
             FakeAgentSession.last_instance = self
 
@@ -101,6 +102,7 @@ async def test_interruption():
         return task
 
     with patch("agent.openai.realtime.RealtimeModel", return_value=object()), \
+         patch("agent.build_frappe_mcp_server", return_value=object()), \
          patch("agent.AgentSession", FakeAgentSession), \
          patch("agent.asyncio.create_task", side_effect=schedule_now):
         ctx = FakeContext()
