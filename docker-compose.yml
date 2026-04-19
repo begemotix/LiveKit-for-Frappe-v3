@@ -35,16 +35,20 @@ services:
       - "traefik.http.routers.livekit.entrypoints=websecure"
       - "traefik.http.routers.livekit.tls=true"
       - "traefik.http.routers.livekit.tls.certresolver=letsencrypt"
-      - "traefik.http.services.livekit.loadbalancer.server.port=7880"
+      - "traefik.http.services.livekit.loadbalancer.server.url=http://host.docker.internal:7880"
 
   agent:
     build:
       context: ./apps/agent
       dockerfile: Dockerfile
     restart: unless-stopped
-    network_mode: host
+    # Use bridge mode for the agent, it only needs to reach LiveKit via the gateway
     env_file:
       - .env
+    environment:
+      - LIVEKIT_URL=ws://host.docker.internal:7880
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - livekit
 
@@ -58,6 +62,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # Frontend in bridge mode for Traefik SSL auto-discovery
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - livekit
 

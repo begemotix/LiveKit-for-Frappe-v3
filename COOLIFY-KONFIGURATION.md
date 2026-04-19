@@ -4,17 +4,27 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 ---
 
-## Architektur: Hybrid Unified Stack
+## Architektur: Hybrid Wired Stack
 
-Wir nutzen jetzt einen **Hybrid-Stack**, um maximale Performance mit einfacher SSL-Konfiguration zu vereinen:
+Wir nutzen ein spezialisiertes **Hybrid-Netzwerk**, um WebRTC-Performance mit einfacher SSL-Verwaltung zu kombinieren:
 
-1. **LiveKit Server & Agent**: Laufen im **`network_mode: host`**. Dies ist zwingend erforderlich für stabile WebRTC-Audio/Video-Verbindungen und blitzschnelle Deployments (kein Docker-Proxy Overhead).
-2. **Frontend**: Läuft im Standard **Bridge-Modus**. Dadurch kann der Coolify-Router (Traefik) das Frontend automatisch erkennen und SSL-Zertifikate (Let's Encrypt) problemlos verwalten.
+1. **LiveKit Server**: Läuft im **`network_mode: host`**. Dies ist zwingend erforderlich für stabile WebRTC-Audio/Video-Verbindungen (kein Docker-Proxy Overhead).
+2. **Agent & Frontend**: Laufen im Standard **Bridge-Modus**. 
+   - Dies ermöglicht dem Frontend die automatische SSL-Zertifikatsverwaltung durch Traefik.
+   - Der Agent kann sicher auf externe Dienste (wie den Frappe-MCP) zugreifen, ohne das Host-Netzwerk zu belasten.
 
 ### Warum dieser Hybrid-Ansatz?
 - **WebRTC-Performance**: LiveKit benötigt direkten Zugriff auf die Hardware-Ports des Hosts, um Latenzen zu minimieren.
-- **SSL-Einfachheit**: Das Frontend ist eine einfache Web-App, die von der automatischen SSL-Terminierung durch Traefik profitiert.
-- **Signaling-Routing**: Wir nutzen Traefik-Labels beim LiveKit-Service, um den Signaling-Traffic (Port 7880) trotz Host-Modus sicher über HTTPS (`live.begemotix.cloud`) erreichbar zu machen.
+- **SSL-Einfachheit**: Das Frontend und das LiveKit-Signaling werden über Traefik mit Let's Encrypt abgesichert.
+- **Interne Verdrahtung**: Der Agent erreicht den LiveKit-Server über das Docker-Gateway (`host.docker.internal`), was den Traffic innerhalb des VPS hält und die Latenz minimiert.
+
+---
+
+## Komponenten-Verdrahtung (Wiring)
+
+- **Agent -> LiveKit**: Der Agent verbindet sich intern über `ws://host.docker.internal:7880`. 
+- **Browser -> LiveKit**: Der Client im Browser verbindet sich verschlüsselt über `wss://live.begemotix.cloud`. Traefik routet dies intern an den Host-Port 7880 weiter.
+- **Agent -> Frappe-MCP**: Der Agent greift als Client auf Ihren externen Frappe-Server zu (HTTPS). Dies erfordert keine speziellen Inbound-Ports am VPS, da es sich um eine ausgehende Verbindung handelt.
 
 ---
 
@@ -38,7 +48,7 @@ Diese Variablen müssen in Coolify gesetzt werden:
 | `LIVEKIT_API_KEY` | **Ja** | API-Key. | `devkey` |
 | `LIVEKIT_API_SECRET` | **Ja** | API-Secret (Hidden). | `secret` |
 | `OPENAI_API_KEY` | **Ja** | Für den Agenten (Hidden). | `sk-...` |
-| `LIVEKIT_URL` | **Ja** | Interne URL für Agent/Frontend. | `ws://localhost:7880` |
+| `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten. | `ws://host.docker.internal:7880` |
 | `NEXT_PUBLIC_LIVEKIT_URL` | **Ja** | Externe URL für den Browser. | `wss://live.example.com` |
 
 ---
