@@ -11,8 +11,13 @@ FROM node:22-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# We need to ensure NEXT_PUBLIC variables are available at build time if they are used in client components
-# For now, we assume they are provided via environment variables during the build process
+
+# Build-Args für Next.js Client-Side Variablen
+ARG NEXT_PUBLIC_LIVEKIT_URL
+ARG NEXT_PUBLIC_APP_CONFIG_ENDPOINT
+ENV NEXT_PUBLIC_LIVEKIT_URL=$NEXT_PUBLIC_LIVEKIT_URL
+ENV NEXT_PUBLIC_APP_CONFIG_ENDPOINT=$NEXT_PUBLIC_APP_CONFIG_ENDPOINT
+
 RUN npm run build
 
 # Stage 3: Runner
@@ -25,7 +30,6 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
@@ -34,7 +38,6 @@ COPY --from=builder /app/package.json ./package.json
 USER nextjs
 
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
