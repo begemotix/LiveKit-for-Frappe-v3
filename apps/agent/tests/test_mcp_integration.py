@@ -10,6 +10,24 @@ from src.frappe_mcp import build_frappe_mcp_server
 from src.mcp_errors import is_permission_error
 
 
+def test_mcp_module_import_available():
+    try:
+        from livekit.agents import mcp  # noqa: F401
+    except Exception as exc:  # pragma: no cover - assertion path
+        pytest.fail(f"Expected MCP module import to succeed, got: {exc!r}")
+
+
+def test_agent_module_import_does_not_raise_mcp_import_error():
+    try:
+        import importlib
+
+        importlib.reload(agent_module)
+    except ModuleNotFoundError as exc:
+        if "mcp" in str(exc):
+            pytest.fail(f"Unexpected MCP import error while importing agent.py: {exc!r}")
+        raise
+
+
 def test_build_frappe_mcp_server_uses_env_headers():
     captured = {}
 

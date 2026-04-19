@@ -12,6 +12,7 @@ dependencies = [
     "livekit-agents[mcp,openai,silero,turn-detector]~=1.5",
     "livekit-plugins-ai-coustics~=0.2",
     "python-dotenv",
+    "python-json-logger~=2.0.0",
 ]
 
 [dependency-groups]
