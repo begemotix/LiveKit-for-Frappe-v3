@@ -66,9 +66,10 @@ async def entrypoint(ctx: JobContext):
         }
     )
 
-    # Initialize AgentSession
+    # Initialize AgentSession with TTS for greetings
     session = AgentSession(
         llm=model,
+        tts=openai.TTS(),
         allow_interruptions=True,
     )
 
@@ -86,6 +87,12 @@ async def entrypoint(ctx: JobContext):
         await session.start(room=ctx.room, agent=agent)
         
         logger.info(f"session started for {participant.identity}")
+
+        # Task: Initial greeting (interruptible)
+        greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
+            .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
+            .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+        await session.say(greeting, allow_interruptions=True)
 
     @ctx.room.on("participant_joined")
     def on_participant_joined(participant):

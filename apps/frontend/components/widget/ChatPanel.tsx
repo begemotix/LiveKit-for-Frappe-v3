@@ -91,8 +91,13 @@ const ChatPanelContent = () => {
 export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
   const [token, setToken] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isGdprAccepted, setIsGdprAccepted] = useState(false);
+
+  const gdprNotice = process.env.NEXT_PUBLIC_GDPR_NOTICE || 
+    'Ich willige in die Verarbeitung meiner Audiodaten durch OpenAI in den USA ein. Dieses Gespräch wird zur Verarbeitung an KI-Modelle übertragen.';
 
   const startConversation = useCallback(async () => {
+    if (!isGdprAccepted) return;
     setIsConnecting(true);
     try {
       const response = await fetch('/api/token');
@@ -121,9 +126,29 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
               Klicken Sie auf den Button unten, um eine Echtzeit-Verbindung mit dem Agenten
               aufzubauen.
             </p>
+
+            <div className="mb-6 flex items-start space-x-3 text-left">
+              <input
+                type="checkbox"
+                id="gdpr-checkbox"
+                checked={isGdprAccepted}
+                onChange={(e) => setIsGdprAccepted(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 accent-primary"
+              />
+              <label
+                htmlFor="gdpr-checkbox"
+                className="text-muted-foreground cursor-pointer text-xs leading-snug select-none"
+              >
+                {gdprNotice}
+              </label>
+            </div>
           </CardContent>
           <CardFooter className="border-t p-4">
-            <Button className="w-full" onClick={startConversation} disabled={isConnecting}>
+            <Button
+              className="w-full"
+              onClick={startConversation}
+              disabled={isConnecting || !isGdprAccepted}
+            >
               {isConnecting ? 'Verbindung wird aufgebaut...' : 'Gespräch starten'}
             </Button>
           </CardFooter>
