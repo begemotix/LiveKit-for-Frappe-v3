@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-19T16:07:54.656Z"
+status: verifying
+last_updated: "2026-04-19T16:14:17.111Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -22,7 +22,7 @@ progress:
 
 Phase: 04 (frappe-integration) — EXECUTING
 Plan: 3 of 3
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -73,6 +73,8 @@ Progress (Project):
 - [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
 - [Phase 04]: MCP wiring stays session-scoped through build_frappe_mcp_server() in AgentSession.
 - [Phase 04]: Disconnect cleanup tolerates callback ordering by treating <=1 participants as terminal for one-shot MCP shutdown.
+- [Phase 04]: Permission-Fehler werden zentral erkannt und ohne Retry auf eine feste nutzerfreundliche Antwort gemappt.
+- [Phase 04]: Phase-04-Handover bleibt auf MCP-Core begrenzt; Prompting-Migration bleibt in Phase 5 (Decision D-A).
 
 ### Blockers
 

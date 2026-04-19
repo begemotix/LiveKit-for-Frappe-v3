@@ -31,7 +31,7 @@
 - [x] **INTG-02**: Agent baut Verbindung zum externen Frappe MCP-Server auf und authentifiziert sich mit eigenen, fest hinterlegten Agenten-Credentials (z.B. API-Key aus der .env)
 - [x] **INTG-03**: Agent nutzt die übergebenen Credentials, um im eigenen Namen als authentifizierter "Agenten-User" in Frappe zu agieren
 - [x] **INTG-04**: Agent entdeckt Tools dynamisch über den MCP-Server (Introspection) und nutzt diese ausschließlich lesend (Read-only). Keine direkten Frappe-API-Aufrufe oder hardcoded Doctypes.
-- [ ] **INTG-05**: Graceful Error Handling für fehlgeschlagene Frappe-Rechte (403/Opaque Errors) implementieren
+- [x] **INTG-05**: Graceful Error Handling für fehlgeschlagene Frappe-Rechte (403/Opaque Errors) implementieren
 
 ## v2 Requirements
 
@@ -78,7 +78,7 @@
 | INTG-02     | Phase 4 | Complete |
 | INTG-03     | Phase 4 | Complete |
 | INTG-04     | Phase 4 | Complete |
-| INTG-05     | Phase 4 | Pending  |
+| INTG-05     | Phase 4 | Complete |
 
 **Coverage:**
 
