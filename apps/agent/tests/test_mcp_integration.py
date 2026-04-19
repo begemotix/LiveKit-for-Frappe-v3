@@ -2,6 +2,7 @@ import os
 import asyncio
 from unittest.mock import patch
 from types import SimpleNamespace
+import logging
 
 import pytest
 import agent as agent_module
@@ -156,3 +157,37 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
         await asyncio.gather(*created_tasks)
 
     assert fake_server.close_calls == 1
+
+
+def test_permission_error_user_friendly_no_retry():
+    class FakePermissionError(Exception):
+        pass
+
+    err = FakePermissionError("403 permission denied by remote MCP")
+    message = agent_module.map_mcp_error_to_user_message(
+        err=err,
+        correlation_id="cid-403",
+        tool_name="frappe_list_documents",
+    )
+
+    assert message == "Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff."
+
+
+def test_permission_error_logged_with_correlation(caplog):
+    class FakePermissionError(Exception):
+        pass
+
+    with caplog.at_level(logging.WARNING, logger="agent"):
+        _ = agent_module.map_mcp_error_to_user_message(
+            err=FakePermissionError("insufficient permissions"),
+            correlation_id="corr-123",
+            tool_name="frappe_get_doc",
+        )
+
+    matching = [
+        record for record in caplog.records
+        if record.message == "mcp_permission_denied"
+    ]
+    assert matching, "Expected mcp_permission_denied warning log"
+    assert matching[0].correlation_id == "corr-123"
+    assert matching[0].tool == "frappe_get_doc"
