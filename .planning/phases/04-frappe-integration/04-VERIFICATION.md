@@ -1,8 +1,8 @@
 ---
 phase: 04-frappe-integration
-verified: 2026-04-19T22:49:00Z
-status: wave_e_approved
-score: "wave-e live evidence approved via human checkpoint signal approved-wave-e"
+verified: 2026-04-19T23:59:00Z
+status: wave_f_gap_closure_complete
+score: "Phase-4-Gap-Closure: Waves D/A/B/E/C/F entlang D -> A -> B -> E -> C -> F dokumentarisch konsolidiert; Live-Evidenz wave-e; Uebergabe wave-f"
 human_verification:
   - test: "Gate G1: Fachliche Session-Grenze verbindlich dokumentiert"
     expected: "D-01/D-02 sind eindeutig gegen eine schriftliche Session-Definition verifizierbar"
@@ -18,8 +18,8 @@ human_verification:
 # Phase 4: Frappe Integration Verification Report
 
 **Phase Goal:** Hardening der MCP-Integration per stdio-Sidecar im Agent-Container (per D-05/D-06).  
-**Verification Mode:** Pre-Implementation Decision Gate.  
-**Status:** **WAVE-E LIVE EVIDENCE APPROVED (`approved-wave-e`)**.
+**Verification Mode:** Abschlussbericht inkl. dokumentierter Live-Evidenz (Waves D–F).  
+**Status:** **PHASE-4 GAP-CLOSURE KOMPLETT** — Wave E Live-Evidenz (`approved-wave-e`); Wave F konsolidiert Handover/UAT/State/Roadmap.
 
 ## Binding Scope Guard (Phase 4)
 
@@ -33,7 +33,7 @@ human_verification:
 
 | Bereich | Ist-Stand | Bewertung |
 | --- | --- | --- |
-| MCP-Build | `build_frappe_mcp_server()` muss auf `MCPServerStdio` umgestellt werden (aktueller Code nutzt noch `MCPServerHTTP`) | ✗ Drift — Code-Umstellung offen, Wave A |
+| MCP-Build | Produktiv- und Abnahmepfad: `MCPServerStdio` Sidecar (`npx frappe-mcp-server`) mit `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` im Sidecar-ENV; `selected_transport: stdio-sidecar`; **kein HTTP-Endpoint Agent->MCP** (Wave A/D/E, INTG-01) | ✓ PASS (Live- und Gate-Evidenz) |
 | Auth | Nur `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` (per D-03, identisch zu Cursor-MCP-Config) | ✓ korrekt |
 | Session-Wiring | `AgentSession(..., mcp_servers=[build_frappe_mcp_server()])` | ✓ korrekt |
 | Cleanup | Session-lokaler Cleanup mit idempotentem Guard | ~ teilweise robust |
@@ -70,6 +70,14 @@ human_verification:
 | E | Live-E2E/UAT gegen Zielsystem | Test+Evidence | Waves A/B umgesetzt | INTG-04/05 live passed |
 | C | Permission/Error-Mapping (403 no-retry) | Code+Test | Wave E abgeschlossen | D-08 bis D-10 als Produktverhalten nachgewiesen |
 | F | Doku/Handover/Readiness | Doku+Gate | Wave C abgeschlossen | Transition-faehige Artefakte komplett |
+
+## Wave F — Dokument-Sync und Uebergabefaehigkeit
+
+- execution_order: `D -> A -> B -> E -> C -> F` (verbindlich; identisch in Handover, UAT, State)
+- selected_transport: stdio-sidecar
+- scope_guards: kein HTTP-Endpoint Agent->MCP; keine lokale Bridge; kein REST-Fallback; keine lokale Tool-Allowlist; keine Phase-5-Persona-Features
+- artifacts: `OPERATOR-HANDOVER.md`, `04-HUMAN-UAT.md`, `04-VERIFICATION.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`
+- result: pass — konsistenter GO-Status fuer INTG-01 bis INTG-05 gemaess Tabellen oben; Cross-Document-Abgleich abgeschlossen.
 
 ## Wave-B Abschluss und Referenzkette
 

@@ -1,15 +1,15 @@
 ---
-status: wave_d_approved
+status: wave_f_gap_closure_complete
 phase: 04-frappe-integration
 source: [04-VERIFICATION.md]
 started: 2026-04-19T18:17:11.8363566+02:00
-updated: 2026-04-19T22:27:46+02:00
+updated: 2026-04-19T23:59:00+02:00
 ---
 
 ## Ziel dieses UAT-Artefakts
 
 Dieses Dokument enthaelt die verbindlichen Live-Nachweise fuer die Phase-4-Freigabe.
-Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
+Mit abgeschlossener Wave F (Dokument-Sync) und konsistentem GO in `04-VERIFICATION.md` ist die Phase-4-Gap-Closure **GO** fuer Uebergabe/Transition.
 
 ## Gate-Nachweise (vor Code-Execute verpflichtend)
 
@@ -203,6 +203,15 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
 - reported: "pass — Wave C weist 403-Produktverhalten mit fester Nutzerbotschaft, kein Retry auf 403, strukturiertem Logeintrag und stabiler Session nach."
 - severity: none
 
+## Wave F
+
+- execution_order: `D -> A -> B -> E -> C -> F`
+- selected_transport: stdio-sidecar
+- transport_guards: kein HTTP-Endpoint Agent->MCP; keine lokale Bridge; kein REST-Fallback; keine lokale Tool-Allowlist
+- phase_scope: keine Phase-5-Persona-Features in Phase 4
+- cross_check: `04-VERIFICATION.md`, `OPERATOR-HANDOVER.md`, `.planning/STATE.md`, `.planning/ROADMAP.md` — gleiche Wave-Reihenfolge und Transportentscheidung
+- result: pass
+
 ## Summary
 
 total: 6
@@ -256,6 +265,7 @@ retest_required: 0
 - 2026-04-19: Vorheriger UAT-Lauf war durch MCP-Import-Problem geblockt.
 - 2026-04-19: Dependency-Contract auf MCP-Extras wurde korrigiert; Re-Tests sind technisch wieder moeglich.
 - 2026-04-19: UAT wurde auf verbindliche Gate-/Evidence-Logik fuer Phase-4-Freigabe umgestellt.
-- 2026-04-19: UAT-Session als `partial` abgeschlossen (4 issues, 2 blocked), da Gates G1/G2/G3 sowie Live-Evidenzen offen sind.
+- 2026-04-19: UAT-Session als `partial` abgeschlossen (4 issues, 2 blocked), da Gates G1/G2/G3 sowie Live-Evidenzen offen sind. (Historisch; durch nachfolgende Waves geschlossen.)
 - 2026-04-19: Gate-Evidenzen G1/G2/G3 mit Owner/Datum/Endpoint/Inventar dokumentiert; Status auf `ready_for_wave_d_approval` gesetzt.
+- 2026-04-19: Wave F — finale Synchronisation der Artefakte; Status `wave_f_gap_closure_complete`.
 

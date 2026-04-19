@@ -2,15 +2,24 @@
 
 ## Phase-4 Freigabestatus
 
-**Aktuell: Wave D dokumentarisch abgeschlossen und per `approved-wave-d` freigegeben (2026-04-19T22:27:46+02:00).**
+**Aktuell: Phase-4-Gap-Closure abgeschlossen (Wave F Dokumentation, 2026-04-19). Alle Waves D, A, B, E, C und F sind in dieser Reihenfolge dokumentarisch und evidenzbasiert geschlossen.**
 
-1. Fachliche Session-Grenze (D-01/D-02)
-2. Produktiver Transport (`stdio-sidecar`) mit Live-Nachweis
-3. Reale Tool-Inventarliste aus dem Zieldeployment als Abnahme-Artefakt
+1. Fachliche Session-Grenze (D-01/D-02) — Wave B / Gate G1
+2. Produktiver Transport (**stdio-Sidecar**) mit Live-Nachweis — Wave D / Gate G2 (`selected_transport: stdio-sidecar`; **kein HTTP-Endpoint Agent->MCP**)
+3. Reale Tool-Inventarliste aus dem Zieldeployment als Abnahme-Artefakt — Gate G3 / Wave E
+4. Read-only E2E und Discovery — Wave E (`approved-wave-e`)
+5. 403-Produktverhalten ohne Retry — Wave C
+6. Betriebs- und Uebergabedokumentation — Wave F (dieses Paket)
 
 Wave-Reihenfolge ist verbindlich: **D (blockierend) -> A -> B -> E -> C -> F**.
 Exakte Ausfuehrungsreihenfolge (Resume-Check): `D -> A -> B -> E -> C -> F`.
-Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `approved-wave-d` gestartet werden.
+Freigabesignale: `approved-wave-d` (Transport/Gates), `approved-wave-e` (Live-E2E INTG-04).
+
+### Scope-Guards (Phase 4, keine Ausweitung)
+
+- **stdio-Sidecar** als MCP-Produktivpfad; **kein HTTP-Endpoint Agent->MCP**.
+- **Keine lokale Bridge**, **kein REST-Fallback**, **keine lokale Tool-Allowlist**.
+- **Keine Phase-5-Persona-Features** (keine Prompt-Notes aus Frappe, keine Multi-Agent-Persona in dieser Phase).
 
 ## Coolify-ENV-Variablen
 
@@ -47,7 +56,7 @@ Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `app
 - Keine lokale MCP-Bridge.
 - Kein direkter REST-Fallback.
 - Keine lokale Tool-Allowlist.
-- Keine Prompt-Notes-Integration in Phase 4.
+- Keine Prompt-Notes-Integration in Phase 4 (keine Phase-5-Persona-Features).
 - Keine Multi-Agent-Persona-Logik.
 - Kein Voice-Safety-Flow fuer Write-Tools in dieser Phase.
 
