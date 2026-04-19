@@ -3,9 +3,9 @@
 # Stage 1: Dependencies
 FROM node:22-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-# Install dependencies
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+# Install pnpm and dependencies
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:22-slim AS builder
@@ -13,8 +13,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Run build (this will run 'next build' and then 'webpack')
-RUN npm run build
+# Install pnpm in builder stage too for the build script
+RUN npm install -g pnpm
+
+# Run build (this will run 'next build' and then 'webpack' via pnpm)
+RUN pnpm build
 
 # Stage 3: Runner
 FROM node:22-slim AS runner

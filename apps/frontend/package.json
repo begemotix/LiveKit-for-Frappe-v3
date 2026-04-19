@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build-embed-popup-script": "webpack",
-    "build": "next build && npm run build-embed-popup-script",
+    "build": "next build && pnpm build-embed-popup-script",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
