@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-19T20:43:44.716Z"
+status: ready
+last_updated: "2026-04-19T23:59:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -16,24 +16,26 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 04 — frappe-integration
+**Current Focus:** Phase 04 — frappe-integration **GAP-CLOSURE COMPLETE**; naechster logischer Schritt: Phase 05 (Persona) nach `/gsd-transition`.
 
 ## Current Position
 
-Phase: 04 (frappe-integration) — EXECUTING
-Plan: 6 of 10
-**Status:** Ready to execute
+Phase: 04 (frappe-integration) — **COMPLETE** (Gap-Closure inkl. Wave E Live-Evidenz + Wave F Doku-Sync, Plan `04-10-PLAN.md`).
+Plan: 10 of 10
+**Status:** Phase-4-Freigabe dokumentarisch **GO** — konsistent in `04-VERIFICATION.md`, `04-HUMAN-UAT.md`, `OPERATOR-HANDOVER.md`.
+Ausfuehrungslogik (verbindlich): `D -> A -> B -> E -> C -> F`.
+Wave-/Gate-Plane (Auszug): `04-05-PLAN.md`, `04-06-PLAN.md`, `04-07-PLAN.md`, `04-08-PLAN.md`, `04-09-PLAN.md`, `04-10-PLAN.md`.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
 Progress (Project):
-[██████    ] 60%
+[███████   ] 70%
 ```
 
 ## Performance Metrics
 
-- Phases Completed: 3/4
-- Plans Completed: 13/14
+- Phases Completed: 4/5 (Phase 4 frappe-integration dokumentarisch abgeschlossen)
+- Plans Completed: 23/24 (inkl. `04-10-PLAN.md`)
 - Requirements Mapped: 16/16
 - Known Bugs: 0
 
@@ -69,7 +71,7 @@ Progress (Project):
 - [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
 - [Phase 03]: CP-Abschluss erfordert eigene SUMMARY-Artefakte fuer konsistente Planzaehlung.
 - [Phase 03]: Interruption-Tests validieren gegen beobachtbares Verhalten (generate_reply) statt veralteter API-Mocks.
-- [Phase 04]: MCP credentials are read exclusively from FRAPPE_MCP_URL, FRAPPE_API_KEY, and FRAPPE_API_SECRET.
+- [Phase 04]: MCP-Credentials fuer den dokumentierten stdio-Sidecar-Pfad: `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` (konsistent mit UAT/Handover/Verification; kein Runtime-Switch).
 - [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
 - [Phase 04]: MCP wiring stays session-scoped through build_frappe_mcp_server() in AgentSession.
 - [Phase 04]: Disconnect cleanup tolerates callback ordering by treating <=1 participants as terminal for one-shot MCP shutdown.
@@ -89,23 +91,20 @@ Progress (Project):
 - [Phase 04]: INTG-05 bleibt bis Wave C (Plan 04-08) ausstehend und wird nicht in Wave E abgeschlossen.
 - [Phase 04]: 403-Fehlerpfad bleibt als produktives Verhalten mit identischer Voice/Text-Botschaft dokumentiert.
 - [Phase 04]: INTG-05 wird nur per referenzierter Wave-C-Live-Evidenz auf GO gesetzt.
+- [Phase 04]: Wave F (Plan `04-10-PLAN.md`) synchronisiert OPERATOR-HANDOVER, `04-VERIFICATION.md`, `04-HUMAN-UAT.md` mit finalem GO und Wave-Reihenfolge `D -> A -> B -> E -> C -> F`.
 
 ### Blockers
 
-- **Wave D dokumentiert:** Gate-Evidenz fuer G1/G2/G3 ist abgeschlossen; Freigabe fuer 04-06 bis 04-10 erfolgt nach `approved-wave-d`.
-- **NO-GO Gate 4 (Live Access):** Live-UAT/E2E-Zugang und Nachweise fuer Discovery/read-only/403-Produktverhalten sind noch nicht abgeschlossen.
-- **Scope Risk Guard:** Phase-5-Entscheidungen D-11 bis D-15 duerfen in Phase 4 nicht aktiviert werden.
-- STATE.md lacks Performance Metrics section expected by state record-metric; metric entry for 04-06 was not persisted.
+- Keine aktiven Phase-4-Blocker; Live-Gates (`approved-wave-d`, `approved-wave-e`) und Wave-C-403-Nachweis sind in UAT/Verification referenziert.
+- **Scope Risk Guard:** Phase-5-Entscheidungen D-11 bis D-15 bleiben bis `/gsd-transition` nach Phase 5 out of scope fuer Integrationsphase.
 
 ### Next Steps
 
-- Human-Verify fuer Wave D durchfuehren und `approved-wave-d` dokumentieren.
-- Nach Freigabe: Umsetzung entlang Waves D -> A -> B -> E -> C -> F (Start mit 04-06).
-- Live-UAT/E2E-Nachweise fuer Discovery/read-only/403-Produktverhalten vervollstaendigen.
-- Phase 5 bleibt bis Phase-4-GO strikt out of scope.
+- Optional: `/gsd-transition` nach Freigabe durch Mensch — Phase 5 (Frappe-Persona) starten.
+- Betrieb: Checkliste in `OPERATOR-HANDOVER.md` fuer Kunden-Onboarding abarbeiten.
 
 ## Session Continuity
 
-- **Last Action:** Scopedown von Phase 04 auf MCP-Core und Anlage von Phase 05 fuer Persona-Verwaltung.
-- **Current Goal:** Hardening-Plan verbindlich verankern und GO/NO-GO-Gates fuer Phase 4 schliessen.
+- **Last Action:** Plan `04-10-PLAN.md` (Wave F) — STATE/Roadmap und Abschlussartefakte auf GO synchronisiert.
+- **Current Goal:** Phase 4 dokumentarisch abgeschlossen; Transition-Vorbereitung Phase 5.
 - **Resume File:** None

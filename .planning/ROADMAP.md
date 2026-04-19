@@ -7,7 +7,8 @@
 - [ ] **Phase 2: Frontend Widget** - Next.js voice widget mit unauthentifiziertem Gast-Token
 - [x] **Phase 3: Agent Core** - Low-latency OpenAI Realtime voice agent with interruption handling
       (completed 2026-04-19)
-- [ ] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
+- [x] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
+      (Gap-Closure complete 2026-04-19)
 - [ ] **Phase 5: Frappe-basierte Persona-Verwaltung** - System-Prompt sourcing from Frappe Notes with fallback strategy
 
 ## Phase Details
@@ -78,7 +79,7 @@
 2. The agent successfully authenticates its MCP requests using its own fixed credentials (e.g. API-Key from .env)
 3. User can ask the agent about Frappe data, and the agent retrieves and speaks information accessible to the agent user
 4. If the agent asks for data it lacks permissions for, it gracefully informs the user of the restriction instead of crashing
-   **Plans**: 10 plans
+   **Plans**: 10/10 plans complete
    Plans:
 
 - [x] 04-01-PLAN.md — MCP foundation: ENV contract, factory, and baseline integration tests.
@@ -90,7 +91,7 @@
 - [x] 04-07-PLAN.md — Wave B closure: document session-boundary and cleanup behavior evidence.
 - [x] 04-08-PLAN.md — Wave C closure: complete 403 no-retry product-behavior evidence.
 - [x] 04-09-PLAN.md — Wave E closure: run final live UAT evidence checks against target system.
-- [ ] 04-10-PLAN.md — Wave F closure: synchronize final handover, state, and roadmap readiness.
+- [x] 04-10-PLAN.md — Wave F closure: synchronize final handover, state, and roadmap readiness.
 
 ### Phase 5: Frappe-basierte Persona-Verwaltung
 
@@ -111,5 +112,5 @@
 | 1. Infrastructure Setup | 2/2            | Complete    | 2026-04-18 |
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
 | 3. Agent Core           | 4/4            | Complete    | 2026-04-19 |
-| 4. Frappe Integration   | 4/10           | In Progress | -          |
+| 4. Frappe Integration   | 10/10          | Complete    | 2026-04-19 |
 | 5. Persona-Verwaltung   | 0/TBD          | Not started | -          |
