@@ -113,4 +113,5 @@ async def entrypoint(ctx: JobContext):
         break
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    port = int(os.getenv("LIVEKIT_AGENT_PORT", 0))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, port=port))

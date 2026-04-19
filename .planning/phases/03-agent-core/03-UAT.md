@@ -1,14 +1,14 @@
 ---
-status: blocked
+status: active
 phase: 03-agent-core
 source: 03-01-SUMMARY.md, 03-02-SUMMARY.md, 03-03-SUMMARY.md
 started: 2026-04-18T18:02:24.3824851+02:00
-updated: 2026-04-18T18:05:09.0338646+02:00
+updated: 2026-04-19T11:23:00.0000000+02:00
 ---
 
 ## Current Test
 
-[testing blocked — Runtime-Deployment auf Coolify ausstehend]
+[Test 1. DSGVO-Ansage beim Join kann durchgeführt werden]
 
 ## Tests
 
@@ -33,11 +33,10 @@ result: pending
 total: 4
 passed: 0
 issues: 0
-pending: 0
+pending: 4
 skipped: 0
-blocked: 4
+blocked: 0
 
 ## Gaps
 
-- blocked_by: deployment
-  reason: "Runtime-Deployment auf Coolify ausstehend"
+- none
