@@ -4,29 +4,29 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 ---
 
-## Architektur: Unified Stack
+## Architektur: Universal Bridge Stack
 
-Wir nutzen jetzt einen **Unified Docker-Compose-Stack**, der alle Komponenten enthält:
-1. **LiveKit Server**: Das WebRTC-Backend (Port 7880, 7881, etc.).
-2. **Agent**: Der Python-basierte Voice-Worker (verbindet sich intern mit LiveKit).
-3. **Frontend**: Das Next.js-Widget (Port 3000).
+Wir nutzen jetzt einen **Universal Docker-Compose-Stack**, der vollständig im **Bridge-Modus** läuft. Dies ist die sauberste Lösung für Multi-Tenant-Umgebungen und automatisches SSL-Routing.
 
-Wir nutzen **`network_mode: host`** gezielt **nur** für die WebRTC/Agent-Komponenten:
-1. **Performance**: WebRTC-Traffic (UDP) wird ohne Docker-Proxy-Overhead direkt vom Host verarbeitet.
-2. **Einfachheit**: Es müssen keine 10.000 UDP-Ports gemappt werden.
-3. **Frontend-Isolierung**: Das Next.js Frontend läuft **nicht** im Host-Modus. Dadurch kann der Coolify-Router (Traefik) es automatisch erkennen, Traffic dorthin routen und problemlos SSL-Zertifikate (Let's Encrypt) ausstellen.
+1. **LiveKit Server**: Das WebRTC-Backend.
+2. **Agent**: Der Python-basierte Voice-Worker (verbindet sich intern via Docker-DNS `ws://livekit:7880`).
+3. **Frontend**: Das Next.js-Widget.
 
-### Warum `network_mode: host` beim Server?
-Docker startet für jeden einzeln gemappten UDP-Port einen eigenen Proxy-Prozess. Bei WebRTC (10.000 Ports) führt dies oft dazu, dass Container minutenlang im Status "Created" hängen oder gar nicht erst starten. Mit `network_mode: host` entfällt dieser Overhead.
+### Warum Bridge-Modus statt Host-Modus?
+Früher war der Host-Modus nötig, um den Overhead von 10.000 Docker-Proxy-Prozessen für WebRTC zu vermeiden. Wir haben den Port-Bereich nun auf **100 Ports (50000-50100)** optimiert. Dadurch kann der Stack im Bridge-Modus laufen, was folgende Vorteile bietet:
+- **Automatisches SSL**: Coolify/Traefik erkennt alle Dienste automatisch und stellt Let's Encrypt Zertifikate ohne manuelle Labels aus.
+- **Isolierung**: Dienste kommunizieren intern über das Docker-Netzwerk (`livekit-net`), ohne Host-Ports zu belegen (außer den explizit gemappten).
+- **Port-Flexibilität**: Mehrere Instanzen können einfach nebeneinander laufen.
 
 ---
 
 ## Multi-Tenancy (Mehrere Instanzen pro VPS)
 
-Wenn Sie mehrere Instanzen auf demselben Server betreiben möchten, müssen Sie die Ports in der `docker-compose.yml` anpassen:
-- LiveKit Signaling: 7880 -> 7882, etc.
-- Frontend: 3000 -> 3001, etc.
-- UDP-Range: 50000-50100 -> 50101-50200.
+Wenn Sie mehrere Instanzen auf demselben Server betreiben möchten, müssen Sie nur die Host-Ports in der `docker-compose.yml` anpassen:
+- Signaling: `7880:7880` -> `7882:7880`
+- WebRTC TCP: `7881:7881` -> `7883:7881`
+- UDP-Range: `50000-50100:50000-50100/udp` -> `50101-50200:50000-50100/udp`
+- Frontend: `3000:3000` -> `3001:3000`
 
 ---
 
