@@ -12,7 +12,6 @@ services:
       - --config-body
       - |
         port: 7880
-        bind: 0.0.0.0
         log_level: info
         rtc:
           tcp_port: 7881
