@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-19T20:04:12.635Z"
+last_updated: "2026-04-19T20:28:49.932Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 24
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -21,8 +21,8 @@ progress:
 ## Current Position
 
 Phase: 04 (frappe-integration) — EXECUTING
-Plan: 1 of 10
-**Status:** Executing Phase 04
+Plan: 2 of 10
+**Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -79,6 +79,8 @@ Progress (Project):
 - [Phase 04]: Track live UAT checks as retest-required-unblocked after dependency blocker removal.
 - [Phase 04]: Hardening-Gate eingefuehrt: kein Execute/Testing vor dokumentierten Betriebsfakten (Session-Grenze, Endpoint, Tool-Inventar).
 - [Phase 04]: Verbindliche Wave-Reihenfolge festgelegt: D (blockierend) -> A -> B -> E -> C -> F.
+- [Phase 04]: Wave D wird als freigegeben behandelt, sobald das Human-Verify-Signal approved-wave-d vorliegt.
+- [Phase 04]: Folgeschritte 04-06 bis 04-10 bleiben formal an die dokumentierte Reihenfolge D -> A -> B -> E -> C -> F gekoppelt.
 
 ### Blockers
 
@@ -97,4 +99,4 @@ Progress (Project):
 
 - **Last Action:** Scopedown von Phase 04 auf MCP-Core und Anlage von Phase 05 fuer Persona-Verwaltung.
 - **Current Goal:** Hardening-Plan verbindlich verankern und GO/NO-GO-Gates fuer Phase 4 schliessen.
-- **Resume File:** .planning/phases/04-frappe-integration/04-CONTEXT.md
+- **Resume File:** None
