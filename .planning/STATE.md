@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-19T20:40:45.141Z"
+last_updated: "2026-04-19T20:43:44.716Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 ## Current Position
 
 Phase: 04 (frappe-integration) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 **Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
@@ -87,6 +87,8 @@ Progress (Project):
 - [Phase 04]: Scope-Guardrails bleiben unveraendert: stdio-sidecar, kein HTTP Agent-zu-MCP, keine lokale Bridge, kein REST-Fallback, keine lokale Tool-Allowlist.
 - [Phase 04]: INTG-04 wird erst nach freigegebenem Wave-E-Live-Nachweis auf GO gesetzt (Signal approved-wave-e).
 - [Phase 04]: INTG-05 bleibt bis Wave C (Plan 04-08) ausstehend und wird nicht in Wave E abgeschlossen.
+- [Phase 04]: 403-Fehlerpfad bleibt als produktives Verhalten mit identischer Voice/Text-Botschaft dokumentiert.
+- [Phase 04]: INTG-05 wird nur per referenzierter Wave-C-Live-Evidenz auf GO gesetzt.
 
 ### Blockers
 
