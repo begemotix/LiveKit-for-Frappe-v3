@@ -22,22 +22,24 @@ progress:
 
 Phase: 04 (frappe-integration) — **COMPLETE** (Gap-Closure inkl. Wave E Live-Evidenz + Wave F Doku-Sync, Plan `04-10-PLAN.md`).
 Plan: 10 of 10
-**Status:** Phase-4-Freigabe dokumentarisch **GO** — konsistent in `04-VERIFICATION.md`, `04-HUMAN-UAT.md`, `OPERATOR-HANDOVER.md`.
+**Status:** Phase-4 dokumentarisch abgeschlossen (Wave F); bereit fuer Transition/Verifier nach Bedarf
 Ausfuehrungslogik (verbindlich): `D -> A -> B -> E -> C -> F`.
 Wave-/Gate-Plane (Auszug): `04-05-PLAN.md`, `04-06-PLAN.md`, `04-07-PLAN.md`, `04-08-PLAN.md`, `04-09-PLAN.md`, `04-10-PLAN.md`.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
 Progress (Project):
-[███████   ] 70%
+[██████████] 96%
 ```
 
 ## Performance Metrics
 
-- Phases Completed: 4/5 (Phase 4 frappe-integration dokumentarisch abgeschlossen)
-- Plans Completed: 23/24 (inkl. `04-10-PLAN.md`)
-- Requirements Mapped: 16/16
-- Known Bugs: 0
+| Run | Duration | Tasks | Files |
+| --- | --- | --- | --- |
+| Phase 04 P10 | 12min | 2 tasks | 6 files |
+
+- Phases Completed (manuell): 4/5 inkl. Phase-4-Dokumentabschluss
+- Requirements: INTG-01 bis INTG-05 laut REQUIREMENTS.md complete
 
 ## Accumulated Context
 
@@ -92,6 +94,8 @@ Progress (Project):
 - [Phase 04]: 403-Fehlerpfad bleibt als produktives Verhalten mit identischer Voice/Text-Botschaft dokumentiert.
 - [Phase 04]: INTG-05 wird nur per referenzierter Wave-C-Live-Evidenz auf GO gesetzt.
 - [Phase 04]: Wave F (Plan `04-10-PLAN.md`) synchronisiert OPERATOR-HANDOVER, `04-VERIFICATION.md`, `04-HUMAN-UAT.md` mit finalem GO und Wave-Reihenfolge `D -> A -> B -> E -> C -> F`.
+- [Phase 04]: Wave F: Phase-4-Gap-Closure dokumentarisch GO; Artefakte synchronisiert.
+- [Phase 04]: Verbindliche Ausfuehrungsreihenfolge D -> A -> B -> E -> C -> F in Handover, UAT, Verification, STATE.
 
 ### Blockers
 
