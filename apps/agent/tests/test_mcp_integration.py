@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 
-from frappe_mcp import build_frappe_mcp_server
+from src.frappe_mcp import build_frappe_mcp_server
 
 
 def test_build_frappe_mcp_server_uses_env_headers():
@@ -21,7 +21,7 @@ def test_build_frappe_mcp_server_uses_env_headers():
         },
         clear=False,
     ):
-        with patch("frappe_mcp.mcp.MCPServerHTTP", DummyMCPServerHTTP):
+        with patch("src.frappe_mcp._create_mcp_server", DummyMCPServerHTTP):
             server = build_frappe_mcp_server()
 
     assert isinstance(server, DummyMCPServerHTTP)
