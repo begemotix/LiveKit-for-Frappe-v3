@@ -91,14 +91,8 @@ const ChatPanelContent = () => {
 export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
   const [token, setToken] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isGdprAccepted, setIsGdprAccepted] = useState(false);
-
-  const gdprNotice =
-    process.env.NEXT_PUBLIC_GDPR_NOTICE ||
-    'Ich willige in die Verarbeitung meiner Audiodaten durch OpenAI in den USA ein. Dieses Gespräch wird zur Verarbeitung an KI-Modelle übertragen.';
 
   const startConversation = useCallback(async () => {
-    if (!isGdprAccepted) return;
     setIsConnecting(true);
     try {
       const response = await fetch('/api/token');
@@ -109,7 +103,7 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
     } finally {
       setIsConnecting(false);
     }
-  }, [isGdprAccepted]);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -145,11 +139,7 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
             </div>
           </CardContent>
           <CardFooter className="border-t p-4">
-            <Button
-              className="w-full"
-              onClick={startConversation}
-              disabled={isConnecting || !isGdprAccepted}
-            >
+            <Button className="w-full" onClick={startConversation} disabled={isConnecting}>
               {isConnecting ? 'Verbindung wird aufgebaut...' : 'Gespräch starten'}
             </Button>
           </CardFooter>
