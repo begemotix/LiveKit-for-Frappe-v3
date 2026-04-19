@@ -26,6 +26,26 @@ def configure_logging():
 
 logger = configure_logging()
 
+def load_agent_instructions():
+    try:
+        # Try to load instructions from MD file (readme/AGENT_PROMPT.md)
+        # This works both locally and in Docker when mounted
+        base_dir = os.path.dirname(__file__)
+        path = os.path.join(base_dir, "readme", "AGENT_PROMPT.md")
+        
+        # Also check one level up if not found (for local dev vs docker)
+        if not os.path.exists(path):
+            path = os.path.join(base_dir, "..", "..", "readme", "AGENT_PROMPT.md")
+
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+                logger.info(f"Loaded agent instructions from {path}")
+                return content
+    except Exception as e:
+        logger.error(f"Error loading instructions from MD: {e}")
+    return None
+
 class Assistant(Agent):
     def __init__(self, instructions: str):
         super().__init__(instructions=instructions)
@@ -51,11 +71,17 @@ async def entrypoint(ctx: JobContext):
     # Task 1: Initialize Realtime Model and Server VAD
     filler_instructions = "IMPORTANT: When using a tool, always first say a brief natural filler in the user's language (e.g., 'Einen Moment, ich schaue nach' if German, 'One moment, I'll check that' if English) so the user knows you are working."
     
-    base_instructions = os.getenv("ROLE_DESCRIPTION", "You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.") \
-        .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
-        .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+    # Try to load instructions from Markdown file first (Punkt X - Baseline Training)
+    md_instructions = load_agent_instructions()
     
-    instructions = f"{base_instructions}\n\n{filler_instructions}"
+    if md_instructions:
+        instructions = f"{md_instructions}\n\n{filler_instructions}"
+    else:
+        # Fallback to Environment Variables
+        base_instructions = os.getenv("ROLE_DESCRIPTION", "You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.") \
+            .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
+            .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+        instructions = f"{base_instructions}\n\n{filler_instructions}"
 
     model = openai.realtime.RealtimeModel(
         modalities=["audio", "text"],
