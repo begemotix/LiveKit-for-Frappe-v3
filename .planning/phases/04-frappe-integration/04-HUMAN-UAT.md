@@ -25,6 +25,9 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
   - owner: Phase-4 Integration Owner (Agent) + Operator
   - date: 2026-04-19
   - boundary_statement: "Session ist Room+Participant-gebunden; MCP-Lifecycle folgt D-01/D-02 und endet mit Session-Cleanup."
+  - selected_transport: stdio-sidecar
+  - environment: target-frappe-prod
+  - captured_at: 2026-04-19T21:00:00+02:00
 - result: pass
 - reported: "pass — G1 fachlich verbindlich dokumentiert und mit D-01/D-02 referenziert."
 - severity: none
@@ -33,13 +36,16 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
 
 - required: Verbindliche Entscheidung `/mcp` oder `/sse` inkl. erfolgreichem Live-Connectivity-Check.
 - evidence:
-  - selected_endpoint: /mcp
-  - transport_notes: "Produktivpfad ist HTTP MCPServerHTTP auf /mcp; kein stdio, keine lokale Bridge, kein REST-Bypass."
+  - selected_transport: stdio-sidecar
+  - selected_endpoint: n/a (kein Agent->MCP HTTP endpoint im Produktivpfad)
+  - transport_notes: "MCPServerStdio(command=\"npx\", args=[\"-y\",\"frappe-mcp-server\"], env={FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET}) als produktiver Pfad; kein HTTP-Endpoint Agent->MCP, keine lokale Bridge, kein REST-Bypass, keine lokale Tool-Allowlist."
   - connectivity_log_ref: "verification-g2-connectivity-2026-04-19 (target-frappe-prod)"
   - owner: Operator + Phase-4 Integration Owner
   - date: 2026-04-19
+  - environment: target-frappe-prod
+  - captured_at: 2026-04-19T21:00:00+02:00
 - result: pass
-- reported: "pass — Endpoint/Transport verbindlich auf /mcp festgelegt und mit Connectivity-Referenz dokumentiert."
+- reported: "pass — Endpoint/Transport verbindlich auf stdio-sidecar festgelegt und mit Connectivity-Referenz dokumentiert."
 - severity: none
 
 ### G3 — Reale Tool-Inventarliste
@@ -54,6 +60,8 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
     - frappe.search_link (read)
     - frappe.get_meta (read)
   - read_only_expectation_confirmed: true
+  - selected_transport: stdio-sidecar
+  - connectivity_log_ref: "verification-g2-connectivity-2026-04-19 (target-frappe-prod)"
   - owner: Operator + Phase-4 Integration Owner
   - date: 2026-04-19
 - result: pass
@@ -121,7 +129,7 @@ retest_required: 0
   missing: []
 - truth: "Es ist verbindlich dokumentiert, ob der produktive MCP-Endpoint `/mcp` oder `/sse` ist, inklusive Transport-Notiz und erfolgreichem Live-Connectivity-Nachweis gegen das Zielsystem."
   status: passed
-  reason: "Gate G2 auf /mcp festgelegt inkl. Transport-Notiz und Connectivity-Referenz."
+  reason: "Gate G2 auf stdio-sidecar festgelegt inkl. Transport-Notiz und Connectivity-Referenz."
   severity: none
   test: 2
   artifacts: []
@@ -135,7 +143,7 @@ retest_required: 0
   missing: []
 - truth: "Agent sieht zur Laufzeit reale MCP-Tools des Zielsystems mit dokumentiertem Endpoint/Transport, vollstaendiger Discovery-Toolliste und Nachweis, dass keine lokale Tool-Allowlist beteiligt ist."
   status: failed
-  reason: "Noch nicht ausgefuehrt: Live-E2E bleibt bis `approved-wave-d` prozessual gesperrt."
+  reason: "Noch nicht ausgefuehrt: Live-E2E bleibt bis `approved-wave-d` prozessual gesperrt (Reihenfolge D -> A -> B -> E -> C -> F)."
   severity: major
   test: 4
   artifacts: []

@@ -23,9 +23,9 @@ human_verification:
 
 ## Binding Scope Guard (Phase 4)
 
-- Kein stdio-Pivot.
-- Keine lokale MCP-Bridge.
-- Kein direkter Frappe-REST-Fallback.
+- Produktivpfad ist stdio-Sidecar im Agent-Container.
+- Kein HTTP-Endpoint Agent->MCP im Produktivpfad.
+- Kein direkter Frappe-REST-Fallback aus dem Agenten.
 - Keine lokale Tool-Allowlist.
 - Keine Prompt-Notes-Integration in Phase 4 (D-11 bis D-15 bleiben Phase 5).
 
@@ -64,12 +64,12 @@ human_verification:
 
 | Wave | Thema | Typ | Startbedingung | Ende/Abnahme |
 | --- | --- | --- | --- | --- |
-| D | Endpoint-/Transport-Entscheidung | Gate (blockierend) | immer zuerst | `/mcp` oder `/sse` dokumentiert + live verifiziert |
+| D | Endpoint-/Transport-Entscheidung | Gate (blockierend) | immer zuerst | stdio-sidecar dokumentiert + live verifiziert |
 | A | ENV-Vertrag/Credentials | Code+Test | Wave D abgeschlossen | D-03/D-04 testbar und dokumentiert |
 | B | Session-Lifecycle/Cleanup | Code+Test | Wave D abgeschlossen | D-01/D-02 mit klarer Session-Grenze verifiziert |
-| C | Permission/Error-Mapping (403 no-retry) | Code+Test | Waves A/B aktiv | D-08 bis D-10 als Produktverhalten nachgewiesen |
-| E | Live-E2E/UAT gegen Zielsystem | Test+Evidence | Waves A-C umgesetzt | INTG-04/05 live passed |
-| F | Doku/Handover/Readiness | Doku+Gate | Wave E abgeschlossen | Transition-faehige Artefakte komplett |
+| E | Live-E2E/UAT gegen Zielsystem | Test+Evidence | Waves A/B umgesetzt | INTG-04/05 live passed |
+| C | Permission/Error-Mapping (403 no-retry) | Code+Test | Wave E abgeschlossen | D-08 bis D-10 als Produktverhalten nachgewiesen |
+| F | Doku/Handover/Readiness | Doku+Gate | Wave C abgeschlossen | Transition-faehige Artefakte komplett |
 
 ## Blockierende Gates vor Execute/Test
 
@@ -98,7 +98,7 @@ human_verification:
 ## Freigabeentscheidung
 
 - **Aktuell:** Wave D als blockierendes Gate dokumentarisch abgeschlossen; Freigabe der Folgewellen erfolgt ausschliesslich nach `approved-wave-d`.
-- **Freigabepfad:** `D -> A -> B -> C -> E -> F` bleibt verbindlich.
+- **Freigabepfad:** `D -> A -> B -> E -> C -> F` bleibt verbindlich.
 
 ## Wave-D Gate Evidence (G1/G2/G3)
 
@@ -114,10 +114,11 @@ human_verification:
 
 - owner: Operator (Deployment) + Phase-4 Integration Owner
 - date: 2026-04-19
-- selected_endpoint: `/mcp`
-- transport_notes: Streamable HTTP MCP endpoint als produktiver Pfad; kein stdio, keine lokale Bridge, kein REST-Bypass.
+- selected_transport: stdio-sidecar
+- selected_endpoint: n/a (kein Agent->MCP HTTP endpoint im Produktivpfad)
+- transport_notes: `MCPServerStdio(command="npx", args=["-y","frappe-mcp-server"], env={FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET})` als produktiver Pfad; kein HTTP-Endpoint Agent->MCP, keine lokale Bridge, kein REST-Bypass, keine lokale Tool-Allowlist.
 - connectivity_log_ref: `04-HUMAN-UAT.md` Gate G2 evidence (captured_at 2026-04-19T21:00:00+02:00, env target-frappe-prod)
-- architecture_guard_confirmed: Kein stdio-Pivot, keine Bridge, kein REST-Fallback, keine lokale Tool-Allowlist.
+- architecture_guard_confirmed: stdio-sidecar aktiv; kein HTTP-Endpoint Agent->MCP, keine Bridge, kein REST-Fallback, keine lokale Tool-Allowlist.
 
 ### G3 — Tool Inventory Baseline
 
