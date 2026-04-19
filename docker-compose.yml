@@ -49,7 +49,6 @@ services:
         NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL}
         NEXT_PUBLIC_APP_CONFIG_ENDPOINT: ${NEXT_PUBLIC_APP_CONFIG_ENDPOINT:-}
     restart: unless-stopped
-    network_mode: host
     env_file:
       - .env
     depends_on:

@@ -11,12 +11,12 @@ Wir nutzen jetzt einen **Unified Docker-Compose-Stack**, der alle Komponenten en
 2. **Agent**: Der Python-basierte Voice-Worker (verbindet sich intern mit LiveKit).
 3. **Frontend**: Das Next.js-Widget (Port 3000).
 
-Wir nutzen weiterhin für alle Komponenten den **`network_mode: host`**. Das bedeutet:
+Wir nutzen **`network_mode: host`** gezielt **nur** für die WebRTC/Agent-Komponenten:
 1. **Performance**: WebRTC-Traffic (UDP) wird ohne Docker-Proxy-Overhead direkt vom Host verarbeitet.
 2. **Einfachheit**: Es müssen keine 10.000 UDP-Ports gemappt werden.
-3. **Kommunikation**: Alle Dienste können sich gegenseitig über `localhost` erreichen.
+3. **Frontend-Isolierung**: Das Next.js Frontend läuft **nicht** im Host-Modus. Dadurch kann der Coolify-Router (Traefik) es automatisch erkennen, Traffic dorthin routen und problemlos SSL-Zertifikate (Let's Encrypt) ausstellen.
 
-### Warum `network_mode: host`?
+### Warum `network_mode: host` beim Server?
 Docker startet für jeden einzeln gemappten UDP-Port einen eigenen Proxy-Prozess. Bei WebRTC (10.000 Ports) führt dies oft dazu, dass Container minutenlang im Status "Created" hängen oder gar nicht erst starten. Mit `network_mode: host` entfällt dieser Overhead.
 
 ---
@@ -49,7 +49,7 @@ Diese Variablen müssen in Coolify gesetzt werden:
 
 1. **Ressource**: Docker Compose (verweist auf dieses Repo).
 2. **Build**: Coolify baut das Frontend und den Agenten automatisch über die jeweiligen Dockerfiles in `apps/`.
-3. **Traefik (Coolify)**: Routen Sie HTTPS von Ihrer Domain auf Port **3000** (Frontend) des Hosts.
+3. **Traefik (Coolify)**: Coolify erkennt das Frontend automatisch und routet Traffic von Ihrer Domain auf Port **3000** im Container. Das Ausstellen von Let's Encrypt Zertifikaten funktioniert "out of the box".
 4. **LiveKit Ports**: Stellen Sie sicher, dass die Ports 7880-7881 (TCP) und 3478, 5349, 50000-50100 (UDP) in der Firewall offen sind.
 
 ---
