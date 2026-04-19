@@ -1,0 +1,20 @@
+---
+description: Operator-Handover ist Pflicht vor Phase-Transition
+globs:
+alwaysApply: true
+---
+
+# Operator-Handover-Pflicht
+
+Jede GSD-Phase MUSS vor Transition eine Datei
+`.planning/phases/<phase>/OPERATOR-HANDOVER.md` enthalten.
+
+Mindestabschnitte in dieser Datei:
+
+1. Coolify-ENV-Variablen (Name, Zweck, Default, Beispielwert)
+2. Konfigurierbare Komponenten (ohne Code-Änderung austauschbar, z. B. LLM-Provider, Frappe-Instanz, Stimme, Modell)
+3. Nicht-konfigurierbare Komponenten (hardcoded + Begründung)
+4. Handover-Checkliste für den Onboarding-Termin (Kundenfragen + auszuhändigende Dateien)
+
+Fehlt die Datei oder einer der Mindestabschnitte, ist die Phase **nicht abnahmefähig**:
+kein `/gsd-transition`.

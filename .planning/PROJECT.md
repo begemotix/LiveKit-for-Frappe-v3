@@ -54,6 +54,9 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 | MCP für Frappe-Integration     | Keine eigene API nötig; standardisierte Anbindung, Tools werden dynamisch vom Frappe-MCP-Server bezogen.                                  | — Pending |
 | OpenAI Realtime (Typ A) für V1 | Schnelles Feedback, geringe Latenz, keine separaten STT/TTS-Module nötig. Eignet sich für Evaluationen ohne harte EU-DSGVO Anforderungen. | — Pending |
 | Template-Nutzung               | Orientierung an offiziellen LiveKit-Repos für hohe Wartbarkeit und Kompatibilität.                                                        | — Pending |
+| D-A: Prompts ab Phase 4+ aus Frappe | `readme/AGENT_PROMPT.md` ist nur Demo-Übergang; ab Phase 4 erfolgt Prompt-Steuerung aus Frappe statt Filesystem. Keine Mehrinvestition in Markdown-System. | — Accepted |
+| D-B: DSGVO-Ansage nicht auf Agent-Ebene | Telefon-Ansage via Zadarma vor Übergabe, Browser-Hinweis als UI-Text in späterer Frontend-Phase; keine LiveKit-Audioansage/Cloud-TTS. `NEXT_PUBLIC_GDPR_NOTICE` bleibt, Default leer. | — Accepted |
+| D-C: Reverse-Proxy = Coolify-Traefik | Produktivpfad nutzt Coolify-Traefik. Caddy bleibt nur optional und auskommentiert für Nicht-Coolify-Deployments im Repo. | — Accepted |
 
 ## Evolution
 

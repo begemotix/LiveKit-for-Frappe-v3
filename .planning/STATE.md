@@ -62,6 +62,9 @@ Progress (Project):
 - [Phase 03]: D-09: Strukturiertes JSON-Logging
 - [Phase 03]: D-10: Korrelations-ID aus Room-Name
 - [Phase 03-agent-core]: Added pytest-asyncio to enable asynchronous testing of the LiveKit agent.
+- [Architektur]: D-A: Agent-Prompts werden ab Phase 4+ aus Frappe geregelt; `readme/AGENT_PROMPT.md` ist nur Übergang für die Demo-Phase.
+- [Architektur]: D-B: DSGVO-Ansagen liegen nicht auf LiveKit/Agent-Ebene; Telefon via Zadarma, Browser-Hinweis später im Frontend, `NEXT_PUBLIC_GDPR_NOTICE` bleibt mit leerem Default.
+- [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
 
 ### Blockers
 

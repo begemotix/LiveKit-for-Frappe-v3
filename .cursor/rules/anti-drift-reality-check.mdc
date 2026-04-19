@@ -1,0 +1,22 @@
+---
+description: Anti-Drift Reality Check vor Commits
+globs:
+alwaysApply: true
+---
+
+# Anti-Drift: Reality Check
+
+Vor jedem `git commit` MUSS der Agent im Terminal ausführen und sichtbar ausgeben:
+
+1. `ls -la` im Repo-Root
+2. `ls -1 | wc -l` (Dateianzahl)
+3. `git ls-files | grep -E "^(HEAD|packed-refs|pre-commit\.sample|ORIG_HEAD|FETCH_HEAD|index)$"`
+
+Wenn Schritt 3 Treffer liefert: **Commit abbrechen (Abort)** und Ursache beheben.
+
+Bei Template-Klonen gilt zusätzlich:
+
+1. Direkt nach jedem `git clone` den Inhalt des Zielordners anzeigen.
+2. Das geklonte `.git`-Verzeichnis entfernen, bevor weitergearbeitet wird.
+
+Begründung: Phase-2 Lessons Learned. Ein Verifier-`PASSED` ersetzt keinen Sichtkontakt.
