@@ -41,6 +41,31 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
   - result: pass
 - reported: "pass — Wave A dokumentiert ENV-only Credential-Contract und produktiven stdio-sidecar-Transport ohne Runtime-Switch."
 
+## Wave B
+
+### Wave B — Session-Grenze (D-01/D-02)
+
+- owner: Phase-4 Integration Owner (Agent) + Operator
+- date: 2026-04-19
+- boundary_statement: "Session ist room-basiert (eine Session pro LiveKit-Raum). MCP-Lifecycle folgt D-01/D-02: Aufbau pro Room-Session, Reuse innerhalb derselben Session, Cleanup bei Session-Ende."
+- decision_refs: D-01, D-02
+- verification_ref: .planning/phases/04-frappe-integration/04-VERIFICATION.md#wave-d-gate-evidence-g1g2g3
+- result: pass
+- reported: "pass — Wave B fixiert die fachliche Session-Grenze als room-basiert und bindet sie formal an D-01/D-02."
+
+### Wave B — Session-Ende Cleanup-Nachweis
+
+- cleanup_trigger: "terminale Teilnehmerzahl <=1"
+- shutdown_behavior: "einmaliger MCP-Shutdown pro Session (idempotent)"
+- evidence:
+  - owner: Phase-4 Integration Owner (Agent)
+  - date: 2026-04-19
+  - cleanup_log_ref: "wave-b-cleanup-session-end-2026-04-19"
+  - verification_ref: .planning/phases/04-frappe-integration/04-VERIFICATION.md#wave-d-gate-evidence-g1g2g3
+  - threshold: "<=1"
+  - result: pass
+- reported: "pass — Session-Ende bei <=1 Teilnehmern triggert genau einen MCP-Shutdown, konsistent mit D-02."
+
 ## Current Test
 
 [testing complete]
