@@ -51,14 +51,14 @@ human_verification:
 | D-05 | ✓ PASS | Discovery dynamisch, keine lokale Allowlist |
 | D-06 | ✓ PASS | Read-only serverseitig vorgesehen |
 | D-07 | ✓ PASS | Kein REST-Bypass/hardcoded Doctype-Pfad |
-| D-08 | ~ PARTIAL | Nutzerfreundliche Meldung vorhanden, kanaluebergreifende Produktverifikation offen |
-| D-09 | ~ PARTIAL | Kein Retry sichtbar, Live-Negativtest noch offen |
-| D-10 | ~ PARTIAL | Structured Logging vorhanden, feste Pflichtfelder in Live-Nachweis offen |
+| D-08 | ✓ PASS | Wave-C-UAT belegt identische Nutzerbotschaft fuer Voice/Text: `Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff.` |
+| D-09 | ✓ PASS | Wave-C-UAT dokumentiert explizit `kein Retry auf 403` als produktives Verhalten. |
+| D-10 | ✓ PASS | Wave-C-UAT enthaelt strukturierten 403-Logbeleg mit `event`, `correlation_id`, `tool`, `error_class` bei stabiler Session. |
 | INTG-01 | ✓ PASS | Wave-A-Nachweis dokumentiert in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-a` (stdio-sidecar + ENV-Contract). |
 | INTG-02 | ✓ PASS | Wave-A-Nachweis bestaetigt ausschliessliche Credential-Quelle `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` ohne Runtime-Switch. |
 | INTG-03 | ✓ PASS | Agent-Credential-Identitaet umgesetzt und fuer Wave B mit Session-Grenze/Cleanup-Nachweis verknuepft (`04-HUMAN-UAT.md#wave-b`) |
 | INTG-04 | ✓ GO | Wave-E-Live-Nachweis fuer Discovery + Read-only E2E ist in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#live-testfaelle-wave-e` als `result: pass` dokumentiert und freigegeben (`approved-wave-e`). |
-| INTG-05 | ~ PARTIAL | INTG-05: pending Wave C (Plan 04-08) bis 403-Produktnachweis |
+| INTG-05 | ✓ GO | Wave-C-403-Nachweis ist in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#3-403-rechtefall-als-produktverhalten` als `result: pass` dokumentiert (feste Meldung, kein Retry, Pflichtfelder im Log, stabile Session). |
 
 ## Verbindliche Hardening-Waves (Reihenfolge fix)
 
@@ -106,10 +106,20 @@ human_verification:
 
 ## Produktverhalten 403 (verbindlich)
 
-- Gleiche klare Nutzerbotschaft fuer Voice/Text.
-- Kein Retry auf 403.
+- Gleiche klare Nutzerbotschaft fuer Voice/Text: `Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff.`
+- Kein Retry auf 403 (`kein Retry auf 403`).
 - Strukturierter Logeintrag mit festen Feldern: `event`, `correlation_id`, `tool`, `error_class`.
-- Session bleibt stabil (kein Crash).
+- Session bleibt stabil (kein Crash); Wave-C-UAT referenziert den konkreten 403-Fall.
+
+## Wave-C Abschluss (INTG-05)
+
+- evidence_source: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#3-403-rechtefall-als-produktverhalten`
+- status: complete
+- architecture_guardrails_reconfirmed:
+  - "MCPServerStdio mit FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET bleibt der produktive stdio-sidecar Pfad."
+  - "kein HTTP-Endpoint Agent->MCP"
+  - "keine lokale Bridge"
+  - "kein REST-Fallback"
 
 ## Freigabeentscheidung
 
@@ -117,7 +127,7 @@ human_verification:
 - **Freigabepfad:** `D -> A -> B -> E -> C -> F` bleibt verbindlich.
 - **Checkpoint Outcome:** Human-Verify abgeschlossen mit Signal `approved-wave-e` am 2026-04-19T22:49:00+02:00.
 - **INTG-04:** GO auf Basis der freigegebenen Wave-E-UAT-Evidenz (Discovery + Read-only E2E in `04-HUMAN-UAT.md`).
-- **INTG-05:** pending Wave C (Plan 04-08) bis 403-Produktnachweis.
+- **INTG-05:** GO auf Basis des dokumentierten Wave-C-403-Nachweises (`04-HUMAN-UAT.md#3-403-rechtefall-als-produktverhalten`).
 
 ## Wave-D Gate Evidence (G1/G2/G3)
 
