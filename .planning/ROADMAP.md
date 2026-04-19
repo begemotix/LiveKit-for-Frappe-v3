@@ -82,7 +82,7 @@
    Plans:
 
 - [x] 04-01-PLAN.md — MCP foundation: ENV contract, factory, and baseline integration tests.
-- [ ] 04-02-PLAN.md — Wire session-scoped MCP lifecycle with dedicated agent identity and discovery guards.
+- [x] 04-02-PLAN.md — Wire session-scoped MCP lifecycle with dedicated agent identity and discovery guards.
 - [ ] 04-03-PLAN.md — Add graceful permission/error handling and operator handover.
 
 ### Phase 5: Frappe-basierte Persona-Verwaltung

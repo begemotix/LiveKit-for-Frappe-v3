@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-19T16:00:36.134Z"
+last_updated: "2026-04-19T16:07:54.656Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 ## Current Position
 
 Phase: 04 (frappe-integration) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 **Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
@@ -71,6 +71,8 @@ Progress (Project):
 - [Phase 03]: Interruption-Tests validieren gegen beobachtbares Verhalten (generate_reply) statt veralteter API-Mocks.
 - [Phase 04]: MCP credentials are read exclusively from FRAPPE_MCP_URL, FRAPPE_API_KEY, and FRAPPE_API_SECRET.
 - [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
+- [Phase 04]: MCP wiring stays session-scoped through build_frappe_mcp_server() in AgentSession.
+- [Phase 04]: Disconnect cleanup tolerates callback ordering by treating <=1 participants as terminal for one-shot MCP shutdown.
 
 ### Blockers
 
