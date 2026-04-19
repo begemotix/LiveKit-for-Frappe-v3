@@ -93,7 +93,8 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isGdprAccepted, setIsGdprAccepted] = useState(false);
 
-  const gdprNotice = process.env.NEXT_PUBLIC_GDPR_NOTICE || 
+  const gdprNotice =
+    process.env.NEXT_PUBLIC_GDPR_NOTICE ||
     'Ich willige in die Verarbeitung meiner Audiodaten durch OpenAI in den USA ein. Dieses Gespräch wird zur Verarbeitung an KI-Modelle übertragen.';
 
   const startConversation = useCallback(async () => {
@@ -108,7 +109,7 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [isGdprAccepted]);
 
   if (!isOpen) return null;
 
@@ -133,7 +134,7 @@ export const ChatPanel = ({ isOpen }: ChatPanelProps) => {
                 id="gdpr-checkbox"
                 checked={isGdprAccepted}
                 onChange={(e) => setIsGdprAccepted(e.target.checked)}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 accent-primary"
+                className="accent-primary mt-1 h-4 w-4 shrink-0 rounded border-gray-300"
               />
               <label
                 htmlFor="gdpr-checkbox"
