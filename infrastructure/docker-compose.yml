@@ -5,15 +5,31 @@ services:
     image: livekit/livekit-server:latest
     container_name: livekit
     restart: unless-stopped
-    command: --config /livekit-server.yaml
+    command:
+      - --config-body
+      - |
+        port: 7880
+        bind: 0.0.0.0
+        log_level: info
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 60000
+          use_external_ip: true
+        turn:
+          enabled: true
+          domain: ${DOMAIN}
+          tls_port: 5349
+          udp_port: 3478
+          external_tls: true
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
     ports:
       - '7880:7880'
       - '7881:7881'
       - '3478:3478/udp'
       - '5349:5349/tcp'
       - '50000-60000:50000-60000/udp'
-    volumes:
-      - ./livekit.config.yaml:/livekit-server.yaml
     env_file:
       - .env
 
