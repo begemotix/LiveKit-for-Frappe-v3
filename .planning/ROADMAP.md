@@ -89,7 +89,7 @@
 - [x] 04-06-PLAN.md — Wave A closure: validate endpoint-bound ENV/auth contract evidence.
 - [x] 04-07-PLAN.md — Wave B closure: document session-boundary and cleanup behavior evidence.
 - [ ] 04-08-PLAN.md — Wave C closure: complete 403 no-retry product-behavior evidence.
-- [ ] 04-09-PLAN.md — Wave E closure: run final live UAT evidence checks against target system.
+- [x] 04-09-PLAN.md — Wave E closure: run final live UAT evidence checks against target system.
 - [ ] 04-10-PLAN.md — Wave F closure: synchronize final handover, state, and roadmap readiness.
 
 ### Phase 5: Frappe-basierte Persona-Verwaltung
