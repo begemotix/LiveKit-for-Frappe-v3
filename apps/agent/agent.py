@@ -1,10 +1,12 @@
 import logging
 import os
 import asyncio
+import inspect
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.plugins import openai
+from src.frappe_mcp import build_frappe_mcp_server
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +27,23 @@ def configure_logging():
     return logger
 
 logger = configure_logging()
+
+
+async def _cleanup_mcp_server(mcp_server):
+    for method_name in ("aclose", "close", "shutdown"):
+        method = getattr(mcp_server, method_name, None)
+        if method is None:
+            continue
+        try:
+            result = method()
+            if inspect.isawaitable(result):
+                await result
+            return
+        except Exception as cleanup_error:
+            logger.error(f"MCP cleanup via {method_name} failed: {cleanup_error}")
+            return
+
+    logger.warning("MCP cleanup skipped: no supported close method found")
 
 def load_agent_instructions():
     try:
@@ -96,7 +115,12 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         llm=model,
         allow_interruptions=True,
+        mcp_servers=[build_frappe_mcp_server()],
     )
+    frappe_mcp_server = None
+    if hasattr(session, "mcp_servers") and session.mcp_servers:
+        frappe_mcp_server = session.mcp_servers[0]
+    mcp_cleanup_done = False
 
     @session.on("function_call_start")
     def on_function_call_start(tool_call):
@@ -118,6 +142,19 @@ async def entrypoint(ctx: JobContext):
             .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
         await session.generate_reply(instructions=f"Begrüße den Nutzer freundlich mit folgendem Text: {greeting}")
+
+    async def cleanup_session_mcp():
+        nonlocal mcp_cleanup_done
+        if mcp_cleanup_done:
+            return
+        mcp_cleanup_done = True
+        if frappe_mcp_server is not None:
+            await _cleanup_mcp_server(frappe_mcp_server)
+
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(_participant):
+        if not ctx.room.remote_participants:
+            asyncio.create_task(cleanup_session_mcp())
 
     @ctx.room.on("participant_joined")
     def on_participant_joined(participant):
