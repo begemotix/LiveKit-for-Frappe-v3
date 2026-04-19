@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-04-19T19:37:27.423Z"
+status: executing
+last_updated: "2026-04-19T20:04:12.635Z"
 progress:
   total_phases: 5
   completed_phases: 2
@@ -20,9 +20,9 @@ progress:
 
 ## Current Position
 
-Phase: 04 (frappe-integration) — PLANNING HARDENING GATE
-Plan: hardening-gate before execution
-**Status:** Wave-D Gate-Dokumentation abgeschlossen; Human-Verify Checkpoint `approved-wave-d` ausstehend. Bis dahin NO-GO fuer 04-06 bis 04-10.
+Phase: 04 (frappe-integration) — EXECUTING
+Plan: 1 of 10
+**Status:** Executing Phase 04
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -78,18 +78,18 @@ Progress (Project):
 - [Phase 04]: Use livekit-agents MCP extras in both uv and pip dependency contracts to prevent pre-session import failures.
 - [Phase 04]: Track live UAT checks as retest-required-unblocked after dependency blocker removal.
 - [Phase 04]: Hardening-Gate eingefuehrt: kein Execute/Testing vor dokumentierten Betriebsfakten (Session-Grenze, Endpoint, Tool-Inventar).
-- [Phase 04]: Verbindliche Wave-Reihenfolge festgelegt: D (blockierend) -> A -> B -> C -> E -> F.
+- [Phase 04]: Verbindliche Wave-Reihenfolge festgelegt: D (blockierend) -> A -> B -> E -> C -> F.
 
 ### Blockers
 
-- **Checkpoint Pending (Wave D Approval):** Human-Verify `approved-wave-d` steht aus; ohne dieses Signal bleiben 04-06 bis 04-10 gesperrt.
+- **Wave D dokumentiert:** Gate-Evidenz fuer G1/G2/G3 ist abgeschlossen; Freigabe fuer 04-06 bis 04-10 erfolgt nach `approved-wave-d`.
 - **NO-GO Gate 4 (Live Access):** Live-UAT/E2E-Zugang und Nachweise fuer Discovery/read-only/403-Produktverhalten sind noch nicht abgeschlossen.
 - **Scope Risk Guard:** Phase-5-Entscheidungen D-11 bis D-15 duerfen in Phase 4 nicht aktiviert werden.
 
 ### Next Steps
 
 - Human-Verify fuer Wave D durchfuehren und `approved-wave-d` dokumentieren.
-- Nach Freigabe: Umsetzung entlang Waves D -> A -> B -> C -> E -> F (Start mit 04-06).
+- Nach Freigabe: Umsetzung entlang Waves D -> A -> B -> E -> C -> F (Start mit 04-06).
 - Live-UAT/E2E-Nachweise fuer Discovery/read-only/403-Produktverhalten vervollstaendigen.
 - Phase 5 bleibt bis Phase-4-GO strikt out of scope.
 
