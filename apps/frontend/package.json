@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build-embed-popup-script": "webpack",
+    "build-embed-popup-script": "node node_modules/webpack-cli/bin/cli.js",
     "build": "next build && pnpm build-embed-popup-script",
     "start": "next start",
     "lint": "next lint",
