@@ -78,12 +78,13 @@
 2. The agent successfully authenticates its MCP requests using its own fixed credentials (e.g. API-Key from .env)
 3. User can ask the agent about Frappe data, and the agent retrieves and speaks information accessible to the agent user
 4. If the agent asks for data it lacks permissions for, it gracefully informs the user of the restriction instead of crashing
-   **Plans**: 3 plans
+   **Plans**: 4 plans
    Plans:
 
 - [x] 04-01-PLAN.md — MCP foundation: ENV contract, factory, and baseline integration tests.
 - [x] 04-02-PLAN.md — Wire session-scoped MCP lifecycle with dedicated agent identity and discovery guards.
 - [x] 04-03-PLAN.md — Add graceful permission/error handling and operator handover.
+- [x] 04-04-PLAN.md — Gap closure: fix MCP runtime dependency/import blocker and unblock live UAT retests.
 
 ### Phase 5: Frappe-basierte Persona-Verwaltung
 
@@ -104,5 +105,5 @@
 | 1. Infrastructure Setup | 2/2            | Complete    | 2026-04-18 |
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
 | 3. Agent Core           | 4/4            | Complete    | 2026-04-19 |
-| 4. Frappe Integration   | 0/TBD          | Not started | -          |
+| 4. Frappe Integration   | 3/4            | In Progress | -          |
 | 5. Persona-Verwaltung   | 0/TBD          | Not started | -          |

@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-04-19T16:14:17.111Z"
+status: executing
+last_updated: "2026-04-19T16:53:19.595Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 17
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 17
 ---
 
 # Project State
@@ -21,8 +21,8 @@ progress:
 ## Current Position
 
 Phase: 04 (frappe-integration) — EXECUTING
-Plan: 3 of 3
-**Status:** Phase complete — ready for verification
+Plan: 2 of 4
+**Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -75,6 +75,8 @@ Progress (Project):
 - [Phase 04]: Disconnect cleanup tolerates callback ordering by treating <=1 participants as terminal for one-shot MCP shutdown.
 - [Phase 04]: Permission-Fehler werden zentral erkannt und ohne Retry auf eine feste nutzerfreundliche Antwort gemappt.
 - [Phase 04]: Phase-04-Handover bleibt auf MCP-Core begrenzt; Prompting-Migration bleibt in Phase 5 (Decision D-A).
+- [Phase 04]: Use livekit-agents MCP extras in both uv and pip dependency contracts to prevent pre-session import failures.
+- [Phase 04]: Track live UAT checks as retest-required-unblocked after dependency blocker removal.
 
 ### Blockers
 
