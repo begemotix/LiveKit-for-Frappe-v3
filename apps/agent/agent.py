@@ -85,18 +85,7 @@ async def entrypoint(ctx: JobContext):
         # Start the session
         await session.start(room=ctx.room, agent=agent)
         
-        # Task 2: DSGVO Announcement (mandatory, non-interruptible)
-        announcement = os.getenv(
-            "MANDATORY_ANNOUNCEMENT",
-            "Hinweis: Sie sprechen mit einem KI-Assistenten. Audio-Daten werden zur Verarbeitung an OpenAI in den USA übertragen. Durch Fortsetzen des Gesprächs willigen Sie ein."
-        )
-        await session.say(announcement, allow_interruptions=False)
-        
-        # Initial greeting (interruptible)
-        greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
-            .replace("{AGENT_NAME}", os.getenv("AGENT_NAME", "AI")) \
-            .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
-        await session.say(greeting, allow_interruptions=True)
+        logger.info(f"session started for {participant.identity}")
 
     @ctx.room.on("participant_joined")
     def on_participant_joined(participant):
