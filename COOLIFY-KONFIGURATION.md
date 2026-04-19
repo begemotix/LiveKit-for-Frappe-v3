@@ -50,6 +50,19 @@ Diese Variablen müssen in Coolify gesetzt werden:
 | `OPENAI_API_KEY` | **Ja** | Für den Agenten (Hidden). | `sk-...` |
 | `LIVEKIT_URL` | **Ja** | Interne URL für den Agenten (wird in compose überschrieben). | `ws://host.docker.internal:7880` |
 | `NEXT_PUBLIC_LIVEKIT_URL` | **Ja** | Öffentliche URL für den Browser (via Traefik). | `wss://live.begemotix.cloud` |
+| `AGENT_NAME` | Nein | Anzeigename des Agenten. | `Assistant` |
+| `COMPANY_NAME` | Nein | Name des Unternehmens. | `Begemotix` |
+| `ROLE_DESCRIPTION` | Nein | System-Prompt für das LLM. | `You are {AGENT_NAME}, a helpful assistant...` |
+| `INITIAL_GREETING` | Nein | Erster Satz des Agenten. | `Hallo, ich bin {AGENT_NAME}...` |
+| `MANDATORY_ANNOUNCEMENT` | Nein | Nicht unterbrechbarer DSGVO-Hinweis. | `Hinweis: Sie sprechen mit einem KI...` |
+| `AGENT_VOICE` | Nein | OpenAI Voice ID. | `alloy` |
+| `VAD_THRESHOLD` | Nein | Empfindlichkeit der Spracherkennung (0.0-1.0). | `0.5` |
+| `VAD_SILENCE_DURATION_MS` | Nein | Pause in ms, bevor Agent antwortet. | `500` |
+| `SERVICE_FQDN_LIVEKIT` | Nein | FQDN für LiveKit. | `live.begemotix.cloud` |
+| `SERVICE_URL_LIVEKIT` | Nein | Full URL für LiveKit. | `https://live.begemotix.cloud` |
+| `SERVICE_URL_FRONTEND` | Nein | Full URL für Frontend. | `https://voice.begemotix.cloud` |
+| `SERVICE_FQDN_FRONTEND` | Nein | FQDN für Frontend. | `voice.begemotix.cloud` |
+| `NEXT_PUBLIC_APP_CONFIG_ENDPOINT` | Nein | Optionaler Endpoint für App-Konfiguration. | |
 
 ---
 
