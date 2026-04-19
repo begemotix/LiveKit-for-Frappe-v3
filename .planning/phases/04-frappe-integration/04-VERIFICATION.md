@@ -54,8 +54,8 @@ human_verification:
 | D-08 | ~ PARTIAL | Nutzerfreundliche Meldung vorhanden, kanaluebergreifende Produktverifikation offen |
 | D-09 | ~ PARTIAL | Kein Retry sichtbar, Live-Negativtest noch offen |
 | D-10 | ~ PARTIAL | Structured Logging vorhanden, feste Pflichtfelder in Live-Nachweis offen |
-| INTG-01 | ✓ PASS | MCP-SDK integriert |
-| INTG-02 | ✓ PASS | Auth gegen externe MCP-URL per ENV |
+| INTG-01 | ✓ PASS | Wave-A-Nachweis dokumentiert in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-a` (stdio-sidecar + ENV-Contract). |
+| INTG-02 | ✓ PASS | Wave-A-Nachweis bestaetigt ausschliessliche Credential-Quelle `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` ohne Runtime-Switch. |
 | INTG-03 | ✓ PASS | Agent-Credential-Identitaet umgesetzt |
 | INTG-04 | ~ PARTIAL | Live-Toolinventar + read-only Nachweis fehlen |
 | INTG-05 | ~ PARTIAL | 403-Produktverhalten live noch nicht abgeschlossen |
@@ -102,6 +102,20 @@ human_verification:
 - **Checkpoint Outcome:** Human-Verify abgeschlossen mit Signal `approved-wave-d` am 2026-04-19T22:27:46+02:00.
 
 ## Wave-D Gate Evidence (G1/G2/G3)
+
+## Wave-A Gap-Closure Evidence (INTG-01/INTG-02)
+
+- evidence_source: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-a`
+- verified_at: 2026-04-19T22:33:00+02:00
+- requirements_updated:
+  - INTG-01: PASS (MCP-SDK-Integration plus dokumentierter Produktivpfad `selected_transport: stdio-sidecar`)
+  - INTG-02: PASS (auth bindet ausschliesslich `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET`; kein Runtime-Switch)
+- architecture_guardrails_reconfirmed:
+  - stdio-Sidecar als Produktivpfad
+  - kein HTTP-Endpoint Agent->MCP
+  - keine lokale Bridge
+  - kein REST-Fallback
+  - keine lokale Tool-Allowlist
 
 ### G1 — Session Boundary (D-01/D-02)
 
