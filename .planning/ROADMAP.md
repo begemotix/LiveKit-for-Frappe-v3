@@ -86,7 +86,7 @@
 - [x] 04-03-PLAN.md — Add graceful permission/error handling and operator handover.
 - [x] 04-04-PLAN.md — Gap closure: fix MCP runtime dependency/import blocker and unblock live UAT retests.
 - [x] 04-05-PLAN.md — Wave D gate closure: finalize G1/G2/G3 evidence and unlock execution order.
-- [ ] 04-06-PLAN.md — Wave A closure: validate endpoint-bound ENV/auth contract evidence.
+- [x] 04-06-PLAN.md — Wave A closure: validate endpoint-bound ENV/auth contract evidence.
 - [ ] 04-07-PLAN.md — Wave B closure: document session-boundary and cleanup behavior evidence.
 - [ ] 04-08-PLAN.md — Wave C closure: complete 403 no-retry product-behavior evidence.
 - [ ] 04-09-PLAN.md — Wave E closure: run final live UAT evidence checks against target system.
