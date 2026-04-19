@@ -63,6 +63,7 @@ Diese Variablen müssen in Coolify gesetzt werden:
 | `SERVICE_URL_FRONTEND` | Nein | Full URL für Frontend. | `https://voice.begemotix.cloud` |
 | `SERVICE_FQDN_FRONTEND` | Nein | FQDN für Frontend. | `voice.begemotix.cloud` |
 | `NEXT_PUBLIC_APP_CONFIG_ENDPOINT` | Nein | Optionaler Endpoint für App-Konfiguration. | |
+| `NEXT_PUBLIC_GDPR_NOTICE` | Nein | Text für den DSGVO-Hinweis im Web-Widget. | `Ich willige in die Verarbeitung...` |
 
 ---
 
