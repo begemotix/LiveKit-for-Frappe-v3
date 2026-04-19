@@ -5,7 +5,7 @@ services:
     image: livekit/livekit-server:latest
     container_name: livekit
     restart: unless-stopped
-    command: --config /livekit.yaml
+    command: --config /livekit-server.yaml
     ports:
       - '7880:7880'
       - '7881:7881'
@@ -13,7 +13,7 @@ services:
       - '5349:5349/tcp'
       - '50000-60000:50000-60000/udp'
     volumes:
-      - ./livekit.config.yaml:/livekit.yaml
+      - ./livekit.config.yaml:/livekit-server.yaml
     env_file:
       - .env
 

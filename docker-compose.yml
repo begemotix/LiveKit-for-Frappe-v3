@@ -8,10 +8,10 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    command: --config /livekit.yaml
+    command: --config /livekit-server.yaml
     network_mode: host
     volumes:
-      - ./livekit.config.yaml:/livekit.yaml
+      - ./livekit.config.yaml:/livekit-server.yaml
     env_file:
       - .env
 
