@@ -1,0 +1,1 @@
+Discovery-Artefakte (discovery-<datum>.json) werden beim Wave-E-Live-Lauf (Plan 04-09) durch den Agent-Startup erzeugt. Inhalt: rohe Ausgabe von list_tools() auf dem MCPServerStdio-Handle gegen target-frappe-prod. Keine manuelle Pflege, keine hardcodierte Liste in Verification/UAT.

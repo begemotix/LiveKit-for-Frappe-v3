@@ -16,7 +16,7 @@ Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `app
 
 | Name | Zweck | Default | Beispielwert | Hinweis |
 | --- | --- | --- | --- | --- |
-| `FRAPPE_MCP_URL` | Upstream-Zielinstanz fuer den Sidecar-MCP-Server | leer | `https://frappe.example.com` | Pflicht fuer MCP-Core (Decision D-03, D-05) |
+| `FRAPPE_URL` | Frappe-Zielinstanz des Kunden; wird vom Agent-Container an den stdio-Sidecar-Prozess (frappe-mcp-server) als env durchgereicht | leer | `https://begemotix.pro` | Pflicht; identisch zu Cursor-MCP-Config (D-03, D-05) |
 | `FRAPPE_API_KEY` | Agent-Credential Key fuer MCP-Auth | leer | `agent_key_xxx` | Nur dedizierter Agent-User, kein Runtime-Switch (Decision D-03, D-04) |
 | `FRAPPE_API_SECRET` | Agent-Credential Secret fuer MCP-Auth | leer | `agent_secret_xxx` | Nur dedizierter Agent-User, kein Runtime-Switch (Decision D-03, D-04) |
 | `ROLE_DESCRIPTION` | Prompt-Baseline aus Phase 3 | `You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.` | `You are {AGENT_NAME}...` | Uebergangsloesung — wird in Phase 5 durch Frappe-Notes ersetzt (Decision D-A) |
@@ -26,7 +26,7 @@ Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `app
 
 ## Konfigurierbare Komponenten
 
-- MCP-Zielinstanz ueber `FRAPPE_MCP_URL` (Kundeninstanz pro Deployment).
+- MCP-Zielinstanz ueber `FRAPPE_URL` (Kundeninstanz pro Deployment).
 - MCP-Authentifizierung ueber `FRAPPE_API_KEY` und `FRAPPE_API_SECRET` des dedizierten Agent-Users.
 - Frappe-seitige Rollen/Allowlist des Agent-Users fuer read-only Zugriff (Decision D-06).
 - Prompt-Baseline-Werte (`ROLE_DESCRIPTION`, `AGENT_NAME`, `COMPANY_NAME`) bleiben bis Phase 5 konfigurierbar, sind aber als Uebergang markiert (Decision D-A).
@@ -57,7 +57,7 @@ Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `app
 - [x] Gate G2: Endpoint/Transport (`stdio-sidecar`) schriftlich entschieden und gegen Zielsystem geprueft.
 - [x] Gate G3: Reale Tool-Inventarliste dokumentiert und als Abnahme-Artefakt in UAT verlinkt.
 - [ ] Betreiber stellt dedizierten Frappe-Agent-User bereit (eigene API Credentials, minimale Rollen).
-- [ ] `FRAPPE_MCP_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` in Coolify gesetzt und auf korrekten Scope validiert.
+- [ ] `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` in Coolify gesetzt und auf korrekten Scope validiert.
 - [ ] MCP-Discovery gegen Zielinstanz pruefen (Tools werden dynamisch geliefert, keine lokale Allowlist).
 - [ ] Permission-Test durchfuehren: absichtlich verbotenen Tool-Call ausloesen und nutzerfreundliche Antwort ohne Retry verifizieren.
 - [ ] Logcheck: 403-Produktfall enthaelt feste Felder `event`, `correlation_id`, `tool`, `error_class`.

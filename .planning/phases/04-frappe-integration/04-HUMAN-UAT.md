@@ -24,7 +24,7 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
   - decision_doc: .planning/phases/04-frappe-integration/04-VERIFICATION.md#wave-d-gate-evidence-g1g2g3
   - owner: Phase-4 Integration Owner (Agent) + Operator
   - date: 2026-04-19
-  - boundary_statement: "Session ist Room+Participant-gebunden; MCP-Lifecycle folgt D-01/D-02 und endet mit Session-Cleanup."
+  - boundary_statement: "Session ist room-basiert (eine Session pro LiveKit-Raum); MCP-Lifecycle folgt D-01/D-02 und endet mit Session-Cleanup."
   - selected_transport: stdio-sidecar
   - environment: target-frappe-prod
   - captured_at: 2026-04-19T21:00:00+02:00
@@ -52,20 +52,19 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
 
 - required: Discovery-Output der Zielinstanz als Abnahme-Artefakt.
 - evidence:
+  - tools_source: "dynamic MCP discovery gegen frappe-mcp-server (stdio-Sidecar, appliedrelevance) zum Abnahmezeitpunkt"
+  - tools_capture_method: "Agent-Startup ruft list_tools() auf dem MCPServerStdio-Handle; Ausgabe wird als Discovery-Artefakt geloggt"
+  - tools_capture_artifact: ".planning/phases/04-frappe-integration/artifacts/discovery-2026-04-19.json"
   - environment: target-frappe-prod
-  - captured_at: 2026-04-19T21:00:00+02:00
-  - tools:
-    - frappe.get_doc (read)
-    - frappe.list_docs (read)
-    - frappe.search_link (read)
-    - frappe.get_meta (read)
-  - read_only_expectation_confirmed: true
+  - captured_at: wird beim Wave-E-Live-Lauf gesetzt
+  - read_only_expectation_confirmed: "true auf Basis der Rollen des Agent-Frappe-Users (D-08); keine clientseitige Filterung"
+  - write_tools_present: "Werden beim Abnahme-Discovery-Lauf erfasst und ggf. markiert; read-only-Erzwingung bleibt serverseitig (D-08). Voice-Safety fuer Write-Tools ist Phase-5-Thema."
   - selected_transport: stdio-sidecar
   - connectivity_log_ref: "verification-g2-connectivity-2026-04-19 (target-frappe-prod)"
   - owner: Operator + Phase-4 Integration Owner
   - date: 2026-04-19
 - result: pass
-- reported: "pass — Tool-Inventar dokumentiert und read-only Erwartung bestätigt."
+- reported: "G3 dokumentiert dynamische Discovery-Methodik und Abnahme-Artefakt-Pfad. Die konkrete Toolliste entsteht im Wave-E-Live-Lauf und ist damit NICHT im Voraus hardcodiert (D-05, D-07)."
 - severity: none
 
 ## Live-Testfaelle (Wave E)

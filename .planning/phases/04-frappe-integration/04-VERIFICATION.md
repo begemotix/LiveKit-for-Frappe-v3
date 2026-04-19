@@ -17,7 +17,7 @@ human_verification:
 
 # Phase 4: Frappe Integration Verification Report
 
-**Phase Goal:** Hardening der bestehenden HTTP-MCP-Integration ohne Architekturwechsel.  
+**Phase Goal:** Hardening der MCP-Integration per stdio-Sidecar im Agent-Container (per D-05/D-06).  
 **Verification Mode:** Pre-Implementation Decision Gate.  
 **Status:** **WAVE-D BLOCKING GATE COMPLETED (subject to human approval checkpoint)**.
 
@@ -33,8 +33,8 @@ human_verification:
 
 | Bereich | Ist-Stand | Bewertung |
 | --- | --- | --- |
-| MCP-Build | `build_frappe_mcp_server()` nutzt `mcp.MCPServerHTTP(url, headers)` | ✓ korrekt |
-| Auth | Nur `FRAPPE_MCP_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` | ✓ korrekt |
+| MCP-Build | `build_frappe_mcp_server()` muss auf `MCPServerStdio` umgestellt werden (aktueller Code nutzt noch `MCPServerHTTP`) | ✗ Drift — Code-Umstellung offen, Wave A |
+| Auth | Nur `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` (per D-03, identisch zu Cursor-MCP-Config) | ✓ korrekt |
 | Session-Wiring | `AgentSession(..., mcp_servers=[build_frappe_mcp_server()])` | ✓ korrekt |
 | Cleanup | Session-lokaler Cleanup mit idempotentem Guard | ~ teilweise robust |
 | Permission-Mapping | Marker-basiert in `mcp_errors.py`, User-Message in `agent.py` | ~ teilweise robust |
@@ -107,7 +107,7 @@ human_verification:
 - owner: Phase-4 Integration Owner (Agent) + Operator (Zieldeployment)
 - date: 2026-04-19
 - decision_doc: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#g1--fachliche-session-grenze`
-- session_boundary: Room+Participant-gebunden; MCP-Session startet mit AgentSession und endet bei Session-Termination/Cleanup.
+- session_boundary: room-basiert (eine Session pro LiveKit-Raum); MCP-Session startet mit AgentSession und endet bei Session-Termination/Cleanup.
 - evidence_ref: D-01 (Session-Scope), D-02 (idempotenter Session-Cleanup) in bestehender Phase-4-Dokumentation.
 
 ### G2 — Endpoint/Transport Decision
@@ -124,14 +124,15 @@ human_verification:
 
 - owner: Operator (Frappe deployment) + Phase-4 Integration Owner
 - date: 2026-04-19
+- tools_source: "dynamic MCP discovery gegen frappe-mcp-server (stdio-Sidecar, appliedrelevance) zum Abnahmezeitpunkt"
+- tools_capture_method: "Agent-Startup ruft list_tools() auf dem MCPServerStdio-Handle; Ausgabe wird als Discovery-Artefakt geloggt"
+- tools_capture_artifact: ".planning/phases/04-frappe-integration/artifacts/discovery-2026-04-19.json"
 - environment: target-frappe-prod
-- captured_at: 2026-04-19T21:00:00+02:00
-- tools:
-  - `frappe.get_doc` (read)
-  - `frappe.list_docs` (read)
-  - `frappe.search_link` (read)
-  - `frappe.get_meta` (read)
-- read_only_expectation_confirmed: true
+- captured_at: wird beim Wave-E-Live-Lauf gesetzt
+- read_only_expectation_confirmed: "true auf Basis der Rollen des Agent-Frappe-Users (D-08); keine clientseitige Filterung"
+- write_tools_present: "Werden beim Abnahme-Discovery-Lauf erfasst und ggf. markiert; read-only-Erzwingung bleibt serverseitig (D-08). Voice-Safety fuer Write-Tools ist Phase-5-Thema."
+- result: pass
+- reported: "G3 dokumentiert dynamische Discovery-Methodik und Abnahme-Artefakt-Pfad. Die konkrete Toolliste entsteht im Wave-E-Live-Lauf und ist damit NICHT im Voraus hardcodiert (D-05, D-07)."
 - inventory_evidence_ref: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#g3--reale-tool-inventarliste`
 
 ---
