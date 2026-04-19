@@ -2,6 +2,7 @@ import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import { getAppConfig } from '@/lib/env';
 import { getShadowStyles } from '@/lib/styles';
+// @ts-expect-error Types for css are missing
 import globalCss from '@/styles/globals.css';
 import EmbedFixedAgentClient from './agent-client';
 

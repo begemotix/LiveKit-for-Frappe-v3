@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Mic, Send } from 'lucide-react';
-import { useRoomContext, useVoiceAssistant } from '@livekit/components-react';
+import { Mic } from 'lucide-react';
+import { useVoiceAssistant } from '@livekit/components-react';
 import { LiveKitProvider } from '@/components/LiveKitProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,14 +19,15 @@ const ChatPanelContent = () => {
   const { state: agentState } = useVoiceAssistant();
   const { messages } = useChatAndTranscription();
 
-  const statusLabel =
-    {
-      disconnected: 'Bereit für Gespräch',
-      connecting: 'Verbindung wird aufgebaut...',
-      listening: 'Agent hört zu...',
-      thinking: 'Agent denkt nach...',
-      speaking: 'Agent spricht...',
-    }[agentState] || 'Bereit';
+  const statusMap: Record<string, string> = {
+    disconnected: 'Bereit für Gespräch',
+    connecting: 'Verbindung wird aufgebaut...',
+    initializing: 'Agent initialisiert...',
+    listening: 'Agent hört zu...',
+    thinking: 'Agent denkt nach...',
+    speaking: 'Agent spricht...',
+  };
+  const statusLabel = statusMap[agentState] || 'Bereit';
 
   return (
     <>

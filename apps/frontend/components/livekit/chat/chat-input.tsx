@@ -14,7 +14,8 @@ export function ChatInput({ onSend, className, disabled, ...props }: ChatInputPr
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    props.onSubmit?.(e);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    props.onSubmit?.(e as any);
     onSend?.(message);
     setMessage('');
   };
