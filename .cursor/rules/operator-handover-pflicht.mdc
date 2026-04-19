@@ -9,12 +9,34 @@ alwaysApply: true
 Jede GSD-Phase MUSS vor Transition eine Datei
 `.planning/phases/<phase>/OPERATOR-HANDOVER.md` enthalten.
 
+Vor dem Erstellen/Updaten jeder `OPERATOR-HANDOVER.md` MUSS der Agent
+die aktiven Architekturentscheidungen prüfen und respektieren:
+
+1. `.planning/PROJECT.md` Abschnitt **Key Decisions**
+2. `.planning/STATE.md` Abschnitt **Accumulated Context > Decisions**
+
+Insbesondere sind alle D-Entscheidungen (`D-A`, `D-B`, ... / `D-01`, `D-02`, ...)
+als bindende Realität zu behandeln.
+
 Mindestabschnitte in dieser Datei:
 
 1. Coolify-ENV-Variablen (Name, Zweck, Default, Beispielwert)
 2. Konfigurierbare Komponenten (ohne Code-Änderung austauschbar, z. B. LLM-Provider, Frappe-Instanz, Stimme, Modell)
 3. Nicht-konfigurierbare Komponenten (hardcoded + Begründung)
 4. Handover-Checkliste für den Onboarding-Termin (Kundenfragen + auszuhändigende Dateien)
+
+Zusätzliche Pflichtregeln für Inhalte:
+
+- ENV-Variablen, deren Funktion laut Decision deaktiviert wurde oder in eine
+  spätere Phase verschoben ist, dürfen **nicht** mit alten Defaults/Funktionen
+  dokumentiert werden. Sie müssen mit leerem Default und folgendem Hinweis
+  dokumentiert werden:
+  `"im aktuellen Architekturstand ungenutzt — siehe Decision D-X"`.
+
+- Bedienpfade, die laut Decision nur Übergangslösungen sind und später ersetzt
+  werden, müssen explizit markiert werden als:
+  `"Übergangslösung — wird in Phase X durch Y abgelöst (Decision D-X)"`.
+  Sie dürfen nicht als dauerhafter Operator-Knopf beschrieben werden.
 
 Fehlt die Datei oder einer der Mindestabschnitte, ist die Phase **nicht abnahmefähig**:
 kein `/gsd-transition`.
