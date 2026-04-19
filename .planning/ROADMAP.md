@@ -4,12 +4,14 @@
 
 - [x] **Phase 1: Infrastructure Setup** - Self-hosted LiveKit WebRTC engine and proxy deployment
       (completed 2026-04-18)
-- [ ] **Phase 2: Frontend Widget** - Next.js voice widget mit unauthentifiziertem Gast-Token
+- [x] **Phase 2: Frontend Widget** - Next.js voice widget mit unauthentifiziertem Gast-Token
+      (completed 2026-04-18)
 - [x] **Phase 3: Agent Core** - Low-latency OpenAI Realtime voice agent with interruption handling
       (completed 2026-04-19)
 - [x] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
-      (Gap-Closure complete 2026-04-19)
+      (Gap-Closure complete 2026-04-19; Live-Verifikation stdio+MCP bestaetigt 2026-04-20)
 - [ ] **Phase 5: Frappe-basierte Persona-Verwaltung** - System-Prompt sourcing from Frappe Notes with fallback strategy
+      **(ACTIVE seit /gsd-transition 2026-04-21)**
 
 ## Phase Details
 
@@ -113,4 +115,4 @@
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
 | 3. Agent Core           | 4/4            | Complete    | 2026-04-19 |
 | 4. Frappe Integration   | 10/10          | Complete    | 2026-04-19 |
-| 5. Persona-Verwaltung   | 0/TBD          | Not started | -          |
+| 5. Persona-Verwaltung   | 0/TBD          | In progress | 2026-04-21 |

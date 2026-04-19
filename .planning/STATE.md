@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-04-20T12:00:00.000Z"
+last_updated: "2026-04-21T12:00:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -16,20 +16,22 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 04 — frappe-integration **GAP-CLOSURE COMPLETE**; naechster logischer Schritt: Phase 05 (Persona) nach `/gsd-transition`.
+**Current Focus:** Phase 05 — **Frappe-basierte Persona-Verwaltung** (aktiv nach `/gsd-transition`, 2026-04-21).
 
 ## Current Position
 
-Phase: 04 (frappe-integration) — **COMPLETE** (Gap-Closure inkl. Wave E Live-Evidenz + Wave F Doku-Sync, Plan `04-10-PLAN.md`).
-Plan: 10 of 10
-**Status:** Phase-4 dokumentarisch abgeschlossen (Wave F); bereit fuer Transition/Verifier nach Bedarf
+Phase: **05** (frappe-persona) — **ACTIVE**  
+Phase 04 (frappe-integration): **TRANSITIONED / CLOSED** — Live-Betrieb bestaetigt (stdio-MCP, `MCPToolset`, Voice+E2E gegen Frappe).
+
+Plan: 0 of TBD (Phase-5-Artefakte anlegen: Context, Requirements-Split aus ROADMAP, erster Plan)
+**Status:** Milestone v1.0 — vier Phasen abgeschlossen; Arbeitspaket Persona/Prompt-Sourcing aus Frappe Notes
 Ausfuehrungslogik (verbindlich): `D -> A -> B -> E -> C -> F`.
 Wave-/Gate-Plane (Auszug): `04-05-PLAN.md`, `04-06-PLAN.md`, `04-07-PLAN.md`, `04-08-PLAN.md`, `04-09-PLAN.md`, `04-10-PLAN.md`.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
 Progress (Project):
-[██████████] 96%
+[████████░░] 80%   (4 von 5 Phasen abgeschlossen; Phase 5 aktiv)
 ```
 
 ## Performance Metrics
@@ -38,7 +40,7 @@ Progress (Project):
 | --- | --- | --- | --- |
 | Phase 04 P10 | 12min | 2 tasks | 6 files |
 
-- Phases Completed (manuell): 4/5 inkl. Phase-4-Dokumentabschluss
+- Phases Completed (manuell): **4/5** — Phase 04 inkl. Live-Verifikation abgeschlossen; **Phase 05 gestartet**
 - Requirements: INTG-01 bis INTG-05 laut REQUIREMENTS.md complete
 
 ## Accumulated Context
@@ -76,7 +78,7 @@ Progress (Project):
 - [Phase 04]: **Verbindliche Transport-Entscheidung Frappe:** Produktiv ist ausschliesslich **stdio** ueber `MCPServerStdio` mit lokalem `npx -y frappe-mcp-server` (gleiches Muster wie funktionierendes Cursor-`bgx-frappe`). **Keine** Basisannahme mehr, dass der Agent Frappe-MCP per **HTTP/SSE oder Site-Root-Pfad `/mcp`** anbindet; `FRAPPE_URL` + `FRAPPE_API_KEY` + `FRAPPE_API_SECRET` sind der ENV-Vertrag (optionaler Legacy-Fallback nur fuer Ableitung der Basis-URL aus `FRAPPE_MCP_URL` im Code, bevorzugt ist `FRAPPE_URL`).
 - [Phase 04]: MCP-Credentials fuer den dokumentierten stdio-Sidecar-Pfad: `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` (konsistent mit UAT/Handover/Verification; kein Runtime-Switch).
 - [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
-- [Phase 04]: MCP wiring stays session-scoped through build_frappe_mcp_server() in AgentSession.
+- [Phase 04]: MCP wiring session-scoped: `build_frappe_mcp_server()` + `MCPToolset` als `AgentSession(tools=[...])` (deprecated `mcp_servers` entfernt).
 - [Phase 04]: Disconnect cleanup tolerates callback ordering by treating <=1 participants as terminal for one-shot MCP shutdown.
 - [Phase 04]: Permission-Fehler werden zentral erkannt und ohne Retry auf eine feste nutzerfreundliche Antwort gemappt.
 - [Phase 04]: Phase-04-Handover bleibt auf MCP-Core begrenzt; Prompting-Migration bleibt in Phase 5 (Decision D-A).
@@ -97,19 +99,21 @@ Progress (Project):
 - [Phase 04]: Wave F (Plan `04-10-PLAN.md`) synchronisiert OPERATOR-HANDOVER, `04-VERIFICATION.md`, `04-HUMAN-UAT.md` mit finalem GO und Wave-Reihenfolge `D -> A -> B -> E -> C -> F`.
 - [Phase 04]: Wave F: Phase-4-Gap-Closure dokumentarisch GO; Artefakte synchronisiert.
 - [Phase 04]: Verbindliche Ausfuehrungsreihenfolge D -> A -> B -> E -> C -> F in Handover, UAT, Verification, STATE.
+- [GSD 2026-04-21]: **`/gsd-transition`** ausgefuehrt — Phase 04 **closed**, Phase 05 **active**; `completed_phases: 4`, `completed_plans` auf aktuellen Ist-Stand 24/24 gesetzt.
 
 ### Blockers
 
 - Keine aktiven Phase-4-Blocker; Live-Gates (`approved-wave-d`, `approved-wave-e`) und Wave-C-403-Nachweis sind in UAT/Verification referenziert.
-- **Scope Risk Guard:** Phase-5-Entscheidungen D-11 bis D-15 bleiben bis `/gsd-transition` nach Phase 5 out of scope fuer Integrationsphase.
+- **Scope Risk Guard:** Phase-5-Entscheidungen **D-11 bis D-15** sind jetzt **im Scope von Phase 05** (nicht mehr Integrations-Backlog).
 
 ### Next Steps
 
-- Optional: `/gsd-transition` nach Freigabe durch Mensch — Phase 5 (Frappe-Persona) starten.
-- Betrieb: Checkliste in `OPERATOR-HANDOVER.md` fuer Kunden-Onboarding abarbeiten.
+- Phase 05: `.planning/phases/05-frappe-persona/` anlegen (mindestens `05-CONTEXT.md`, Requirements aus ROADMAP schärfen).
+- Ersten Plan skizzieren (`/gsd-discuss-phase` oder `/gsd-plan-phase` je nach Workflow).
+- Betrieb: Checkliste in `OPERATOR-HANDOVER.md` fuer Kunden-Onboarding weiter nutzen.
 
 ## Session Continuity
 
-- **Last Action:** Phase-4-Artefakte auf freigegebenen **stdio-MCP**-Weg synchronisiert (Planning + Code-Paritaet `MCPServerStdio`); Begruendung: Cursor nutzt real stdio gegen `frappe-mcp-server`; Root-`/mcp`/`/sse` gegen Zielsite liefern keinen nutzbaren Agent-MCP-HTTP-Endpunkt; LiveKit unterstuetzt `MCPServerStdio` offiziell.
-- **Current Goal:** Phase 4 dokumentarisch abgeschlossen; Transition-Vorbereitung Phase 5.
+- **Last Action:** **`/gsd-transition`** — Phase 04 formal geschlossen, Fokus auf **Phase 05 (Persona / Frappe Notes)** verschoben; `STATE`/`ROADMAP`/`PROJECT` synchronisiert.
+- **Current Goal:** Phase-5-Anforderungen und erste Plaene (Prompt-Sourcing, ENV-Fallback laut ROADMAP) ausarbeiten.
 - **Resume File:** None

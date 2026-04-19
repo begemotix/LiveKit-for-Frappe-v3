@@ -14,12 +14,13 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 
 - [x] Einrichtung des selbst-gehosteten LiveKit-Servers via Docker (Validiert in Phase 01: infrastructure-setup)
 - [x] Bereitstellung der Infrastruktur über Docker Compose (Validiert in Phase 01: infrastructure-setup)
+- [x] Implementierung des Agent-Workers (Typ A - OpenAI Realtime API) für geringe Latenz (Phase 03)
+- [x] Bereitstellung eines Browser-Widgets (Next.js) für Voice-Interaktionen (Phase 02)
+- [x] Anbindung an Frappe über MCP (Read-only Abfragen; stdio-Sidecar + `MCPToolset`, Phase 04)
 
 ### Active
 
-- [ ] Implementierung des Agent-Workers (Typ A - OpenAI Realtime API) für geringe Latenz
-- [ ] Bereitstellung eines Browser-Widgets (Next.js) für Voice-Interaktionen
-- [ ] Anbindung an Frappe über MCP (Read-only Abfragen)
+- [ ] **Phase 05:** Frappe-basierte Persona — System-Prompt aus Frappe Notes (mit robustem ENV-Fallback), siehe `.planning/ROADMAP.md` Phase 5
 
 ### Out of Scope
 
@@ -31,7 +32,7 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 ## Context
 
 - **Produktlinien**: Typ A (OpenAI Realtime), Typ B (Mistral + EU-TTS für DSGVO), Typ C (Text-Agenten).
-- **Ziel heute**: Erster Realtime-sprechender Agent (Typ A) über Browser, der sich mit Frappe verbinden kann.
+- **Ziel jetzt (Phase 05):** Persona und System-Prompt zuverlässig aus Frappe steuern (Notes + Fallback), ohne MCP-/Voice-Regression.
 - Das Projekt orientiert sich massiv an den offiziellen LiveKit Vorlagen und Repos (z.B. `agent-starter-python`, `agent-starter-embed`).
 - Frontend agiert sowohl als Voice-Widget (Floating-Button) als auch als Chatbot-Fenster.
 
@@ -54,7 +55,7 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 | MCP für Frappe-Integration     | Keine eigene REST-API im Agent; Tools dynamisch per MCP. **Phase 4:** `MCPServerStdio` + lokaler `frappe-mcp-server` (wie Cursor), ENV `FRAPPE_URL` / `FRAPPE_API_KEY` / `FRAPPE_API_SECRET` — kein Agent→Frappe-HTTP-MCP über Site-`/mcp` oder `/sse` als Planungsbasis. | Accepted (Phase 4) |
 | OpenAI Realtime (Typ A) für V1 | Schnelles Feedback, geringe Latenz, keine separaten STT/TTS-Module nötig. Eignet sich für Evaluationen ohne harte EU-DSGVO Anforderungen. | — Pending |
 | Template-Nutzung               | Orientierung an offiziellen LiveKit-Repos für hohe Wartbarkeit und Kompatibilität.                                                        | — Pending |
-| D-A: Prompts ab Phase 4+ aus Frappe | `readme/AGENT_PROMPT.md` ist nur Demo-Übergang; ab Phase 4 erfolgt Prompt-Steuerung aus Frappe statt Filesystem. Keine Mehrinvestition in Markdown-System. | — Accepted |
+| D-A: Prompts aus Frappe | `readme/AGENT_PROMPT.md` bleibt Übergang; **Umsetzung** Prompt-Sourcing aus Frappe Notes ist **Phase-05-Arbeitspaket** (nach `/gsd-transition`). | In Progress (Phase 05) |
 | D-B: DSGVO-Ansage nicht auf Agent-Ebene | Telefon-Ansage via Zadarma vor Übergabe, Browser-Hinweis als UI-Text in späterer Frontend-Phase; keine LiveKit-Audioansage/Cloud-TTS. `NEXT_PUBLIC_GDPR_NOTICE` bleibt, Default leer. | — Accepted |
 | D-C: Reverse-Proxy = Coolify-Traefik | Produktivpfad nutzt Coolify-Traefik. Caddy bleibt nur optional und auskommentiert für Nicht-Coolify-Deployments im Repo. | — Accepted |
 | D-D: Universelles internes Wiring über host.docker.internal | Agent und Frontend verbinden LiveKit intern stabil über `host.docker.internal` plus `host-gateway`; harte IPs werden vermieden. | — Accepted |
@@ -81,4 +82,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-20 — Phase-4-Frappe-MCP auf verbindlichen stdio-Transport (`MCPServerStdio`) und `FRAPPE_URL`-Vertrag aligned._
+_Last updated: 2026-04-21 — `/gsd-transition`: Phase 04 geschlossen, Phase 05 (Persona) aktiv; PROJECT Requirements mit abgeschlossenen Phasen 02–04 synchronisiert._
