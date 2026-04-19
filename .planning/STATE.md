@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-19T00:00:00.000Z"
+status: verifying
+last_updated: "2026-04-19T14:53:13.929Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 12
-  completed_plans: 11
+  total_plans: 14
+  completed_plans: 13
 ---
 
 # Project State
@@ -16,13 +16,13 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 03 — agent-core
+**Current Focus:** Phase 04 — frappe-integration
 
 ## Current Position
 
-Phase: 03 (agent-core) — EXECUTING
+Phase: 03 (agent-core) — COMPLETE
 Plan: 4 of 4
-**Status:** Ready to execute
+**Status:** Phase complete — ready for transition to Phase 04
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -32,8 +32,8 @@ Progress (Project):
 
 ## Performance Metrics
 
-- Phases Completed: 2/4
-- Plans Completed: 11/12
+- Phases Completed: 3/4
+- Plans Completed: 13/14
 - Requirements Mapped: 16/16
 - Known Bugs: 0
 
@@ -67,6 +67,8 @@ Progress (Project):
 - [Architektur]: D-A: Agent-Prompts werden ab Phase 4+ aus Frappe geregelt; `readme/AGENT_PROMPT.md` ist nur Übergang für die Demo-Phase.
 - [Architektur]: D-B: DSGVO-Ansagen liegen nicht auf LiveKit/Agent-Ebene; Telefon via Zadarma, Browser-Hinweis später im Frontend, `NEXT_PUBLIC_GDPR_NOTICE` bleibt mit leerem Default.
 - [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
+- [Phase 03]: CP-Abschluss erfordert eigene SUMMARY-Artefakte fuer konsistente Planzaehlung.
+- [Phase 03]: Interruption-Tests validieren gegen beobachtbares Verhalten (generate_reply) statt veralteter API-Mocks.
 
 ### Blockers
 
@@ -74,10 +76,10 @@ Progress (Project):
 
 ### Next Steps
 
-- Complete Phase 03 (agent-core): Plan 03 pending.
+- Start Phase 04 (frappe-integration): discuss and plan first integration slice.
 
 ## Session Continuity
 
-- **Last Action:** Completed Phase 03 Plans 00-02 (agent foundation, core logic, server VAD).
-- **Current Goal:** Execute Plan 03 (tests + white-label docs) after gap-closure.
-- **Resume File:** .planning/phases/03-agent-core/03-CP-PLAN.md
+- **Last Action:** Completed Phase 03 CP closeout (summary, verification fix, handover document).
+- **Current Goal:** Transition to Phase 04 planning/execution.
+- **Resume File:** None
