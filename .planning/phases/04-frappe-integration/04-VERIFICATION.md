@@ -44,8 +44,8 @@ human_verification:
 
 | ID | Status | Kommentar |
 | --- | --- | --- |
-| D-01 | ~ PARTIAL | Session-Scope technisch da, fachliche Grenze noch nicht verbindlich dokumentiert |
-| D-02 | ~ PARTIAL | Cleanup vorhanden, aber edge-case-robuste Verifikation steht aus |
+| D-01 | ✓ PASS | Wave-B-UAT fixiert die fachliche Session-Grenze als room-basiert mit Owner/Datum/Boundary-Statement (`04-HUMAN-UAT.md#wave-b`) |
+| D-02 | ✓ PASS | Wave-B-UAT belegt Session-Ende-Cleanup mit terminaler Teilnehmerzahl `<=1` und einmaligem MCP-Shutdown (`04-HUMAN-UAT.md#wave-b--session-ende-cleanup-nachweis`) |
 | D-03 | ✓ PASS | ENV-only Credentials umgesetzt |
 | D-04 | ✓ PASS | Kein Runtime-Switch implementiert |
 | D-05 | ✓ PASS | Discovery dynamisch, keine lokale Allowlist |
@@ -56,7 +56,7 @@ human_verification:
 | D-10 | ~ PARTIAL | Structured Logging vorhanden, feste Pflichtfelder in Live-Nachweis offen |
 | INTG-01 | ✓ PASS | Wave-A-Nachweis dokumentiert in `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-a` (stdio-sidecar + ENV-Contract). |
 | INTG-02 | ✓ PASS | Wave-A-Nachweis bestaetigt ausschliessliche Credential-Quelle `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` ohne Runtime-Switch. |
-| INTG-03 | ✓ PASS | Agent-Credential-Identitaet umgesetzt |
+| INTG-03 | ✓ PASS | Agent-Credential-Identitaet umgesetzt und fuer Wave B mit Session-Grenze/Cleanup-Nachweis verknuepft (`04-HUMAN-UAT.md#wave-b`) |
 | INTG-04 | ~ PARTIAL | Live-Toolinventar + read-only Nachweis fehlen |
 | INTG-05 | ~ PARTIAL | 403-Produktverhalten live noch nicht abgeschlossen |
 
@@ -70,6 +70,22 @@ human_verification:
 | E | Live-E2E/UAT gegen Zielsystem | Test+Evidence | Waves A/B umgesetzt | INTG-04/05 live passed |
 | C | Permission/Error-Mapping (403 no-retry) | Code+Test | Wave E abgeschlossen | D-08 bis D-10 als Produktverhalten nachgewiesen |
 | F | Doku/Handover/Readiness | Doku+Gate | Wave C abgeschlossen | Transition-faehige Artefakte komplett |
+
+## Wave-B Abschluss und Referenzkette
+
+- wave_b_status: complete
+- wave_b_scope: "D-01, D-02 und INTG-03 sind auf Basis der Wave-B-UAT-Evidenz als abgeschlossen markiert."
+- reference_chain:
+  - source: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md#wave-b`
+  - verification: `.planning/phases/04-frappe-integration/04-VERIFICATION.md#wave-b-abschluss-und-referenzkette`
+  - handover: `.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md`
+  - chain_status: complete
+- scope_guards_reconfirmed:
+  - "Produktivpfad bleibt stdio-Sidecar gemaess D-05/D-06."
+  - "kein HTTP-Endpoint Agent-zu-MCP."
+  - "keine lokale Bridge."
+  - "kein REST-Fallback."
+  - "keine lokale Tool-Allowlist."
 
 ## Blockierende Gates vor Execute/Test
 
