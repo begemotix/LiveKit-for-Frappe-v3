@@ -8,6 +8,7 @@
 - [x] **Phase 3: Agent Core** - Low-latency OpenAI Realtime voice agent with interruption handling
       (completed 2026-04-19)
 - [ ] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
+- [ ] **Phase 5: Frappe-basierte Persona-Verwaltung** - System-Prompt sourcing from Frappe Notes with fallback strategy
 
 ## Phase Details
 
@@ -77,6 +78,23 @@
 2. The agent successfully authenticates its MCP requests using its own fixed credentials (e.g. API-Key from .env)
 3. User can ask the agent about Frappe data, and the agent retrieves and speaks information accessible to the agent user
 4. If the agent asks for data it lacks permissions for, it gracefully informs the user of the restriction instead of crashing
+   **Plans**: 3 plans
+   Plans:
+
+- [ ] 04-01-PLAN.md — MCP foundation: ENV contract, factory, and baseline integration tests.
+- [ ] 04-02-PLAN.md — Wire session-scoped MCP lifecycle with dedicated agent identity and discovery guards.
+- [ ] 04-03-PLAN.md — Add graceful permission/error handling and operator handover.
+
+### Phase 5: Frappe-basierte Persona-Verwaltung
+
+**Goal**: Der System-Prompt wird aus Frappe Notes gesteuert, mit robustem ENV-Fallback fuer Ausfallpfade.
+**Depends on**: Phase 4
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+
+1. Der Agent setzt den System-Prompt aus Frappe Notes zusammen (Public + Assigned).
+2. Bei Nichterreichbarkeit von Frappe/MCP bleibt der Agent ueber ENV-Fallback antwortfaehig.
+3. Notes-Scoping via Custom Field fuer Multi-Agent-Deployments ist als spaetere Erweiterung dokumentiert und architektonisch vorgesehen.
    **Plans**: TBD
 
 ## Progress
@@ -87,3 +105,4 @@
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
 | 3. Agent Core           | 4/4            | Complete    | 2026-04-19 |
 | 4. Frappe Integration   | 0/TBD          | Not started | -          |
+| 5. Persona-Verwaltung   | 0/TBD          | Not started | -          |

@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-last_updated: "2026-04-19T15:21:53.366Z"
+last_updated: "2026-04-19T16:05:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 2
-  total_plans: 14
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 15
   completed_plans: 13
 ---
 
@@ -16,18 +16,18 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 04 — frappe-integration
+**Current Focus:** Phase 04 — frappe-integration (MCP-Core Scope)
 
 ## Current Position
 
-Phase: 03 (agent-core) — COMPLETE
-Plan: 4 of 4
-**Status:** Phase complete — ready for transition to Phase 04
+Phase: 04 (frappe-integration) — IN PLANNING/EXECUTION PREP
+Plan: 0 of 3
+**Status:** Plans finalized; execute pending with MCP-core only scope
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
 Progress (Project):
-[██▌       ] 25%
+[██████    ] 60%
 ```
 
 ## Performance Metrics
@@ -64,7 +64,7 @@ Progress (Project):
 - [Phase 03]: D-09: Strukturiertes JSON-Logging
 - [Phase 03]: D-10: Korrelations-ID aus Room-Name
 - [Phase 03-agent-core]: Added pytest-asyncio to enable asynchronous testing of the LiveKit agent.
-- [Architektur]: D-A: Agent-Prompts werden ab Phase 4+ aus Frappe geregelt; `readme/AGENT_PROMPT.md` ist nur Übergang für die Demo-Phase.
+- [Architektur]: D-A angepasst: Agent-Prompts bleiben in Phase 4 unveraendert (Phase-3-Stand via Python-Konstanten/ENV); Notes-basierte Prompt-Verwaltung wurde auf Phase 5 verschoben.
 - [Architektur]: D-B: DSGVO-Ansagen liegen nicht auf LiveKit/Agent-Ebene; Telefon via Zadarma, Browser-Hinweis später im Frontend, `NEXT_PUBLIC_GDPR_NOTICE` bleibt mit leerem Default.
 - [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
 - [Phase 03]: CP-Abschluss erfordert eigene SUMMARY-Artefakte fuer konsistente Planzaehlung.
@@ -76,10 +76,11 @@ Progress (Project):
 
 ### Next Steps
 
-- Start Phase 04 (frappe-integration): discuss and plan first integration slice.
+- Execute Phase 04 (frappe-integration) mit MCP-Core-Scope.
+- Start discuss/planning fuer Phase 05 (frappe-basierte Persona-Verwaltung).
 
 ## Session Continuity
 
-- **Last Action:** Completed Phase 03 CP closeout (summary, verification fix, handover document).
-- **Current Goal:** Transition to Phase 04 planning/execution.
+- **Last Action:** Scopedown von Phase 04 auf MCP-Core und Anlage von Phase 05 fuer Persona-Verwaltung.
+- **Current Goal:** Execute Phase 04 plans (MCP connection, discovery, permission handling).
 - **Resume File:** .planning/phases/04-frappe-integration/04-CONTEXT.md

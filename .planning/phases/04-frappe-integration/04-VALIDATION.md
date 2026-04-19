@@ -21,16 +21,16 @@ created: 2026-04-19
 | **Config file** | apps/agent/pyproject.toml (`[tool.pytest.ini_options]`) |
 | **Quick run command** | `pytest apps/agent/tests/test_mcp_integration.py -x -q` |
 | **Full suite command** | `pytest apps/agent/tests -q` |
-| **Estimated runtime** | ~60 seconds |
+| **Estimated runtime** | ~20-30 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `pytest apps/agent/tests/test_mcp_integration.py -x -q`
+- **After every task commit:** Run a focused test command for the touched behavior (single-test node), e.g. `pytest apps/agent/tests/test_mcp_integration.py::test_session_has_mcp_server -x -q`
 - **After every plan wave:** Run `pytest apps/agent/tests -q`
 - **Before `/gsd-verify-work`:** Full suite must be green
-- **Max feedback latency:** 60 seconds
+- **Max feedback latency:** 30 seconds
 
 ---
 
@@ -71,7 +71,7 @@ created: 2026-04-19
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
 - [ ] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
+- [ ] Feedback latency <= 30s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending

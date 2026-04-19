@@ -32,16 +32,16 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 - **D-10:** Fehlerpfade werden strukturiert geloggt (inkl. Korrelationsbezug), ohne Crash der Session.
 
 ### Prompt Source from Frappe Notes
-- **D-11:** Beim Session-Start werden Prompt-Bausteine via MCP aus Frappe Notes geladen.
-- **D-12:** Der System-Prompt wird aus zwei Quellen zusammengefuehrt: Public Notes der Instanz plus Notes, die dem Agent-Frappe-User zugewiesen sind.
-- **D-13:** Falls Frappe/MCP nicht erreichbar ist, nutzt der Agent eine ENV-Baseline als Notfall-Persona.
-- **D-14:** Pro Deployment gibt es genau eine Agent-Frappe-User-Identitaet und damit genau ein Persona-Set.
-- **D-15:** Phase 4 startet mit Lazy Load ohne Cache; Session-Caching ist nur als spaetere Optimierung bei realem Bedarf vorgesehen.
+- **D-11 (deferred to Phase 5):** Beim Session-Start werden Prompt-Bausteine via MCP aus Frappe Notes geladen.
+- **D-12 (deferred to Phase 5):** Der System-Prompt wird aus zwei Quellen zusammengefuehrt: Public Notes der Instanz plus Notes, die dem Agent-Frappe-User zugewiesen sind.
+- **D-13 (deferred to Phase 5):** Falls Frappe/MCP nicht erreichbar ist, nutzt der Agent eine ENV-Baseline als Notfall-Persona.
+- **D-14 (deferred to Phase 5):** Pro Deployment gibt es genau eine Agent-Frappe-User-Identitaet und damit genau ein Persona-Set.
+- **D-15 (deferred to Phase 5):** Phase 4 startet mit Lazy Load ohne Cache; Session-Caching ist nur als spaetere Optimierung bei realem Bedarf vorgesehen.
 
 ### Claude's Discretion
 - Konkrete technische Struktur fuer Session-Lifecycle-Hooks (solange D-01/D-02 eingehalten werden).
 - Konkretes Wording der Permission-Fehlermeldungen je Kanal (Voice/Text), solange sie klar und nicht-technisch sind.
-- Technische Umsetzung des Prompt-Merge (Reihenfolge/Trennformat), solange Public + Assigned Notes enthalten sind.
+- Prompting-Implementierung bleibt in Phase 4 unveraendert (Phase-3-Stand via Python-Konstanten/ENV); Details zu Notes-Merge werden in Phase 5 entschieden.
 
 </decisions>
 
@@ -82,10 +82,9 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 <specifics>
 ## Specific Ideas
 
-- Prompt-Fachquelle ist explizit "Frappe Notes via MCP", nicht Dateisystem-Markdown.
-- Public + Assigned Notes bilden gemeinsam die Persona.
-- Operator-Hinweis fuer Notes-Groesse (z. B. max. 2-3 Notes pro Agent) wird im Handover dokumentiert.
-- Im Plan muessen der konkrete MCP-Tool-Pfad fuer "assigned to user" Notes und der exakte ENV-Notfallinhalt geklaert werden.
+- Scope Phase 4 bleibt MCP-Core: Verbindung, Discovery, Tool-Bedienung und Permission-Handling.
+- Prompting bleibt in Phase 4 beim Phase-3-Stand (Python-Konstanten/ENV) und wird nicht auf Notes umgestellt.
+- Notes-basierte Persona-Verwaltung wird in Phase 5 geplant.
 
 </specifics>
 
