@@ -32,6 +32,30 @@ services:
     env_file:
       - .env
 
+  agent:
+    build:
+      context: ../apps/agent
+      dockerfile: Dockerfile
+    container_name: agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - livekit
+
+  frontend:
+    build:
+      context: ../apps/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    depends_on:
+      - livekit
+
   caddy:
     image: caddy:latest
     container_name: caddy
@@ -46,6 +70,7 @@ services:
     env_file:
       - .env
     depends_on:
+      - frontend
       - livekit
 
 volumes:

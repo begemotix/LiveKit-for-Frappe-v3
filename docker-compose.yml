@@ -1,6 +1,6 @@
-# LiveKit Stack — Optimized for Performance (Host Networking)
-# Recommendation: use network_mode: host for optimal WebRTC performance.
-# No port mappings required in this mode; the container uses host ports directly.
+# LiveKit Stack — Unified Deployment (Host Networking)
+# This includes the LiveKit Server, the Python Agent, and the Next.js Frontend.
+# network_mode: host is used for optimal WebRTC and internal communication performance.
 
 version: "3.9"
 
@@ -30,6 +30,28 @@ services:
     env_file:
       - .env
 
+  agent:
+    build:
+      context: ./apps/agent
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    depends_on:
+      - livekit
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    depends_on:
+      - livekit
+
   caddy:
     profiles:
       - with-caddy
@@ -42,6 +64,9 @@ services:
       - caddy_config:/config
     env_file:
       - .env
+    depends_on:
+      - frontend
+      - livekit
 
 volumes:
   caddy_data:
