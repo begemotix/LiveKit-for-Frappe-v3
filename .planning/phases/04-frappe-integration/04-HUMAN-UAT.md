@@ -16,6 +16,31 @@ Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
 - checkpoint_signal: approved-wave-d
 - checkpoint_recorded_at: 2026-04-19T22:27:46+02:00
 
+## Wave A
+
+- selected_transport: stdio-sidecar
+- runtime_switch: disabled (kein Runtime-Switch auf Frontend/User-Credentials)
+- transport_notes: "MCPServerStdio(command=\"npx\", args=[\"-y\",\"frappe-mcp-server\"], env={FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET}) ist der produktive Transportpfad."
+
+### Wave A — ENV-Vertrag
+
+- credential_source_contract:
+  - FRAPPE_URL
+  - FRAPPE_API_KEY
+  - FRAPPE_API_SECRET
+- assertion: "Bei jeder Anfrage nutzt der Agent ausschliesslich FRAPPE_URL, FRAPPE_API_KEY und FRAPPE_API_SECRET."
+- runtime_switch_assertion: "Kein Runtime-Switch auf Frontend/User-Credentials verfuegbar."
+- decision_refs: D-03, D-04, D-05, D-06
+
+### Wave A — Connectivity-Nachweis
+
+- evidence:
+  - captured_at: 2026-04-19T22:32:00+02:00
+  - environment: target-frappe-prod
+  - connectivity_log_ref: "verification-wave-a-connectivity-2026-04-19 (target-frappe-prod)"
+  - result: pass
+- reported: "pass — Wave A dokumentiert ENV-only Credential-Contract und produktiven stdio-sidecar-Transport ohne Runtime-Switch."
+
 ## Current Test
 
 [testing complete]
