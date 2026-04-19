@@ -26,30 +26,27 @@ services:
           external_tls: true
         keys:
           ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "3478:3478/udp"
-      - "5349:5349"
-      - "50000-50100:50000-50100/udp"
+    network_mode: host
     env_file:
       - .env
-    networks:
-      - livekit-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.livekit.rule=Host(`live.begemotix.cloud`)"
+      - "traefik.http.routers.livekit.entrypoints=websecure"
+      - "traefik.http.routers.livekit.tls=true"
+      - "traefik.http.routers.livekit.tls.certresolver=letsencrypt"
+      - "traefik.http.services.livekit.loadbalancer.server.port=7880"
 
   agent:
     build:
       context: ./apps/agent
       dockerfile: Dockerfile
     restart: unless-stopped
+    network_mode: host
     env_file:
       - .env
-    environment:
-      - LIVEKIT_URL=ws://livekit:7880
     depends_on:
       - livekit
-    networks:
-      - livekit-net
 
   frontend:
     build:
@@ -63,17 +60,13 @@ services:
       - .env
     depends_on:
       - livekit
-    networks:
-      - livekit-net
 
   caddy:
     profiles:
       - with-caddy
     image: caddy:latest
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    network_mode: host
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -83,12 +76,6 @@ services:
     depends_on:
       - frontend
       - livekit
-    networks:
-      - livekit-net
-
-networks:
-  livekit-net:
-    driver: bridge
 
 volumes:
   caddy_data:

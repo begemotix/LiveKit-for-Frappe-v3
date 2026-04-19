@@ -4,29 +4,27 @@ Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **e
 
 ---
 
-## Architektur: Universal Bridge Stack
+## Architektur: Hybrid Unified Stack
 
-Wir nutzen jetzt einen **Universal Docker-Compose-Stack**, der vollständig im **Bridge-Modus** läuft. Dies ist die sauberste Lösung für Multi-Tenant-Umgebungen und automatisches SSL-Routing.
+Wir nutzen jetzt einen **Hybrid-Stack**, um maximale Performance mit einfacher SSL-Konfiguration zu vereinen:
 
-1. **LiveKit Server**: Das WebRTC-Backend.
-2. **Agent**: Der Python-basierte Voice-Worker (verbindet sich intern via Docker-DNS `ws://livekit:7880`).
-3. **Frontend**: Das Next.js-Widget.
+1. **LiveKit Server & Agent**: Laufen im **`network_mode: host`**. Dies ist zwingend erforderlich für stabile WebRTC-Audio/Video-Verbindungen und blitzschnelle Deployments (kein Docker-Proxy Overhead).
+2. **Frontend**: Läuft im Standard **Bridge-Modus**. Dadurch kann der Coolify-Router (Traefik) das Frontend automatisch erkennen und SSL-Zertifikate (Let's Encrypt) problemlos verwalten.
 
-### Warum Bridge-Modus statt Host-Modus?
-Früher war der Host-Modus nötig, um den Overhead von 10.000 Docker-Proxy-Prozessen für WebRTC zu vermeiden. Wir haben den Port-Bereich nun auf **100 Ports (50000-50100)** optimiert. Dadurch kann der Stack im Bridge-Modus laufen, was folgende Vorteile bietet:
-- **Automatisches SSL**: Coolify/Traefik erkennt alle Dienste automatisch und stellt Let's Encrypt Zertifikate ohne manuelle Labels aus.
-- **Isolierung**: Dienste kommunizieren intern über das Docker-Netzwerk (`livekit-net`), ohne Host-Ports zu belegen (außer den explizit gemappten).
-- **Port-Flexibilität**: Mehrere Instanzen können einfach nebeneinander laufen.
+### Warum dieser Hybrid-Ansatz?
+- **WebRTC-Performance**: LiveKit benötigt direkten Zugriff auf die Hardware-Ports des Hosts, um Latenzen zu minimieren.
+- **SSL-Einfachheit**: Das Frontend ist eine einfache Web-App, die von der automatischen SSL-Terminierung durch Traefik profitiert.
+- **Signaling-Routing**: Wir nutzen Traefik-Labels beim LiveKit-Service, um den Signaling-Traffic (Port 7880) trotz Host-Modus sicher über HTTPS (`live.begemotix.cloud`) erreichbar zu machen.
 
 ---
 
 ## Multi-Tenancy (Mehrere Instanzen pro VPS)
 
 Wenn Sie mehrere Instanzen auf demselben Server betreiben möchten, müssen Sie nur die Host-Ports in der `docker-compose.yml` anpassen:
-- Signaling: `7880:7880` -> `7882:7880`
-- WebRTC TCP: `7881:7881` -> `7883:7881`
-- UDP-Range: `50000-50100:50000-50100/udp` -> `50101-50200:50000-50100/udp`
-- Frontend: `3000:3000` -> `3001:3000`
+- Signaling: Host-Port 7880
+- WebRTC TCP: Host-Port 7881
+- UDP-Range: Host-Ports 50000-50100
+- Frontend: Port 3000 (automatisch durch Coolify)
 
 ---
 
