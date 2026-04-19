@@ -51,7 +51,7 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 
 | Decision                       | Rationale                                                                                                                                 | Outcome   |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| MCP für Frappe-Integration     | Keine eigene API nötig; standardisierte Anbindung, Tools werden dynamisch vom Frappe-MCP-Server bezogen.                                  | — Pending |
+| MCP für Frappe-Integration     | Keine eigene REST-API im Agent; Tools dynamisch per MCP. **Phase 4:** `MCPServerStdio` + lokaler `frappe-mcp-server` (wie Cursor), ENV `FRAPPE_URL` / `FRAPPE_API_KEY` / `FRAPPE_API_SECRET` — kein Agent→Frappe-HTTP-MCP über Site-`/mcp` oder `/sse` als Planungsbasis. | Accepted (Phase 4) |
 | OpenAI Realtime (Typ A) für V1 | Schnelles Feedback, geringe Latenz, keine separaten STT/TTS-Module nötig. Eignet sich für Evaluationen ohne harte EU-DSGVO Anforderungen. | — Pending |
 | Template-Nutzung               | Orientierung an offiziellen LiveKit-Repos für hohe Wartbarkeit und Kompatibilität.                                                        | — Pending |
 | D-A: Prompts ab Phase 4+ aus Frappe | `readme/AGENT_PROMPT.md` ist nur Demo-Übergang; ab Phase 4 erfolgt Prompt-Steuerung aus Frappe statt Filesystem. Keine Mehrinvestition in Markdown-System. | — Accepted |
@@ -81,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-19 after Phase 01 gap-closure documentation (01-03)_
+_Last updated: 2026-04-20 — Phase-4-Frappe-MCP auf verbindlichen stdio-Transport (`MCPServerStdio`) und `FRAPPE_URL`-Vertrag aligned._

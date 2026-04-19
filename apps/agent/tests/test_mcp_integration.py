@@ -1,13 +1,26 @@
-import os
 import asyncio
-from unittest.mock import patch
-from types import SimpleNamespace
 import logging
+import os
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
+
 import agent as agent_module
 from src.frappe_mcp import build_frappe_mcp_server
 from src.mcp_errors import is_permission_error
+
+_AGENT_PY = Path(__file__).resolve().parent.parent / "agent.py"
+_ENV_EXAMPLE = Path(__file__).resolve().parent.parent / ".env.example"
+
+
+def test_env_example_documents_frappe_stdio_mcp():
+    text = _ENV_EXAMPLE.read_text(encoding="utf-8")
+    assert "FRAPPE_URL=https://<your-frappe-host>" in text
+    assert "stdio" in text.lower()
+    assert "FRAPPE_API_KEY=" in text
+    assert "FRAPPE_API_SECRET=" in text
 
 
 def test_mcp_module_import_available():
@@ -28,59 +41,95 @@ def test_agent_module_import_does_not_raise_mcp_import_error():
         raise
 
 
-def test_build_frappe_mcp_server_uses_env_headers():
-    captured = {}
+def test_build_frappe_mcp_server_uses_stdio_sidecar():
+    class DummyMCPServerStdio:
+        pass
 
-    class DummyMCPServerHTTP:
-        def __init__(self, url, headers):
-            captured["url"] = url
-            captured["headers"] = headers
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "FRAPPE_URL": "https://example.test",
+                "FRAPPE_API_KEY": "agent-key",
+                "FRAPPE_API_SECRET": "agent-secret",
+            },
+            clear=False,
+        ),
+        patch(
+            "livekit.agents.mcp.MCPServerStdio", return_value=DummyMCPServerStdio()
+        ) as mock_stdio,
+    ):
+        server = build_frappe_mcp_server()
 
-    with patch.dict(
-        os.environ,
-        {
-            "FRAPPE_MCP_URL": "https://example.test/mcp",
+    assert isinstance(server, DummyMCPServerStdio)
+    mock_stdio.assert_called_once_with(
+        command="npx",
+        args=["-y", "frappe-mcp-server"],
+        env={
+            "FRAPPE_URL": "https://example.test",
             "FRAPPE_API_KEY": "agent-key",
             "FRAPPE_API_SECRET": "agent-secret",
         },
-        clear=False,
-    ):
-        with patch("src.frappe_mcp._create_mcp_server", DummyMCPServerHTTP):
-            server = build_frappe_mcp_server()
+    )
 
-    assert isinstance(server, DummyMCPServerHTTP)
-    assert captured["url"] == "https://example.test/mcp"
-    assert captured["headers"]["Authorization"] == "token agent-key:agent-secret"
+
+def test_build_frappe_mcp_server_derives_url_from_legacy_frappe_mcp_url():
+    class DummyMCPServerStdio:
+        pass
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "FRAPPE_MCP_URL": "https://legacy.example:8443/some/path/mcp",
+                "FRAPPE_API_KEY": "k",
+                "FRAPPE_API_SECRET": "s",
+            },
+            clear=False,
+        ),
+    ):
+        os.environ.pop("FRAPPE_URL", None)
+        with patch(
+            "livekit.agents.mcp.MCPServerStdio", return_value=DummyMCPServerStdio()
+        ) as mock_stdio:
+            build_frappe_mcp_server()
+
+    mock_stdio.assert_called_once_with(
+        command="npx",
+        args=["-y", "frappe-mcp-server"],
+        env={
+            "FRAPPE_URL": "https://legacy.example:8443",
+            "FRAPPE_API_KEY": "k",
+            "FRAPPE_API_SECRET": "s",
+        },
+    )
 
 
 def test_build_frappe_mcp_server_missing_env_raises():
     with patch.dict(
         os.environ,
         {
-            "FRAPPE_MCP_URL": "https://example.test/mcp",
+            "FRAPPE_URL": "https://example.test",
             "FRAPPE_API_KEY": "agent-key",
         },
         clear=False,
     ):
         os.environ.pop("FRAPPE_API_SECRET", None)
 
-        try:
+        with pytest.raises(ValueError, match="Missing required MCP env vars:") as exc_info:
             build_frappe_mcp_server()
-            assert False, "Expected ValueError for missing FRAPPE_API_SECRET"
-        except ValueError as exc:
-            assert "Missing required MCP env vars:" in str(exc)
-            assert "FRAPPE_API_SECRET" in str(exc)
+        assert "FRAPPE_API_SECRET" in str(exc_info.value)
 
 
 def test_session_has_mcp_server():
-    with open("apps/agent/agent.py", "r", encoding="utf-8") as source_file:
+    with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
     assert "mcp_servers=[build_frappe_mcp_server()]" in source
 
 
 def test_no_runtime_credential_switch():
-    with open("apps/agent/agent.py", "r", encoding="utf-8") as source_file:
+    with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
     assert "FRAPPE_API_KEY" not in source
@@ -90,7 +139,7 @@ def test_no_runtime_credential_switch():
 
 
 def test_dynamic_tool_discovery_runtime_evidence():
-    with open("apps/agent/agent.py", "r", encoding="utf-8") as source_file:
+    with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
     assert "mcp_servers=[build_frappe_mcp_server()]" in source
@@ -99,7 +148,7 @@ def test_dynamic_tool_discovery_runtime_evidence():
 
 
 def test_no_direct_frappe_api_calls():
-    with open("apps/agent/agent.py", "r", encoding="utf-8") as source_file:
+    with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
     assert "/api/method" not in source

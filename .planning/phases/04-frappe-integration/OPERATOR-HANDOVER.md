@@ -5,7 +5,7 @@
 **Aktuell: Phase-4-Gap-Closure abgeschlossen (Wave F Dokumentation, 2026-04-19). Alle Waves D, A, B, E, C und F sind in dieser Reihenfolge dokumentarisch und evidenzbasiert geschlossen.**
 
 1. Fachliche Session-Grenze (D-01/D-02) — Wave B / Gate G1
-2. Produktiver Transport (**stdio-Sidecar**) mit Live-Nachweis — Wave D / Gate G2 (`selected_transport: stdio-sidecar`; **kein HTTP-Endpoint Agent->MCP**)
+2. Produktiver MCP-Transport (**stdio via lokalem MCP-Server**, `MCPServerStdio`) mit Runtime-Nachweis — Wave D / Gate G2 (`selected_transport: stdio-sidecar`; **kein HTTP-Endpoint Agent->MCP**; Site-`/mcp`/`/sse` sind **nicht** die Planungsbasis)
 3. Reale Tool-Inventarliste aus dem Zieldeployment als Abnahme-Artefakt — Gate G3 / Wave E
 4. Read-only E2E und Discovery — Wave E (`approved-wave-e`)
 5. 403-Produktverhalten ohne Retry — Wave C
@@ -20,6 +20,12 @@ Freigabesignale: `approved-wave-d` (Transport/Gates), `approved-wave-e` (Live-E2
 - **stdio-Sidecar** als MCP-Produktivpfad; **kein HTTP-Endpoint Agent->MCP**.
 - **Keine lokale Bridge**, **kein REST-Fallback**, **keine lokale Tool-Allowlist**.
 - **Keine Phase-5-Persona-Features** (keine Prompt-Notes aus Frappe, keine Multi-Agent-Persona in dieser Phase).
+
+## Transportentscheidung und Begruendung (Frappe MCP)
+
+- **Verbindlich:** Frappe wird im Agent nur ueber **stdio** angebunden: LiveKit **`MCPServerStdio`** startet lokal **`npx -y frappe-mcp-server`** mit ENV **`FRAPPE_URL`**, **`FRAPPE_API_KEY`**, **`FRAPPE_API_SECRET`** — identisch zum funktionierenden **Cursor**-Setup (`bgx-frappe`).
+- **Nicht Basis dieses Produkts:** HTTP-, SSE- oder Site-Root-**`/mcp`**-Annahmen fuer den Agent→Frappe-MCP-Pfad (hier typischerweise HTML/404, kein belastbarer Streamable-HTTP-MCP gegen die oeffentliche Site).
+- **LiveKit:** Offizielles MCP-Modell mit **stdio-Client** (`MCPServerStdio`); kein `MCPServerHTTP` fuer Frappe in diesem Setup.
 
 ## Coolify-ENV-Variablen
 
@@ -63,7 +69,7 @@ Freigabesignale: `approved-wave-d` (Transport/Gates), `approved-wave-e` (Live-E2
 ## Handover-Checkliste fuer den Onboarding-Termin
 
 - [x] Gate G1: Session-Grenze schriftlich entschieden und in Verification/UAT referenziert.
-- [x] Gate G2: Endpoint/Transport (`stdio-sidecar`) schriftlich entschieden und gegen Zielsystem geprueft.
+- [x] Gate G2: Produktiver MCP-Transport fuer Frappe als **stdio via lokalem MCP-Server** schriftlich entschieden und mit **Runtime-Nachweis** (Start, Discovery, Read-only, 403, Session) gegen Zielsystem geprueft.
 - [x] Gate G3: Reale Tool-Inventarliste dokumentiert und als Abnahme-Artefakt in UAT verlinkt.
 - [ ] Betreiber stellt dedizierten Frappe-Agent-User bereit (eigene API Credentials, minimale Rollen).
 - [ ] `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` in Coolify gesetzt und auf korrekten Scope validiert.

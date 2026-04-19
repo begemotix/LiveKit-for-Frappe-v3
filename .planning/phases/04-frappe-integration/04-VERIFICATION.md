@@ -1,14 +1,14 @@
 ---
 phase: 04-frappe-integration
-verified: 2026-04-19T23:59:00Z
+verified: 2026-04-20T12:00:00Z
 status: wave_f_gap_closure_complete
 score: "Phase-4-Gap-Closure: Waves D/A/B/E/C/F entlang D -> A -> B -> E -> C -> F dokumentarisch konsolidiert; Live-Evidenz wave-e; Uebergabe wave-f"
 human_verification:
   - test: "Gate G1: Fachliche Session-Grenze verbindlich dokumentiert"
     expected: "D-01/D-02 sind eindeutig gegen eine schriftliche Session-Definition verifizierbar"
     why_human: "Die fachliche Grenze ist eine Operator-/Produktentscheidung, nicht rein aus Code ableitbar"
-  - test: "Gate G2: Produktiver Endpoint/Transport entschieden (`/mcp` oder `/sse`)"
-    expected: "Entscheidung ist dokumentiert und gegen Zielsystem verifiziert"
+  - test: "Gate G2: Produktiver MCP-Transport fuer Frappe ist stdio via lokalem MCP-Server, inklusive Runtime-Nachweis"
+    expected: "stdio-Sidecar (`MCPServerStdio` + `npx`/`frappe-mcp-server`) ist dokumentiert; erfolgreicher stdio-Start, Discovery, Read-only-Call, 403-Verhalten und Session-Stabilitaet sind belegbar"
     why_human: "Zieldeployment ist extern und nicht offline deterministisch pruefbar"
   - test: "Gate G3: Reale Tool-Inventarliste als Abnahme-Artefakt dokumentiert"
     expected: "Inventar ist in UAT/Handover referenziert und freigegeben"
@@ -64,7 +64,7 @@ human_verification:
 
 | Wave | Thema | Typ | Startbedingung | Ende/Abnahme |
 | --- | --- | --- | --- | --- |
-| D | Endpoint-/Transport-Entscheidung | Gate (blockierend) | immer zuerst | stdio-sidecar dokumentiert + live verifiziert |
+| D | MCP-Transport-Entscheidung (stdio) | Gate (blockierend) | immer zuerst | stdio-sidecar dokumentiert + Runtime-Nachweis (Start, Discovery, Read-only, 403, Session) |
 | A | ENV-Vertrag/Credentials | Code+Test | Wave D abgeschlossen | D-03/D-04 testbar und dokumentiert |
 | B | Session-Lifecycle/Cleanup | Code+Test | Wave D abgeschlossen | D-01/D-02 mit klarer Session-Grenze verifiziert |
 | E | Live-E2E/UAT gegen Zielsystem | Test+Evidence | Waves A/B umgesetzt | INTG-04/05 live passed |
@@ -102,9 +102,10 @@ human_verification:
 - **Nachweis:** Schriftliche Entscheidung in Verification + Handover + referenzierter Testfall.
 - **NO-GO Grund:** D-01/D-02 sonst nicht pruefbar.
 
-### Gate G2: Endpoint/Transport
-- **Fehlende Operator-Info:** Produktivpfad `/mcp` oder `/sse` inkl. Transport-Entscheidung.
-- **Nachweis:** Dokumentierte Entscheidung + erfolgreicher Live-Connectivity-Check.
+### Gate G2: Produktiver MCP-Transport (stdio)
+- **Fehlende Operator-Info:** Nachweis, dass der Agent Frappe-MCP **per stdio** (lokaler `frappe-mcp-server`-Prozess) anbindet — inkl. **Runtime-Nachweis** (Sidecar startet, Discovery liefert reale Tools, mindestens ein erlaubter Read-only-Call, 403/Permission-Verhalten, Session bleibt stabil).
+- **Nachweis:** `selected_transport: stdio-sidecar`, `MCPServerStdio(...)`, ENV `FRAPPE_URL` + API-Credentials; **kein** Agent→MCP-HTTP unter Site-`/mcp` oder `/sse` als Annahme.
+- **Begruendung (verbindlich):** Cursor nutzt dasselbe Setup real per stdio; direkte HTTP-MCP-Pfade an der Site-Root liefern hier keinen nutzbaren Endpunkt; LiveKit unterstuetzt `MCPServerStdio` offiziell.
 - **NO-GO Grund:** Wave D ist blockierend vor allen Code-Waves.
 
 ### Gate G3: Reales Tool-Inventar
@@ -161,13 +162,14 @@ human_verification:
 - session_boundary: room-basiert (eine Session pro LiveKit-Raum); MCP-Session startet mit AgentSession und endet bei Session-Termination/Cleanup.
 - evidence_ref: D-01 (Session-Scope), D-02 (idempotenter Session-Cleanup) in bestehender Phase-4-Dokumentation.
 
-### G2 — Endpoint/Transport Decision
+### G2 — Produktiver MCP-Transport (stdio)
 
 - owner: Operator (Deployment) + Phase-4 Integration Owner
 - date: 2026-04-19
 - selected_transport: stdio-sidecar
-- selected_endpoint: n/a (kein Agent->MCP HTTP endpoint im Produktivpfad)
+- selected_endpoint: n/a (kein Agent->MCP HTTP endpoint im Produktivpfad; **keine** verbindliche Wahl zwischen Site-`/mcp` und `/sse`)
 - transport_notes: `MCPServerStdio(command="npx", args=["-y","frappe-mcp-server"], env={FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET})` als produktiver Pfad; kein HTTP-Endpoint Agent->MCP, keine lokale Bridge, kein REST-Bypass, keine lokale Tool-Allowlist.
+- decision_rationale: "Cursor nutzt dasselbe Setup real per stdio; Site-Root-HTTP-MCP (`/mcp`, `/sse`) liefert hier keinen nutzbaren Endpunkt fuer den Agent; LiveKit `MCPServerStdio` ist der unterstuetzte offizielle Weg."
 - connectivity_log_ref: `04-HUMAN-UAT.md` Gate G2 evidence (captured_at 2026-04-19T21:00:00+02:00, env target-frappe-prod)
 - architecture_guard_confirmed: stdio-sidecar aktiv; kein HTTP-Endpoint Agent->MCP, keine Bridge, kein REST-Fallback, keine lokale Tool-Allowlist.
 

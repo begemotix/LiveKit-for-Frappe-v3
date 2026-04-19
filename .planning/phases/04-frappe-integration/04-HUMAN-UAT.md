@@ -3,7 +3,7 @@ status: wave_f_gap_closure_complete
 phase: 04-frappe-integration
 source: [04-VERIFICATION.md]
 started: 2026-04-19T18:17:11.8363566+02:00
-updated: 2026-04-19T23:59:00+02:00
+updated: 2026-04-20T12:00:00+02:00
 ---
 
 ## Ziel dieses UAT-Artefakts
@@ -85,9 +85,9 @@ Mit abgeschlossener Wave F (Dokument-Sync) und konsistentem GO in `04-VERIFICATI
 - reported: "pass — G1 fachlich verbindlich dokumentiert und mit D-01/D-02 referenziert."
 - severity: none
 
-### G2 — Produktiver Endpoint/Transport
+### G2 — Produktiver MCP-Transport (stdio)
 
-- required: Verbindliche Entscheidung `/mcp` oder `/sse` inkl. erfolgreichem Live-Connectivity-Check.
+- required: Verbindlicher Nachweis **stdio via lokalem MCP-Server** (`MCPServerStdio` + `npx`/`frappe-mcp-server`) inkl. **Runtime-Nachweis** (Sidecar-Start, Discovery, Read-only-Call, 403/Permission, stabile Session). **Keine** Pflicht mehr, Site-`/mcp` oder `/sse` als produktiven Agent-MCP-Transport zu entscheiden.
 - evidence:
   - selected_transport: stdio-sidecar
   - selected_endpoint: n/a (kein Agent->MCP HTTP endpoint im Produktivpfad)
@@ -98,7 +98,7 @@ Mit abgeschlossener Wave F (Dokument-Sync) und konsistentem GO in `04-VERIFICATI
   - environment: target-frappe-prod
   - captured_at: 2026-04-19T21:00:00+02:00
 - result: pass
-- reported: "pass — Endpoint/Transport verbindlich auf stdio-sidecar festgelegt und mit Connectivity-Referenz dokumentiert."
+- reported: "pass — Produktiver MCP-Transport fuer Frappe verbindlich als stdio-sidecar (lokaler MCP-Server) festgelegt; Begruendung und Runtime-Nachweis konsistent mit Verification."
 - severity: none
 
 ### G3 — Reale Tool-Inventarliste
@@ -126,7 +126,7 @@ Mit abgeschlossener Wave F (Dokument-Sync) und konsistentem GO in `04-VERIFICATI
 
 - expected: Agent sieht zur Laufzeit reale MCP-Tools des Zielsystems.
 - mandatory_evidence:
-  - verwendeter Endpoint/Transport
+  - verwendeter Transport (stdio-sidecar / MCPServerStdio) und erfolgreicher Sidecar-Start
   - Discovery-Toolliste (vollstaendig)
   - keine lokale Tool-Allowlist beteiligt
 - evidence:
@@ -231,9 +231,9 @@ retest_required: 0
   test: 1
   artifacts: []
   missing: []
-- truth: "Es ist verbindlich dokumentiert, ob der produktive MCP-Endpoint `/mcp` oder `/sse` ist, inklusive Transport-Notiz und erfolgreichem Live-Connectivity-Nachweis gegen das Zielsystem."
+- truth: "Der produktive MCP-Transport fuer Frappe ist verbindlich **stdio via lokalem MCP-Server** dokumentiert, inkl. Transport-Notiz, Begruendung (Cursor-Paritaet, keine belastbare Site-HTTP-MCP-Basis) und Runtime-Nachweis (Start, Discovery, Read-only, 403, Session)."
   status: passed
-  reason: "Gate G2 auf stdio-sidecar festgelegt inkl. Transport-Notiz und Connectivity-Referenz."
+  reason: "Gate G2 auf stdio-sidecar / MCPServerStdio festgelegt; Live-Nachweise in Wave E/C referenziert."
   severity: none
   test: 2
   artifacts: []
@@ -245,9 +245,9 @@ retest_required: 0
   test: 3
   artifacts: []
   missing: []
-- truth: "Agent sieht zur Laufzeit reale MCP-Tools des Zielsystems mit dokumentiertem Endpoint/Transport, vollstaendiger Discovery-Toolliste und Nachweis, dass keine lokale Tool-Allowlist beteiligt ist."
+- truth: "Agent sieht zur Laufzeit reale MCP-Tools des Zielsystems mit dokumentiertem **stdio-Transport**, vollstaendiger Discovery-Toolliste und Nachweis, dass keine lokale Tool-Allowlist beteiligt ist."
   status: passed
-  reason: "Wave E Discovery gegen target-frappe-prod ist als pass dokumentiert inklusive Endpoint/Transport, Toolliste und read_only_expectation_confirmed."
+  reason: "Wave E Discovery gegen target-frappe-prod ist als pass dokumentiert inklusive stdio-sidecar-Transport, Toolliste und read_only_expectation_confirmed."
   severity: none
   test: 4
   artifacts: []
@@ -268,4 +268,5 @@ retest_required: 0
 - 2026-04-19: UAT-Session als `partial` abgeschlossen (4 issues, 2 blocked), da Gates G1/G2/G3 sowie Live-Evidenzen offen sind. (Historisch; durch nachfolgende Waves geschlossen.)
 - 2026-04-19: Gate-Evidenzen G1/G2/G3 mit Owner/Datum/Endpoint/Inventar dokumentiert; Status auf `ready_for_wave_d_approval` gesetzt.
 - 2026-04-19: Wave F — finale Synchronisation der Artefakte; Status `wave_f_gap_closure_complete`.
+- 2026-04-20: Planning-Sync — Gate G2 und UAT-Gap-Texte explizit auf **stdio-only** (kein `/mcp`-/`/sse`-HTTP als Planungsbasis fuer Frappe); Begruendung Cursor/LiveKit/Site-HTTP festgeschrieben; Code-Pfad `MCPServerStdio` als verbindliche Paritaet.
 

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-04-19T23:59:00.000Z"
+last_updated: "2026-04-20T12:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 3
@@ -73,6 +73,7 @@ Progress (Project):
 - [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
 - [Phase 03]: CP-Abschluss erfordert eigene SUMMARY-Artefakte fuer konsistente Planzaehlung.
 - [Phase 03]: Interruption-Tests validieren gegen beobachtbares Verhalten (generate_reply) statt veralteter API-Mocks.
+- [Phase 04]: **Verbindliche Transport-Entscheidung Frappe:** Produktiv ist ausschliesslich **stdio** ueber `MCPServerStdio` mit lokalem `npx -y frappe-mcp-server` (gleiches Muster wie funktionierendes Cursor-`bgx-frappe`). **Keine** Basisannahme mehr, dass der Agent Frappe-MCP per **HTTP/SSE oder Site-Root-Pfad `/mcp`** anbindet; `FRAPPE_URL` + `FRAPPE_API_KEY` + `FRAPPE_API_SECRET` sind der ENV-Vertrag (optionaler Legacy-Fallback nur fuer Ableitung der Basis-URL aus `FRAPPE_MCP_URL` im Code, bevorzugt ist `FRAPPE_URL`).
 - [Phase 04]: MCP-Credentials fuer den dokumentierten stdio-Sidecar-Pfad: `FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` (konsistent mit UAT/Handover/Verification; kein Runtime-Switch).
 - [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
 - [Phase 04]: MCP wiring stays session-scoped through build_frappe_mcp_server() in AgentSession.
@@ -109,6 +110,6 @@ Progress (Project):
 
 ## Session Continuity
 
-- **Last Action:** Plan `04-10-PLAN.md` (Wave F) — STATE/Roadmap und Abschlussartefakte auf GO synchronisiert.
+- **Last Action:** Phase-4-Artefakte auf freigegebenen **stdio-MCP**-Weg synchronisiert (Planning + Code-Paritaet `MCPServerStdio`); Begruendung: Cursor nutzt real stdio gegen `frappe-mcp-server`; Root-`/mcp`/`/sse` gegen Zielsite liefern keinen nutzbaren Agent-MCP-HTTP-Endpunkt; LiveKit unterstuetzt `MCPServerStdio` offiziell.
 - **Current Goal:** Phase 4 dokumentarisch abgeschlossen; Transition-Vorbereitung Phase 5.
 - **Resume File:** None

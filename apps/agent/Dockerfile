@@ -5,11 +5,13 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# System-Abhängigkeiten für WebRTC/Audio
+# System-Abhängigkeiten für WebRTC/Audio + Node/npx für Frappe-MCP-stdio-Sidecar (frappe-mcp-server)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     python3-dev \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Abhängigkeiten installieren
