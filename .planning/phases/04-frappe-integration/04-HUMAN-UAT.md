@@ -1,9 +1,9 @@
 ---
-status: ready_for_wave_d_approval
+status: wave_d_approved
 phase: 04-frappe-integration
 source: [04-VERIFICATION.md]
 started: 2026-04-19T18:17:11.8363566+02:00
-updated: 2026-04-19T21:05:00+02:00
+updated: 2026-04-19T22:27:46+02:00
 ---
 
 ## Ziel dieses UAT-Artefakts
@@ -12,6 +12,9 @@ Dieses Dokument enthaelt die verbindlichen Live-Nachweise fuer die Phase-4-Freig
 Ohne abgeschlossene Nachweise bleibt Phase 4 auf NO-GO.
 
 ## Gate-Nachweise (vor Code-Execute verpflichtend)
+
+- checkpoint_signal: approved-wave-d
+- checkpoint_recorded_at: 2026-04-19T22:27:46+02:00
 
 ## Current Test
 

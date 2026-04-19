@@ -1,8 +1,8 @@
 ---
 phase: 04-frappe-integration
-verified: 2026-04-19T21:05:00Z
-status: gate_d_completed_pending_human_approval
-score: "wave-d gate evidence documented; awaiting human checkpoint approval"
+verified: 2026-04-19T22:27:46Z
+status: gate_d_approved
+score: "wave-d gate evidence documented and approved via human checkpoint signal"
 human_verification:
   - test: "Gate G1: Fachliche Session-Grenze verbindlich dokumentiert"
     expected: "D-01/D-02 sind eindeutig gegen eine schriftliche Session-Definition verifizierbar"
@@ -19,7 +19,7 @@ human_verification:
 
 **Phase Goal:** Hardening der MCP-Integration per stdio-Sidecar im Agent-Container (per D-05/D-06).  
 **Verification Mode:** Pre-Implementation Decision Gate.  
-**Status:** **WAVE-D BLOCKING GATE COMPLETED (subject to human approval checkpoint)**.
+**Status:** **WAVE-D BLOCKING GATE APPROVED (`approved-wave-d`)**.
 
 ## Binding Scope Guard (Phase 4)
 
@@ -99,6 +99,7 @@ human_verification:
 
 - **Aktuell:** Wave D als blockierendes Gate dokumentarisch abgeschlossen; Freigabe der Folgewellen erfolgt ausschliesslich nach `approved-wave-d`.
 - **Freigabepfad:** `D -> A -> B -> E -> C -> F` bleibt verbindlich.
+- **Checkpoint Outcome:** Human-Verify abgeschlossen mit Signal `approved-wave-d` am 2026-04-19T22:27:46+02:00.
 
 ## Wave-D Gate Evidence (G1/G2/G3)
 
@@ -137,5 +138,5 @@ human_verification:
 
 ---
 
-_Verified: 2026-04-19T21:05:00Z_  
+_Verified: 2026-04-19T22:27:46Z_  
 _Verifier: Codex (planning hardening gate)_

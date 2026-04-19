@@ -2,7 +2,7 @@
 
 ## Phase-4 Freigabestatus
 
-**Aktuell: Wave D dokumentarisch abgeschlossen; Resume/Freigabe-Signal: `approved-wave-d`**.
+**Aktuell: Wave D dokumentarisch abgeschlossen und per `approved-wave-d` freigegeben (2026-04-19T22:27:46+02:00).**
 
 1. Fachliche Session-Grenze (D-01/D-02)
 2. Produktiver Transport (`stdio-sidecar`) mit Live-Nachweis
