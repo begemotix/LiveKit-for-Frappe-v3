@@ -7,6 +7,7 @@ from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.plugins import openai
 from src.frappe_mcp import build_frappe_mcp_server
+from src.mcp_errors import is_permission_error, user_facing_permission_message
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +28,16 @@ def configure_logging():
     return logger
 
 logger = configure_logging()
+
+
+def map_mcp_error_to_user_message(err: Exception, correlation_id: str, tool_name: str):
+    if is_permission_error(err):
+        logger.warning(
+            "mcp_permission_denied",
+            extra={"correlation_id": correlation_id, "tool": tool_name},
+        )
+        return user_facing_permission_message()
+    return None
 
 
 async def _cleanup_mcp_server(mcp_server):
@@ -66,14 +77,25 @@ def load_agent_instructions():
     return None
 
 class Assistant(Agent):
-    def __init__(self, instructions: str):
+    def __init__(self, instructions: str, correlation_id: str):
         super().__init__(instructions=instructions)
+        self._correlation_id = correlation_id
 
     @llm.function_tool(description="Lookup mock data in the ERP system")
     async def mock_data_lookup(self, query: str):
-        logger.info(f"mock_data_lookup called with query: {query}")
-        await asyncio.sleep(3)
-        return {"status": "success", "data": f"Found info for {query}"}
+        try:
+            logger.info(f"mock_data_lookup called with query: {query}")
+            await asyncio.sleep(3)
+            return {"status": "success", "data": f"Found info for {query}"}
+        except Exception as err:
+            user_message = map_mcp_error_to_user_message(
+                err=err,
+                correlation_id=self._correlation_id,
+                tool_name="mock_data_lookup",
+            )
+            if user_message is not None:
+                return {"status": "error", "message": user_message}
+            raise
 
 async def entrypoint(ctx: JobContext):
     # Derive correlation ID from room name (D-10)
@@ -130,7 +152,7 @@ async def entrypoint(ctx: JobContext):
         logger.info(f"starting session for participant {participant.identity}")
         
         # Create the agent instance for this session
-        agent = Assistant(instructions=instructions)
+        agent = Assistant(instructions=instructions, correlation_id=correlation_id)
         
         # Start the session
         await session.start(room=ctx.room, agent=agent)

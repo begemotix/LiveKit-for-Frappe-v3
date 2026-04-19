@@ -7,6 +7,7 @@ import logging
 import pytest
 import agent as agent_module
 from src.frappe_mcp import build_frappe_mcp_server
+from src.mcp_errors import is_permission_error
 
 
 def test_build_frappe_mcp_server_uses_env_headers():
@@ -171,6 +172,19 @@ def test_permission_error_user_friendly_no_retry():
     )
 
     assert message == "Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff."
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "403 forbidden",
+        "permission denied for this resource",
+        "Operation not permitted",
+        "insufficient permissions to execute tool",
+    ],
+)
+def test_permission_error_marker_detection(text):
+    assert is_permission_error(Exception(text)) is True
 
 
 def test_permission_error_logged_with_correlation(caplog):
