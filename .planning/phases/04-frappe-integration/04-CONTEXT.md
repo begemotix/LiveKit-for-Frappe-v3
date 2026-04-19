@@ -1,6 +1,6 @@
 # Phase 4: Frappe Integration - Context
 
-**Gathered:** 2026-04-19
+**Gathered:** 2026-04-19 (updated)
 **Status:** Ready for planning
 
 <domain>
@@ -14,34 +14,31 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 ## Implementation Decisions
 
 ### MCP Session Lifecycle
-- **D-01:** MCP-Verbindung wird pro Agent-Session aufgebaut und innerhalb dieser Session wiederverwendet.
-- **D-02:** Session-lokale MCP-Verbindung wird sauber beendet, sobald die Agent-Session endet.
+- **D-01:** Fachliche Session-Grenze ist room-basiert (eine Session pro LiveKit-Raum).
+- **D-02:** MCP-Verbindung wird pro Room-Session aufgebaut, innerhalb dieser Session wiederverwendet und beim Session-Ende sauber beendet.
 
 ### Credential Strategy
-- **D-03:** Der Agent authentifiziert sich ausschliesslich mit festen Agent-Credentials aus ENV.
+- **D-03:** Der Agent authentifiziert sich ausschliesslich mit festen Agent-Credentials aus ENV (`FRAPPE_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET`).
 - **D-04:** Es gibt keinen Runtime-Switch auf Frontend- oder User-Credentials.
 
-### Tool Discovery and MCP Purity
-- **D-05:** Tools werden dynamisch ueber MCP Discovery bezogen; es gibt keine app-seitige Allowlist.
-- **D-06:** Read-only ist Verantwortung des Frappe-MCP-Servers und der Rollen des Agent-Frappe-Users, nicht einer lokalen Tool-Filterlogik.
-- **D-07:** Strikte MCP-Reinheit bleibt bestehen: keine direkten Frappe-API-Aufrufe und keine hardcodierten Doctype-Annahmen.
+### MCP Runtime Path and Discovery
+- **D-05:** Produktivpfad fuer Phase 4 ist ein stdio-Sidecar im Agent-Container: `MCPServerStdio(command="npx", args=["-y", "frappe-mcp-server"], env={FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET})`.
+- **D-06:** Es gibt keinen HTTP-Endpoint zwischen Agent und MCP im Produktivpfad; der MCP-Serverprozess spricht intern per stdio mit dem Agenten und extern per REST mit der Kunden-Frappe-Instanz.
+- **D-07:** Die Discovery-Liste wird beim Abnahmezeitpunkt vollstaendig erfasst und als Ist-Stand eingefroren, inklusive Write-Tools (z. B. `create_document`, `update_document`, `delete_document`, `call_method`, `reconcile_bank_transaction_with_vouchers`).
+- **D-08:** Read-only-Erzwingung liegt bei den Frappe-Rollen des API-Users (kein lokaler Sicherheitsfilter).
+- **D-09:** Strikte MCP-Reinheit bleibt bestehen: keine direkten Frappe-API-Aufrufe und keine hardcodierten Doctype-Annahmen.
 
 ### Permission and Error Handling
-- **D-08:** Bei 403/Permission-Problemen antwortet der Agent mit einer klaren, nutzerfreundlichen Einschrankungs-Meldung.
-- **D-09:** 403-Fehler werden nicht erneut versucht (kein Retry auf fehlende Berechtigung).
-- **D-10:** Fehlerpfade werden strukturiert geloggt (inkl. Korrelationsbezug), ohne Crash der Session.
+- **D-10:** Feste Nutzerbotschaft bei 403/Permission (Voice/Text identisch): `Darauf habe ich mit meinem Agent-Zugang leider keinen Zugriff.`
+- **D-11:** Kein Retry auf 403.
+- **D-12:** Fehlerpfade werden strukturiert geloggt mit festen Feldern (`event`, `correlation_id`, `tool`, `error_class`) ohne Session-Crash.
 
-### Prompt Source from Frappe Notes
-- **D-11 (deferred to Phase 5):** Beim Session-Start werden Prompt-Bausteine via MCP aus Frappe Notes geladen.
-- **D-12 (deferred to Phase 5):** Der System-Prompt wird aus zwei Quellen zusammengefuehrt: Public Notes der Instanz plus Notes, die dem Agent-Frappe-User zugewiesen sind.
-- **D-13 (deferred to Phase 5):** Falls Frappe/MCP nicht erreichbar ist, nutzt der Agent eine ENV-Baseline als Notfall-Persona.
-- **D-14 (deferred to Phase 5):** Pro Deployment gibt es genau eine Agent-Frappe-User-Identitaet und damit genau ein Persona-Set.
-- **D-15 (deferred to Phase 5):** Phase 4 startet mit Lazy Load ohne Cache; Session-Caching ist nur als spaetere Optimierung bei realem Bedarf vorgesehen.
+### Gate and UAT Sequence
+- **D-13:** Verbindliche Reihenfolge: `G1 -> G2 -> G3 -> Live-MCP Discovery -> End-to-End Read-only Datenabfrage -> 403-Rechtefall als Produktverhalten -> Final Handover/Verification`.
 
 ### Claude's Discretion
-- Konkrete technische Struktur fuer Session-Lifecycle-Hooks (solange D-01/D-02 eingehalten werden).
-- Konkretes Wording der Permission-Fehlermeldungen je Kanal (Voice/Text), solange sie klar und nicht-technisch sind.
-- Prompting-Implementierung bleibt in Phase 4 unveraendert (Phase-3-Stand via Python-Konstanten/ENV); Details zu Notes-Merge werden in Phase 5 entschieden.
+- Konkrete technische Hook-Struktur fuer den room-basierten Session-Lifecycle.
+- Exakte Form der Tool-Inventar-Dokumentation (solange vollstaendig und eingefroren).
 
 </decisions>
 
@@ -66,25 +63,25 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 ## Existing Code Insights
 
 ### Reusable Assets
-- `apps/agent/agent.py` (`entrypoint`, `AgentSession`, `function_call_start` Hook) - natuerlicher Integrationspunkt fuer MCP-Session-Init, Tool-Call-Pipeline und Fehlerbehandlung.
-- `apps/agent/agent.py` (`load_agent_instructions`) - vorhandener Prompt-Ladepfad, der in Phase 4 auf Frappe-Notes als Primaerquelle umgestellt werden muss.
+- `apps/agent/agent.py` (`entrypoint`, `AgentSession`, `function_call_start` Hook) - natuerlicher Integrationspunkt fuer Session-Lifecycle, Tool-Call-Pipeline und Fehlerbehandlung.
+- `apps/agent/src/frappe_mcp.py` - bestehender ENV-Credential-Vertrag als Referenz fuer Sidecar-ENV-Paritaet.
 
 ### Established Patterns
 - Session-getriebener Agent-Start via `participant_joined` in `apps/agent/agent.py` - passt zur Entscheidung "MCP pro Session".
 - Strukturiertes JSON-Logging und Korrelationsfelder in `apps/agent/agent.py` - Grundlage fuer INTG-05 Fehlerbehandlung.
 
 ### Integration Points
-- `apps/agent/agent.py` - zentraler Ort fuer MCP-Client-Lifecycle, Discovery und Prompt-Zusammenbau.
-- `apps/agent/tests/test_agent.py` - bestehende Testbasis; muss fuer MCP/Auth/403/Prompt-Fallback-Pfade erweitert werden.
+- `apps/agent/agent.py` - zentraler Ort fuer Session-Lifecycle und Tool-Error-Mapping.
+- `apps/agent/tests/test_mcp_integration.py` - zentrale Testbasis fuer Credential-Vertrag, Discovery und 403-Verhalten.
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-- Scope Phase 4 bleibt MCP-Core: Verbindung, Discovery, Tool-Bedienung und Permission-Handling.
-- Prompting bleibt in Phase 4 beim Phase-3-Stand (Python-Konstanten/ENV) und wird nicht auf Notes umgestellt.
-- Notes-basierte Persona-Verwaltung wird in Phase 5 geplant.
+- Scope Phase 4 bleibt MCP-Core-Hardening mit stdio-Sidecar.
+- G3 schraenkt das Toolset nicht ein, sondern friert den Discovery-Ist-Stand zur Abnahme ein.
+- Voice-Safety fuer Write-Tools bleibt explizit ausserhalb von Phase 4.
 
 </specifics>
 
@@ -93,7 +90,7 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 
 - Voice-Safety-Bestaetigung fuer potenziell schreibende Tool-Calls wird separat diskutiert (eigener Punkt/Topic 6).
 - Multi-Agent-pro-Deployment ist Backlog fuer Phase 5+ (aktuell 1 Persona pro Deployment).
-- Notes-Scoping ueber ein Custom Field auf dem Note-Doctype (z. B. `ai_agent_visibility`) als Content-Scoping-Mechanismus fuer Multi-Agent-Deployments: Notes koennen auf bestimmte Agent-IDs begrenzt werden, ohne separate Frappe-User. Das ist kein Permission-Layer. Default-Verhalten: Notes ohne dieses Feld sind fuer alle Agenten sichtbar (Firmenwissen). Phase-5+-Backlog, gemeinsam mit Multi-Agent-pro-Deployment zu betrachten.
+- Prompt-Notes-/Persona-Themen bleiben Phase 5 (nicht Teil von Phase 4 Hardening).
 
 </deferred>
 
