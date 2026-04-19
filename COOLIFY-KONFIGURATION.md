@@ -18,11 +18,11 @@ Docker startet für jeden einzeln gemappten UDP-Port einen eigenen Proxy-Prozess
 
 ## Multi-Tenancy (Mehrere Instanzen pro VPS)
 
-Wenn Sie mehrere LiveKit-Instanzen auf demselben Server betreiben möchten, müssen Sie die Ports **innerhalb der `livekit.yaml`** anpassen, da sich diese sonst gegenseitig blockieren würden.
+Wenn Sie mehrere LiveKit-Instanzen auf demselben Server betreiben möchten, müssen Sie die Ports **innerhalb der `livekit.config.yaml`** anpassen, da sich diese sonst gegenseitig blockieren würden.
 
 **Vorgehen pro Kunde/Mandant:**
 1. Erstellen Sie eine eigene Coolify-Ressource (Docker Compose).
-2. Vergeben Sie in der `livekit.yaml` (oder via Environment-Variablen, falls unterstützt) eindeutige Ports für Signaling, RTC und TURN.
+2. Vergeben Sie in der `livekit.config.yaml` (oder via Environment-Variablen, falls unterstützt) eindeutige Ports für Signaling, RTC und TURN.
 3. Passen Sie den UDP-Port-Range an (z.B. Instanz 1: 50000-50100, Instanz 2: 50101-50200).
 
 ---
@@ -51,4 +51,4 @@ Diese Variablen müssen in der Coolify-Oberfläche für den Dienst gesetzt werde
 ## Sicherheit & Best Practices
 
 - **API Secrets**: Speichern Sie `LIVEKIT_API_SECRET` und `OPENAI_API_KEY` immer als **Secrets** (Hidden) in Coolify.
-- **UDP Range**: In der `livekit.yaml` ist der Bereich standardmäßig auf 100 Ports begrenzt (50000-50100), was für die meisten Setups ausreicht und die Infrastruktur schont.
+- **UDP Range**: In der `livekit.config.yaml` ist der Bereich standardmäßig auf 100 Ports begrenzt (50000-50100), was für die meisten Setups ausreicht und die Infrastruktur schont.

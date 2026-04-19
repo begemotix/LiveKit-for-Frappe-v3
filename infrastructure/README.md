@@ -25,7 +25,7 @@ docker compose --profile with-caddy up -d
 ```
 
 ## Konfiguration
-- **`livekit.yaml`**: Zentrale Server-Konfiguration (Ports, IP, Keys).
+- **`livekit.config.yaml`**: Zentrale Server-Konfiguration (Ports, IP, Keys).
 - **`.env`**: Enthält Secrets wie API-Keys und Domain-Namen. Nutzen Sie `.env.example` als Vorlage.
 
 Details zum Deployment via **Coolify** finden Sie in der `COOLIFY-KONFIGURATION.md` im Hauptverzeichnis.

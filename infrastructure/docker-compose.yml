@@ -13,7 +13,7 @@ services:
       - '5349:5349/tcp'
       - '50000-60000:50000-60000/udp'
     volumes:
-      - ./livekit.yaml:/livekit.yaml
+      - ./livekit.config.yaml:/livekit.yaml
     env_file:
       - .env
 

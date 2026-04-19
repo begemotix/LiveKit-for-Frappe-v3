@@ -11,7 +11,7 @@ services:
     command: --config /livekit.yaml
     network_mode: host
     volumes:
-      - ./livekit.yaml:/livekit.yaml
+      - ./livekit.config.yaml:/livekit.yaml
     env_file:
       - .env
 
