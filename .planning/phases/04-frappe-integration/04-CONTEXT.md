@@ -94,6 +94,7 @@ Der Voice-Agent verbindet sich per MCP mit der Frappe-Instanz, authentifiziert s
 
 - Voice-Safety-Bestaetigung fuer potenziell schreibende Tool-Calls wird separat diskutiert (eigener Punkt/Topic 6).
 - Multi-Agent-pro-Deployment ist Backlog fuer Phase 5+ (aktuell 1 Persona pro Deployment).
+- Notes-Scoping ueber ein Custom Field auf dem Note-Doctype (z. B. `ai_agent_visibility`) als Content-Scoping-Mechanismus fuer Multi-Agent-Deployments: Notes koennen auf bestimmte Agent-IDs begrenzt werden, ohne separate Frappe-User. Das ist kein Permission-Layer. Default-Verhalten: Notes ohne dieses Feld sind fuer alle Agenten sichtbar (Firmenwissen). Phase-5+-Backlog, gemeinsam mit Multi-Agent-pro-Deployment zu betrachten.
 
 </deferred>
 
