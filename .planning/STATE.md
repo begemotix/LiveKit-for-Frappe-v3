@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-04-19T16:05:00.000Z"
+status: executing
+last_updated: "2026-04-19T16:00:36.134Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 15
-  completed_plans: 13
+  completed_phases: 2
+  total_plans: 17
+  completed_plans: 14
 ---
 
 # Project State
@@ -16,13 +16,13 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 04 — frappe-integration (MCP-Core Scope)
+**Current Focus:** Phase 04 — frappe-integration
 
 ## Current Position
 
-Phase: 04 (frappe-integration) — IN PLANNING/EXECUTION PREP
-Plan: 0 of 3
-**Status:** Plans finalized; execute pending with MCP-core only scope
+Phase: 04 (frappe-integration) — EXECUTING
+Plan: 2 of 3
+**Status:** Ready to execute
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -69,6 +69,8 @@ Progress (Project):
 - [Architektur]: D-C: Reverse-Proxy im Produktivpfad ist Coolify-Traefik; Caddy bleibt nur optional auskommentiert für Nicht-Coolify-Deployments.
 - [Phase 03]: CP-Abschluss erfordert eigene SUMMARY-Artefakte fuer konsistente Planzaehlung.
 - [Phase 03]: Interruption-Tests validieren gegen beobachtbares Verhalten (generate_reply) statt veralteter API-Mocks.
+- [Phase 04]: MCP credentials are read exclusively from FRAPPE_MCP_URL, FRAPPE_API_KEY, and FRAPPE_API_SECRET.
+- [Phase 04]: Missing MCP credentials fail fast with ValueError naming each missing ENV key.
 
 ### Blockers
 
@@ -83,4 +85,4 @@ Progress (Project):
 
 - **Last Action:** Scopedown von Phase 04 auf MCP-Core und Anlage von Phase 05 fuer Persona-Verwaltung.
 - **Current Goal:** Execute Phase 04 plans (MCP connection, discovery, permission handling).
-- **Resume File:** .planning/phases/04-frappe-integration/04-CONTEXT.md
+- **Resume File:** None
