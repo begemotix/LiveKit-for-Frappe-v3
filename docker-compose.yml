@@ -1,7 +1,6 @@
-# AUTOGENERIERT — Quelle: docker-compose.template.yml + scripts/render-compose.sh
-# Coolify: vor deploy bash scripts/render-compose.sh (siehe COOLIFY-KONFIGURATION.md)
-# Lokal: bash scripts/render-compose.sh && docker compose up -d
-# Caddy: nur mit Profil — docker compose --profile with-caddy up -d
+# LiveKit Stack — Optimized for Performance (Host Networking)
+# Recommendation: use network_mode: host for optimal WebRTC performance.
+# No port mappings required in this mode; the container uses host ports directly.
 
 version: "3.9"
 
@@ -10,12 +9,7 @@ services:
     image: livekit/livekit-server:latest
     restart: unless-stopped
     command: --config /livekit.yaml
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "3478:3478/udp"
-      - "5349:5349/tcp"
-      - "50000-60000:50000-60000/udp"
+    network_mode: host
     volumes:
       - ./livekit.yaml:/livekit.yaml
     env_file:
@@ -26,17 +20,13 @@ services:
       - with-caddy
     image: caddy:latest
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    network_mode: host
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     env_file:
       - .env
-    depends_on:
-      - livekit
 
 volumes:
   caddy_data:

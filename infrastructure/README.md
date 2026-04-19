@@ -1,44 +1,31 @@
-# LiveKit for Frappe
+# LiveKit for Frappe - Infrastruktur
 
-Sicherer, selbst-gehosteter Voice-Assistent für Frappe/ERPNext.
+Dieses Verzeichnis enthält die Konfiguration für den LiveKit-Server-Stack.
 
-## LiveKit Deployment
+## Deployment
 
-Docker Compose startet **LiveKit**. **Caddy** ist optional (Profil `with-caddy`) — mit **Coolify/Traefik** typischerweise **ohne** Caddy.
+Der Stack wird via Docker Compose gestartet. Wir nutzen **Host-Networking** für maximale Performance und einfachste Konfiguration.
 
 ### Voraussetzungen
-
-- Docker und Docker Compose.
-- Domain (optional, je nach Proxy).
-- `.env` nach `.env.example`; Host-Ports siehe **`COOLIFY-KONFIGURATION.md`**.
+- Docker & Docker Compose installiert.
+- Domain ist auf die IP des Servers geroutet.
+- Ports 7880, 7881, 3478, 5349 (TCP/UDP) sowie 50000-50100 (UDP) sind in der Firewall offen.
 
 ### Starten
-
-Aus **`docker-compose.template.yml`** die aktuelle Compose erzeugen (Pflicht bei abweichenden Host-Ports — z. B. mehrere Instanzen auf einem Server):
-
 ```bash
-bash scripts/render-compose.sh
 docker compose up -d
 ```
 
-Nur **LiveKit** (Standard): wie oben. **Mit Caddy** (eigener TLS-Proxy, z. B. ohne Traefik):
+Standardmäßig wird nur der **LiveKit-Server** gestartet.
 
+### Optional: Caddy (TLS-Proxy)
+Falls Sie kein Coolify/Traefik nutzen, können Sie Cadddy mitstarten:
 ```bash
-bash scripts/render-compose.sh
 docker compose --profile with-caddy up -d
 ```
 
-Details, Mandanten-Ports, Coolify: **`COOLIFY-KONFIGURATION.md`** im Repository-Root.
+## Konfiguration
+- **`livekit.yaml`**: Zentrale Server-Konfiguration (Ports, IP, Keys).
+- **`.env`**: Enthält Secrets wie API-Keys und Domain-Namen. Nutzen Sie `.env.example` als Vorlage.
 
-### Deployment mit Coolify
-
-- Traefik von Coolify nutzen → **kein** Caddy-Profil; vor Deploy **`bash scripts/render-compose.sh`** mit mandantenspezifischen `LIVEKIT_HOST_*`-Variablen.
-- LiveKit-Signaling-Port in Traefik auf den **gewählten Host-Port** (nicht zwingend 7880) mappen.
-
-### White-Labeling
-
-Widget-Farben u. a. über `.env` / Frontend-`NEXT_PUBLIC_*` (siehe Root-`.env.example`).
-
-## Lizenz
-
-Apache-2.0
+Details zum Deployment via **Coolify** finden Sie in der `COOLIFY-KONFIGURATION.md` im Hauptverzeichnis.
