@@ -57,6 +57,8 @@ Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei
 | D-A: Prompts ab Phase 4+ aus Frappe | `readme/AGENT_PROMPT.md` ist nur Demo-Übergang; ab Phase 4 erfolgt Prompt-Steuerung aus Frappe statt Filesystem. Keine Mehrinvestition in Markdown-System. | — Accepted |
 | D-B: DSGVO-Ansage nicht auf Agent-Ebene | Telefon-Ansage via Zadarma vor Übergabe, Browser-Hinweis als UI-Text in späterer Frontend-Phase; keine LiveKit-Audioansage/Cloud-TTS. `NEXT_PUBLIC_GDPR_NOTICE` bleibt, Default leer. | — Accepted |
 | D-C: Reverse-Proxy = Coolify-Traefik | Produktivpfad nutzt Coolify-Traefik. Caddy bleibt nur optional und auskommentiert für Nicht-Coolify-Deployments im Repo. | — Accepted |
+| D-D: Universelles internes Wiring über host.docker.internal | Agent und Frontend verbinden LiveKit intern stabil über `host.docker.internal` plus `host-gateway`; harte IPs werden vermieden. | — Accepted |
+| D-E: Hybrid Networking als Produktivstandard | LiveKit läuft im Host-Netz für WebRTC-Ports, Agent und Frontend im Bridge-Netz für Traefik-Integration und Betriebssicherheit. | — Accepted |
 
 ## Evolution
 
@@ -79,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-18 after Phase 01 completion_
+_Last updated: 2026-04-19 after Phase 01 gap-closure documentation (01-03)_

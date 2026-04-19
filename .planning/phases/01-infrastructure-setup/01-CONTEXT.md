@@ -18,9 +18,10 @@ Bereitstellung der Server-Infrastruktur für LiveKit (Self-hosted WebRTC Engine)
 
 ### Reverse Proxy & Networking
 
-- **D-02:** Caddy als Standard-Proxy im Stack für das HTTPS-Signaling integrieren.
-- **D-03:** LiveKit UDP-Ports direkt auf dem Host binden (Host-Anbindung) für Media-Traffic.
-- **D-04:** In der Umgebungskonfiguration dokumentieren, wie Coolify-Nutzer ihren globalen Traefik-Proxy stattdessen direkt anbinden können.
+- **D-02:** Produktivpfad nutzt **Coolify-Traefik** für TLS-Termination und Routing; Caddy bleibt als optionales, auskommentiertes Profil für Nicht-Coolify-Deployments.
+- **D-03:** **Hybrid-Networking** als Standard: LiveKit im `network_mode: host`, Agent und Frontend im Bridge-Netzwerk.
+- **D-04:** **host.docker.internal** (inkl. `extra_hosts: host-gateway`) ist das universelle interne Wiring für Agent/Frontend -> LiveKit.
+- **D-08:** Traefik-Routing erfolgt über Service-Labels und leitet auf `http://host.docker.internal:7880`; kein Caddy im produktiven Default-Pfad.
 
 ### TURN-Server
 
@@ -54,7 +55,7 @@ No existing infrastructure code to reuse.
 <specifics>
 ## Specific Ideas
 
-- Coolify-Kompatibilität ist ein wichtiges Kriterium (Traefik-Anbindung dokumentieren, Environment-Variablen-Handling).
+- Coolify-Kompatibilität ist ein wichtiges Kriterium (Traefik-Labels als Standardpfad, Environment-Variablen-Handling und host.docker.internal-Wiring klar dokumentieren).
   </specifics>
 
 <deferred>

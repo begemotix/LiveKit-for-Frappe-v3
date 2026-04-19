@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-18T15:17:49.774Z"
+last_updated: "2026-04-19T00:00:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -23,6 +23,7 @@ progress:
 Phase: 03 (agent-core) — EXECUTING
 Plan: 4 of 4
 **Status:** Ready to execute
+Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
 Progress (Project):
@@ -45,7 +46,8 @@ Progress (Project):
 - [Phase 01]: Integrated TURN server used for connectivity without external dependencies
 - [Phase 01]: Redis omitted to simplify single-node setup
 - [Phase 01-infrastructure-setup]: Explicit port mapping used in docker-compose for standard compatibility
-- [Phase 01-infrastructure-setup]: Caddy selected for automatic Let's Encrypt certificates and simplicity
+- [Phase 01-infrastructure-setup]: Caddy remains optional via profile; production default is Coolify-Traefik.
+- [Phase 01]: Realer Produktivstack nutzt Coolify-Traefik + host.docker.internal-Wiring (formalisiert in Plan 01-03).
 - [Phase 02]: Consolidate UI components in components/ui to match shadcn standard while keeping template compatibility.
 - [Phase 02-frontend-widget]: D-06: Tokens werden ausschließlich serverseitig über /api/token generiert.
 - [Phase 02-frontend-widget]: D-07: Gast-Identitäten werden zufällig generiert, um unauthentifizierten Zugang zu ermöglichen.
