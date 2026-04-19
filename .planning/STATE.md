@@ -20,9 +20,9 @@ progress:
 
 ## Current Position
 
-Phase: 04 (frappe-integration) — EXECUTING
-Plan: 2 of 4
-**Status:** Ready to execute
+Phase: 04 (frappe-integration) — PLANNING HARDENING GATE
+Plan: hardening-gate before execution
+**Status:** Wave-D Gate-Dokumentation abgeschlossen; Human-Verify Checkpoint `approved-wave-d` ausstehend. Bis dahin NO-GO fuer 04-06 bis 04-10.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
 
 ```
@@ -77,18 +77,24 @@ Progress (Project):
 - [Phase 04]: Phase-04-Handover bleibt auf MCP-Core begrenzt; Prompting-Migration bleibt in Phase 5 (Decision D-A).
 - [Phase 04]: Use livekit-agents MCP extras in both uv and pip dependency contracts to prevent pre-session import failures.
 - [Phase 04]: Track live UAT checks as retest-required-unblocked after dependency blocker removal.
+- [Phase 04]: Hardening-Gate eingefuehrt: kein Execute/Testing vor dokumentierten Betriebsfakten (Session-Grenze, Endpoint, Tool-Inventar).
+- [Phase 04]: Verbindliche Wave-Reihenfolge festgelegt: D (blockierend) -> A -> B -> C -> E -> F.
 
 ### Blockers
 
-- None currently.
+- **Checkpoint Pending (Wave D Approval):** Human-Verify `approved-wave-d` steht aus; ohne dieses Signal bleiben 04-06 bis 04-10 gesperrt.
+- **NO-GO Gate 4 (Live Access):** Live-UAT/E2E-Zugang und Nachweise fuer Discovery/read-only/403-Produktverhalten sind noch nicht abgeschlossen.
+- **Scope Risk Guard:** Phase-5-Entscheidungen D-11 bis D-15 duerfen in Phase 4 nicht aktiviert werden.
 
 ### Next Steps
 
-- Execute Phase 04 (frappe-integration) mit MCP-Core-Scope.
-- Start discuss/planning fuer Phase 05 (frappe-basierte Persona-Verwaltung).
+- Human-Verify fuer Wave D durchfuehren und `approved-wave-d` dokumentieren.
+- Nach Freigabe: Umsetzung entlang Waves D -> A -> B -> C -> E -> F (Start mit 04-06).
+- Live-UAT/E2E-Nachweise fuer Discovery/read-only/403-Produktverhalten vervollstaendigen.
+- Phase 5 bleibt bis Phase-4-GO strikt out of scope.
 
 ## Session Continuity
 
 - **Last Action:** Scopedown von Phase 04 auf MCP-Core und Anlage von Phase 05 fuer Persona-Verwaltung.
-- **Current Goal:** Execute Phase 04 plans (MCP connection, discovery, permission handling).
+- **Current Goal:** Hardening-Plan verbindlich verankern und GO/NO-GO-Gates fuer Phase 4 schliessen.
 - **Resume File:** None

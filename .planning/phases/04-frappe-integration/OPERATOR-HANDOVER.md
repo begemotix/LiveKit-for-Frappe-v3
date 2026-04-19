@@ -1,5 +1,16 @@
 # Operator Handover - Phase 04 Frappe Integration
 
+## Phase-4 Freigabestatus
+
+**Aktuell: Wave D dokumentarisch abgeschlossen, Freigabe pending `approved-wave-d`**.
+
+1. Fachliche Session-Grenze (D-01/D-02)
+2. Produktiver Endpoint/Transport (`/mcp` oder `/sse`) mit Live-Nachweis
+3. Reale Tool-Inventarliste aus dem Zieldeployment als Abnahme-Artefakt
+
+Wave-Reihenfolge ist verbindlich: **D (blockierend) -> A -> B -> C -> E -> F**.
+Folgeplaene `04-06` bis `04-10` duerfen erst nach explizitem Freigabesignal `approved-wave-d` gestartet werden.
+
 ## Coolify-ENV-Variablen
 
 | Name | Zweck | Default | Beispielwert | Hinweis |
@@ -18,6 +29,7 @@
 - MCP-Authentifizierung ueber `FRAPPE_API_KEY` und `FRAPPE_API_SECRET` des dedizierten Agent-Users.
 - Frappe-seitige Rollen/Allowlist des Agent-Users fuer read-only Zugriff (Decision D-06).
 - Prompt-Baseline-Werte (`ROLE_DESCRIPTION`, `AGENT_NAME`, `COMPANY_NAME`) bleiben bis Phase 5 konfigurierbar, sind aber als Uebergang markiert (Decision D-A).
+- Endpoint-Festlegung (`/mcp` oder `/sse`) ist konfigurierbar, aber **vor Start verbindlich zu entscheiden und nachzuweisen**.
 
 ## Nicht-konfigurierbare Komponenten
 
@@ -25,13 +37,29 @@
 - Kein Credential-Switch auf Frontend-/Enduser-Token zur Laufzeit (Decision D-04).
 - Permission-Fehler (z. B. 403) werden ohne Retry mit fixer, nutzerfreundlicher Meldung beantwortet (Decision D-08, D-09).
 - Structured Logging fuer Permission-Pfade mit `correlation_id` und Tool-Kontext ist fest implementiert (Decision D-10).
+- Prompt-Notes aus Frappe bleiben in Phase 4 out of scope (D-11 bis D-15 sind Phase 5).
+- Keine lokalen Sicherheitsumgehungen (keine Tool-Allowlist als Security-Ersatz, keine Bridge/Sidecar-Neuarchitektur).
+
+## Do-Not-Implement (Phase 4)
+
+- Kein stdio-Pivot.
+- Keine lokale MCP-Bridge.
+- Kein direkter REST-Fallback.
+- Keine lokale Tool-Allowlist.
+- Keine Prompt-Notes-Integration in Phase 4.
+- Keine Multi-Agent-Persona-Logik.
+- Kein Voice-Safety-Flow fuer Write-Tools in dieser Phase.
 
 ## Handover-Checkliste fuer den Onboarding-Termin
 
+- [x] Gate G1: Session-Grenze schriftlich entschieden und in Verification/UAT referenziert.
+- [x] Gate G2: Endpoint/Transport (`/mcp` oder `/sse`) schriftlich entschieden und gegen Zielsystem geprueft.
+- [x] Gate G3: Reale Tool-Inventarliste dokumentiert und als Abnahme-Artefakt in UAT verlinkt.
 - [ ] Betreiber stellt dedizierten Frappe-Agent-User bereit (eigene API Credentials, minimale Rollen).
 - [ ] `FRAPPE_MCP_URL`, `FRAPPE_API_KEY`, `FRAPPE_API_SECRET` in Coolify gesetzt und auf korrekten Scope validiert.
 - [ ] MCP-Discovery gegen Zielinstanz pruefen (Tools werden dynamisch geliefert, keine lokale Allowlist).
 - [ ] Permission-Test durchfuehren: absichtlich verbotenen Tool-Call ausloesen und nutzerfreundliche Antwort ohne Retry verifizieren.
-- [ ] Logcheck: `mcp_permission_denied` enthaelt `correlation_id` und Toolname.
+- [ ] Logcheck: 403-Produktfall enthaelt feste Felder `event`, `correlation_id`, `tool`, `error_class`.
+- [ ] Session-Stabilitaet nach 403-Negativtest nachgewiesen (kein Session-Crash).
 - [ ] Offene Scope-Grenze kommunizieren: Prompting aus Frappe-Notes ist out-of-scope in Phase 4 und fuer Phase 5 eingeplant (Decision D-A).
-- [ ] Folgende Artefakte an Operator uebergeben: `.planning/phases/04-frappe-integration/04-03-SUMMARY.md`, `.planning/phases/04-frappe-integration/04-03-PLAN.md`, `.planning/STATE.md`.
+- [ ] Folgende Artefakte an Operator uebergeben: `.planning/phases/04-frappe-integration/04-HUMAN-UAT.md`, `.planning/phases/04-frappe-integration/04-VERIFICATION.md`, `.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md`, `.planning/STATE.md`.
