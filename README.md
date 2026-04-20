@@ -1,131 +1,68 @@
-# Web Embed Agent Starter
+# LiveKit for Frappe
 
-This is a starter template for [LiveKit Agents](https://docs.livekit.io/agents) that provides an example of how you might approach building web embed using the [LiveKit JavaScript SDK](https://github.com/livekit/client-sdk-js). It supports [voice](https://docs.livekit.io/agents/start/voice-ai) and [transcriptions](https://docs.livekit.io/agents/build/text/).
+**DSGVO-konformer, selbst-gehosteter Voice-Assistent fuer Frappe/ERPNext.**
 
-This template is built with Next.js and is free for you to use or modify as you see fit.
+Ein White-Label Open-Source Voice-Agent, den Frappe-Betreiber
+vollstaendig auf eigener Infrastruktur betreiben - ohne dass
+Gesprächsdaten US-Clouds oder Dritt-Anbieter erreichen. Nutzer
+interagieren per Browser-Widget, Chatbot-Fenster oder Telefon
+mit dem ERP; Berechtigungen richten sich strikt nach dem
+Frappe-User, mit dem der Agent authentifiziert ist.
 
-<picture>
-  <source srcset="./.github/assets/readme-hero-dark.webp" media="(prefers-color-scheme: dark)">
-  <source srcset="./.github/assets/readme-hero-light.webp" media="(prefers-color-scheme: light)">
-  <img src="./.github/assets/readme-hero-light.webp" alt="App screenshot">
-</picture>
+## Warum DSGVO-konform?
 
-### Features:
+Der Agent laeuft auf Ihrer Infrastruktur. LiveKit-Server,
+Voice-Agent und Frontend werden gemeinsam bei Ihnen deployed.
+Zur Frappe-Instanz des Kunden verbindet sich der Agent per
+MCP (Model Context Protocol) mit drei ENV-Variablen -
+identisch zum Cursor-Setup. Aktuell nutzt der Voice-Pfad
+OpenAI Realtime (Typ A); eine vollstaendig EU-gehostete
+Variante mit Mistral und Voxtral (Typ B) ist in Vorbereitung.
 
-- Real-time voice interaction with LiveKit Agents
-- Camera video streaming support
-- Screen sharing capabilities
-- Audio visualization and level monitoring
-- Virtual avatar integration
-- Light/dark theme switching with system preference detection
-- Customizable branding, colors, and UI text via configuration
+## Fuer wen
 
-This template is built with Next.js and is free for you to use or modify as you see fit.
+- Frappe- oder ERPNext-Betreiber, die Voice-AI ohne
+  Datenabfluss an US-Cloud-Anbieter einsetzen wollen
+- Integratoren und Agenturen mit White-Label-Bedarf
+- Unternehmen im deutschen und europaeischen Markt, fuer die
+  DSGVO nicht optional ist
 
-### Project structure
+## Weiterfuehrende Dokumentation
 
-```
-agent-starter-react/
-├── app/
-│   ├── (app)/
-│   ├── (iframe)/
-│   ├── api/
-│   ├── test/
-│   ├── favicon.ico
-├── components/
-│   ├── embed-iframe/
-│   ├── embed-popup/
-│   ├── livekit/
-│   ├── ui/
-│   ├── popup-page.tsx
-│   ├── root-layout.tsx
-│   └── theme-toggle.tsx
-│   └── welcome.tsx
-│   └── ...
-├── hooks/
-├── lib/
-├── public/
-├── styles/
-└── package.json
-```
+**Fuer Betreiber und Kunden:**
+- [`readme/COOLIFY-KONFIGURATION.md`](readme/COOLIFY-KONFIGURATION.md)
+  - Deployment, ENV-Variablen, Hybrid-Networking
+- [`readme/SCHULUNG_GUIDE.md`](readme/SCHULUNG_GUIDE.md)
+  - So passen Sie Ihren Agenten an (Persoenlichkeit, Wissen,
+  Tonalitaet)
+- [`readme/AGENT_PROMPT.md`](readme/AGENT_PROMPT.md)
+  - Beispiel-Agentenpersoenlichkeit
 
-## Getting started
+**Fuer Uebergabe an Operatoren:**
+- [`.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md`](.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md)
+  - Onboarding-Checkliste, Scope-Guards, Frappe-MCP-Setup
 
-> [!TIP]
-> If you'd like to try this application without modification, you can deploy an instance in just a few clicks with [LiveKit Cloud Sandbox](https://cloud.livekit.io/projects/p_/sandbox/templates/agent-starter-embed).
+**Fuer Entwickler:**
+- `.planning/` - Phasenweise Architektur- und
+  Entscheidungsdokumentation, Decisions, Verifikation
 
-[![Open on LiveKit](https://img.shields.io/badge/Open%20on%20LiveKit%20Cloud-002CF2?style=for-the-badge&logo=external-link)](https://cloud.livekit.io/projects/p_/sandbox/templates/agent-starter-embed)
+## Quickstart
 
-Run the following command to automatically clone this template.
+1. Repository klonen
+2. `.env.example` nach `.env` kopieren und ausfuellen
+   (siehe `readme/COOLIFY-KONFIGURATION.md`)
+3. `docker compose up -d`
+4. Frontend ist unter der konfigurierten Domain erreichbar
 
-```bash
-lk app create --template agent-starter-embed
-```
+## Stack
 
-Then run the app with:
+- **Media:** LiveKit Server, self-hosted, WebRTC
+- **Agent:** Python, LiveKit Agents 1.5.x, MCP-Client (stdio)
+- **MCP-Sidecar:** `frappe-mcp-server` (npm-Paket,
+  stdio-Transport)
+- **Frontend:** Next.js, basiert auf agent-starter-embed
+- **Deployment:** Docker Compose, Coolify-optimiert
 
-```bash
-pnpm install
-pnpm build-embed-popup-script # Builds the embed-popup.js script
-pnpm dev
-```
+## Lizenz
 
-Open http://localhost:3000 in your browser to experience the 2 embeddable demos.
-
-You'll also need an agent to speak with. Try our starter agent for [Python](https://github.com/livekit-examples/agent-starter-python), [Node.js](https://github.com/livekit-examples/agent-starter-node), or [create your own from scratch](https://docs.livekit.io/agents/start/voice-ai/).
-
-> [!NOTE]
-> If you need to modify the LiveKit project credentials used, you can edit `.env.local` (copy from `.env.example` if you don't have one) to suit your needs.
-
-## Configuration
-
-This starter is designed to be flexible so you can adapt it to your specific agent use case. You can easily configure it to work with different types of inputs and outputs:
-
-#### Example: App configuration (`app-config.ts`)
-
-```ts
-export const APP_CONFIG_DEFAULTS = {
-  supportsChatInput: true,
-  supportsVideoInput: true,
-  supportsScreenShare: true,
-  isPreConnectBufferEnabled: true,
-};
-```
-
-You can update these values in [`app-config.ts`](./app-config.ts) to customize branding, features, and UI text for your deployment.
-
-#### Environment Variables
-
-You'll also need to configure your LiveKit credentials in `.env.local` (copy `.env.example` if you don't have one):
-
-```env
-LIVEKIT_API_KEY=your_livekit_api_key
-LIVEKIT_API_SECRET=your_livekit_api_secret
-LIVEKIT_URL=https://your-livekit-server-url
-
-NEXT_PUBLIC_CONN_DETAILS_ENDPOINT=http://localhost:3000/api/connection-details
-```
-
-These are required for the voice agent functionality to work with your LiveKit project.
-
-## Local Development
-
-http://localhost:3000 will respond to code changes in real time through [NextJS Fast Refresh](https://nextjs.org/docs/architecture/fast-refresh) to support a rapid iteration feedback loop.
-
-## Production deployment of embed-popup.js script
-
-Once your environment is set up and you've made any configuration changes, you can copy the embed code generated on the welcome page of your LiveKit Sandbox and paste it into your website.
-
-> [!IMPORTANT]
-> You MUST use the embed code generated on the welcome page of your LiveKit Sandbox to ensure LiveKit connection tokens are generated correctly.
-
-## Debugging the build of embed-popup.js script
-
-You can test and debug your latest build of `embed-popup.js` locally at http://localhost:3000/test/popup.
-
-> [!IMPORTANT]
-> Code changes you make locally will not be reflected in the bundled `embed-popup.js` script until you run `pnpm build-embed-popup-script`.
-
-## Contributing
-
-This template is open source and we welcome contributions! Please open a PR or issue through GitHub, and don't forget to join us in the [LiveKit Community Slack](https://livekit.io/join-slack)!
+Apache-2.0.
