@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready
-last_updated: "2026-04-21T12:00:00.000Z"
+status: Milestone v1.0 — vier Phasen abgeschlossen; Arbeitspaket Persona/Prompt-Sourcing aus Frappe Notes
+last_updated: "2026-04-20T18:08:08.378Z"
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 3
   total_plans: 24
-  completed_plans: 24
+  completed_plans: 23
 ---
 
 # Project State
@@ -116,4 +116,4 @@ Progress (Project):
 
 - **Last Action:** Architektur-Pivot umgesetzt — Fokus auf **Phase 05 (EU-Voice-Agent Typ B)** verschoben; `STATE`/`ROADMAP`/`PROJECT` synchronisiert.
 - **Current Goal:** Phase-5-Anforderungen und erste Plaene (Mistral + Voxtral STT/TTS Integration) ausarbeiten.
-- **Resume File:** None
+- **Resume File:** .planning/phases/05-eu-voice-agent-typ-b/05-CONTEXT.md
