@@ -10,8 +10,10 @@
       (completed 2026-04-19)
 - [x] **Phase 4: Frappe Integration** - Secure MCP connection for read-only Frappe data access
       (Gap-Closure complete 2026-04-19; Live-Verifikation stdio+MCP bestaetigt 2026-04-20)
-- [ ] **Phase 5: Frappe-basierte Persona-Verwaltung** - System-Prompt sourcing from Frappe Notes with fallback strategy
+- [ ] **Phase 5: EU-Voice-Agent (Typ B)** - Mistral LLM + Voxtral STT/TTS als zweiter Agent-Mode
       **(ACTIVE seit /gsd-transition 2026-04-21)**
+- [ ] **Phase 6: Dynamisches Prompt-Management** - MCP-neutrale System-Prompt-Steuerung
+- [ ] **Phase 7: Self-Hosted TTS Alternative** - (Backlog) Piper für lokale Sprachsynthese
 
 ## Phase Details
 
@@ -95,16 +97,40 @@
 - [x] 04-09-PLAN.md — Wave E closure: run final live UAT evidence checks against target system.
 - [x] 04-10-PLAN.md — Wave F closure: synchronize final handover, state, and roadmap readiness.
 
-### Phase 5: Frappe-basierte Persona-Verwaltung
+### Phase 5: EU-Voice-Agent (Typ B)
 
-**Goal**: Der System-Prompt wird aus Frappe Notes gesteuert, mit robustem ENV-Fallback fuer Ausfallpfade.
+**Goal**: Ein zweiter Agent-Modus basierend auf Mistral LLM und Voxtral (STT/TTS) wird integriert und kann im selben Docker-Image per ENV umgeschaltet werden.
 **Depends on**: Phase 4
+**Requirements**: AGNT-05
+**Success Criteria** (what must be TRUE):
+
+1. Der Agent-Worker kann per Environment-Variable zwischen OpenAI-Realtime (Typ A) und Mistral/Voxtral (Typ B) umgeschaltet werden.
+2. Das bestehende MCP-Toolset funktioniert nahtlos mit beiden Agent-Modi.
+3. Der Typ B Agent unterstützt Sprache-zu-Text und Text-zu-Sprache über die lokalen/EU-konformen Voxtral-Schnittstellen.
+4. Beide Agent-Modi laufen im selben Docker-Image, ohne dass unterschiedliche Container gebaut werden müssen.
+5. Der EU-Modus (Typ B, Mistral + Voxtral) ist der Default-Mode für Neu-Deployments. Typ A (OpenAI Realtime) bleibt per ENV wählbar für Kunden, die geringere Latenz über DSGVO-Konformität priorisieren.
+   **Plans**: TBD
+
+### Phase 6: Dynamisches Prompt-Management
+
+**Goal**: Der System-Prompt des Agenten kann flexibel und extern (z.B. über das MCP) verwaltet werden, um Frappe-Zentrierung zu vermeiden.
+**Depends on**: Phase 5
 **Requirements**: TBD
 **Success Criteria** (what must be TRUE):
 
-1. Der Agent setzt den System-Prompt aus Frappe Notes zusammen (Public + Assigned).
-2. Bei Nichterreichbarkeit von Frappe/MCP bleibt der Agent ueber ENV-Fallback antwortfaehig.
-3. Notes-Scoping via Custom Field fuer Multi-Agent-Deployments ist als spaetere Erweiterung dokumentiert und architektonisch vorgesehen.
+1. Der Agent bezieht seinen System-Prompt dynamisch über eine MCP-neutrale Schnittstelle (z.B. MCP Resources, ENV, Config-Endpoint). Die konkrete Quelle ist pro Deployment konfigurierbar und nicht an einen bestimmten ERP-Anbieter gebunden.
+2. Es gibt einen stabilen lokalen Fallback-Mechanismus, falls die externe Prompt-Quelle nicht erreichbar ist.
+3. Das Prompt-Management ist architektonisch entkoppelt vom spezifischen ERP-System.
+   **Plans**: TBD
+
+### Phase 7: Self-Hosted TTS Alternative (Backlog)
+
+**Goal**: Evaluation und optionale Integration von Piper als vollständig lokal gehostete TTS-Alternative ohne Cloud-Abhängigkeiten. Zielsegment: Kunden mit self-hosted LLM und vollständiger Datenresidenz-Anforderung (z.B. öffentliche Hand, Konzern-IT mit Air-Gapped-Setup).
+**Depends on**: Phase 5
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+
+1. Der Agent kann optional Piper für die Sprachsynthese verwenden, ohne Cloud-Abhängigkeit, in mindestens drei Sprachen (DE/EN/FR).
    **Plans**: TBD
 
 ## Progress
@@ -115,4 +141,6 @@
 | 2. Frontend Widget      | 6/6            | Complete    | 2026-04-18 |
 | 3. Agent Core           | 4/4            | Complete    | 2026-04-19 |
 | 4. Frappe Integration   | 10/10          | Complete    | 2026-04-19 |
-| 5. Persona-Verwaltung   | 0/TBD          | In progress | 2026-04-21 |
+| 5. EU-Voice-Agent       | 0/TBD          | In progress | 2026-04-21 |
+| 6. Prompt-Management    | 0/TBD          | Pending     | -          |
+| 7. Piper TTS (Backlog)  | 0/TBD          | Pending     | -          |

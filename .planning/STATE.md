@@ -5,7 +5,7 @@ milestone_name: milestone
 status: ready
 last_updated: "2026-04-21T12:00:00.000Z"
 progress:
-  total_phases: 5
+  total_phases: 7
   completed_phases: 4
   total_plans: 24
   completed_plans: 24
@@ -16,11 +16,11 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 05 — **Frappe-basierte Persona-Verwaltung** (aktiv nach `/gsd-transition`, 2026-04-21).
+**Current Focus:** Phase 05 — **EU-Voice-Agent (Typ B)** (aktiv nach Architektur-Pivot).
 
 ## Current Position
 
-Phase: **05** (frappe-persona) — **ACTIVE**  
+Phase: **05** (eu-voice-agent) — **ACTIVE**  
 Phase 04 (frappe-integration): **TRANSITIONED / CLOSED** — Live-Betrieb bestaetigt (stdio-MCP, `MCPToolset`, Voice+E2E gegen Frappe).
 
 Plan: 0 of TBD (Phase-5-Artefakte anlegen: Context, Requirements-Split aus ROADMAP, erster Plan)
@@ -31,7 +31,7 @@ Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formal
 
 ```
 Progress (Project):
-[████████░░] 80%   (4 von 5 Phasen abgeschlossen; Phase 5 aktiv)
+[████████░░] 57%   (4 von 7 Phasen abgeschlossen; Phase 5 aktiv)
 ```
 
 ## Performance Metrics
@@ -40,7 +40,7 @@ Progress (Project):
 | --- | --- | --- | --- |
 | Phase 04 P10 | 12min | 2 tasks | 6 files |
 
-- Phases Completed (manuell): **4/5** — Phase 04 inkl. Live-Verifikation abgeschlossen; **Phase 05 gestartet**
+- Phases Completed (manuell): **4/7** — Phase 04 inkl. Live-Verifikation abgeschlossen; **Phase 05 gestartet**
 - Requirements: INTG-01 bis INTG-05 laut REQUIREMENTS.md complete
 
 ## Accumulated Context
@@ -108,12 +108,12 @@ Progress (Project):
 
 ### Next Steps
 
-- Phase 05: `.planning/phases/05-frappe-persona/` anlegen (mindestens `05-CONTEXT.md`, Requirements aus ROADMAP schärfen).
+- Phase 05: `.planning/phases/05-eu-voice-agent/` anlegen (mindestens `05-CONTEXT.md`, Requirements aus ROADMAP schärfen).
 - Ersten Plan skizzieren (`/gsd-discuss-phase` oder `/gsd-plan-phase` je nach Workflow).
 - Betrieb: Checkliste in `OPERATOR-HANDOVER.md` fuer Kunden-Onboarding weiter nutzen.
 
 ## Session Continuity
 
-- **Last Action:** **`/gsd-transition`** — Phase 04 formal geschlossen, Fokus auf **Phase 05 (Persona / Frappe Notes)** verschoben; `STATE`/`ROADMAP`/`PROJECT` synchronisiert.
-- **Current Goal:** Phase-5-Anforderungen und erste Plaene (Prompt-Sourcing, ENV-Fallback laut ROADMAP) ausarbeiten.
+- **Last Action:** Architektur-Pivot umgesetzt — Fokus auf **Phase 05 (EU-Voice-Agent Typ B)** verschoben; `STATE`/`ROADMAP`/`PROJECT` synchronisiert.
+- **Current Goal:** Phase-5-Anforderungen und erste Plaene (Mistral + Voxtral STT/TTS Integration) ausarbeiten.
 - **Resume File:** None
