@@ -1,5 +1,11 @@
 # Coolify: Umgebungsvariablen und Deployment-Hinweise
 
+> **Hinweis zum Referenz-Setup:** Diese Anleitung dokumentiert
+> die Konfiguration mit dem Frappe-MCP-Server als Referenzimplementierung.
+> Für andere MCP-Server (ERP, CRM, interne Tools) passen Sie
+> die MCP-Sidecar-ENV-Variablen analog an - das Grundmuster
+> (drei ENV-Werte, stdio-Transport) bleibt identisch.
+
 Diese Referenz richtet sich an **Kunden und Betreiber**, die das Projekt als **einen Docker-Compose-Stack** in [Coolify](https://coolify.io/) betreiben.
 
 ---

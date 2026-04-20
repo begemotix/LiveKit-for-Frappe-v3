@@ -2,6 +2,12 @@
 
 Willkommen bei Ihrem LiveKit Voice Assistant. Dieses Dokument erklärt Ihnen, wie Sie das Verhalten, die Persönlichkeit und das Wissen Ihres sprechenden Agenten anpassen können.
 
+Dieser Leitfaden gilt unabhängig vom angebundenen Backend -
+ob Frappe, ein anderes ERP oder ein beliebiger MCP-Server.
+Die Instruktionen des Agenten beschreiben sein Verhalten und
+seine Persönlichkeit; die Daten, auf die er zugreifen kann,
+kommen aus dem konfigurierten MCP-Server.
+
 ## Das Prinzip: "Training" per Markdown
 Im Gegensatz zu klassischer Software wird dieser Agent nicht programmiert, sondern instruiert. Das Herzstück ist die Datei `AGENT_PROMPT.md`. Alles, was Sie dort hineinschreiben, definiert, wie der Agent auf Anrufe oder Web-Besucher reagiert.
 

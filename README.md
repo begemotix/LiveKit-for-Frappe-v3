@@ -1,13 +1,20 @@
-# LiveKit for Frappe
+# LiveKit for MCP
 
-**DSGVO-konformer, selbst-gehosteter Voice-Assistent fuer Frappe/ERPNext.**
+**DSGVO-konformer, selbst-gehosteter Voice-Client für jeden MCP-Server.**
 
-Ein White-Label Open-Source Voice-Agent, den Frappe-Betreiber
-vollstaendig auf eigener Infrastruktur betreiben - ohne dass
-Gesprächsdaten US-Clouds oder Dritt-Anbieter erreichen. Nutzer
-interagieren per Browser-Widget, Chatbot-Fenster oder Telefon
-mit dem ERP; Berechtigungen richten sich strikt nach dem
-Frappe-User, mit dem der Agent authentifiziert ist.
+Ein White-Label Open-Source Voice-Agent, der sich über das
+Model Context Protocol (MCP) mit beliebigen ERP-, CRM- oder
+Business-Systemen verbindet. Betreiber hosten den Agent
+vollständig auf eigener Infrastruktur - ohne dass
+Gesprächsdaten US-Clouds oder Dritt-Anbieter erreichen.
+Nutzer interagieren per Browser-Widget, Chatbot-Fenster oder
+Telefon mit dem Zielsystem; Berechtigungen richten sich strikt
+nach den Rollen des angebundenen System-Users.
+
+Die erste Referenzimplementierung ist **Frappe/ERPNext** -
+jeder andere MCP-Server mit stdio- oder HTTP-Transport kann
+mit drei ENV-Variablen angebunden werden, identisch zum
+Cursor-MCP-Setup.
 
 ## Warum DSGVO-konform?
 
@@ -19,12 +26,15 @@ identisch zum Cursor-Setup. Aktuell nutzt der Voice-Pfad
 OpenAI Realtime (Typ A); eine vollstaendig EU-gehostete
 Variante mit Mistral und Voxtral (Typ B) ist in Vorbereitung.
 
-## Fuer wen
+## Für wen
 
-- Frappe- oder ERPNext-Betreiber, die Voice-AI ohne
-  Datenabfluss an US-Cloud-Anbieter einsetzen wollen
+- Betreiber von ERP-, CRM- oder internen Business-Systemen
+  mit MCP-Server, die Voice-AI ohne Datenabfluss an
+  US-Cloud-Anbieter einsetzen wollen
+- Frappe/ERPNext-Nutzer - vollständig vorkonfigurierter
+  Referenz-Stack
 - Integratoren und Agenturen mit White-Label-Bedarf
-- Unternehmen im deutschen und europaeischen Markt, fuer die
+- Unternehmen im deutschen und europäischen Markt, für die
   DSGVO nicht optional ist
 
 ## Weiterfuehrende Dokumentation
@@ -58,8 +68,9 @@ Variante mit Mistral und Voxtral (Typ B) ist in Vorbereitung.
 
 - **Media:** LiveKit Server, self-hosted, WebRTC
 - **Agent:** Python, LiveKit Agents 1.5.x, MCP-Client (stdio)
-- **MCP-Sidecar:** `frappe-mcp-server` (npm-Paket,
-  stdio-Transport)
+- **Referenz-MCP-Sidecar:** `frappe-mcp-server` (npm-Paket,
+  stdio-Transport). Andere MCP-Server analog über
+  `MCPServerStdio` einbindbar.
 - **Frontend:** Next.js, basiert auf agent-starter-embed
 - **Deployment:** Docker Compose, Coolify-optimiert
 
