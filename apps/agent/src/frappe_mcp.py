@@ -66,8 +66,8 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
     if missing:
         raise ValueError(f"Missing required MCP env vars: {', '.join(missing)}")
 
-    command = "npx"
-    args = ["-y", "frappe-mcp-server"]
+    command = os.getenv("FRAPPE_MCP_BINARY", "/usr/local/bin/frappe-mcp-server")
+    args: list[str] = []
     child_env = {
         "FRAPPE_URL": frappe_url,
         "FRAPPE_API_KEY": api_key,
@@ -82,6 +82,7 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
             "mcp_sidecar_command": command,
             "mcp_sidecar_args": list(args),
             "mcp_effective_transport": "stdio",
+            "mcp_binary": command,
         },
     )
 

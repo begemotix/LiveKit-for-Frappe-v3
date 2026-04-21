@@ -11,6 +11,7 @@
 | `AGENT_VOICE_REF_AUDIO` | Referenz-Audio-Dateipfad fuer Zero-Shot Voice Cloning | leer | `/app/voice_refs/voice_ref_de.mp3` | Hat Vorrang vor `AGENT_VOICE_ID` (Decision D-08) |
 | `AGENT_VOICE_ID` | Preset-Voice-ID als Fallback wenn kein `AGENT_VOICE_REF_AUDIO` gesetzt ist | leer | `en_paul_neutral` | Wird ignoriert, sobald `AGENT_VOICE_REF_AUDIO` gesetzt ist |
 | `AGENT_NUM_IDLE_PROCESSES` | Anzahl vorgewaermter Agent-Prozesse, die idle auf neue Jobs warten; reduziert Cold-Start-Latenz | `2` | `2` | Optional; ca. 500-700 MB RAM pro Idle-Process (Python + Silero VAD vorgewaermt). Empfehlung: `2` normal, `1` fuer RAM-knappe VPS, `0` deaktiviert Pre-Warming (nicht empfohlen). |
+| `FRAPPE_MCP_BINARY` | Direkter Binary-Pfad fuer den Frappe MCP stdio-Server | `/usr/local/bin/frappe-mcp-server` | `/usr/local/bin/frappe-mcp-server` | Optional; normalerweise nicht setzen. Nur ueberschreiben, falls der Binary im Image an anderem Pfad liegt. |
 | `NEXT_PUBLIC_GDPR_NOTICE` | Browser-Hinweistext fuer DSGVO im Frontend | leer | leer | im aktuellen Architekturstand ungenutzt — siehe Decision D-B |
 
 ## Konfigurierbare Komponenten

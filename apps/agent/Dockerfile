@@ -5,7 +5,7 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# System-Abhängigkeiten für WebRTC/Audio + Node/npx für Frappe-MCP-stdio-Sidecar (frappe-mcp-server)
+# System-Abhängigkeiten für WebRTC/Audio + Node fuer Frappe-MCP-stdio-Sidecar
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Frappe MCP fest im Image installieren (kein npx Cold-Start zur Laufzeit)
+RUN npm install -g frappe-mcp-server \
+    && command -v frappe-mcp-server
+ENV FRAPPE_MCP_BINARY=/usr/local/bin/frappe-mcp-server
 
 # Abhängigkeiten installieren
 COPY requirements.txt .
