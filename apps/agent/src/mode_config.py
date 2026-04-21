@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 VALID_MODES = {"type_a", "type_b"}
 
@@ -28,6 +29,23 @@ def validate_mode_env(mode: str) -> None:
     language = (os.getenv("AGENT_LANGUAGE") or "").strip().lower()
     if language and language not in {"de", "en"}:
         raise ValueError("AGENT_LANGUAGE must be 'de' or 'en' when set")
+
+    if mode == "type_b":
+        ref_audio = (os.getenv("AGENT_VOICE_REF_AUDIO") or "").strip()
+        voice_id = (os.getenv("AGENT_VOICE_ID") or "").strip()
+
+        if ref_audio:
+            ref_path = Path(ref_audio)
+            if not ref_path.is_file():
+                raise ValueError(
+                    f"AGENT_VOICE_REF_AUDIO does not exist or is not a file: {ref_audio}"
+                )
+            if not os.access(ref_path, os.R_OK):
+                raise ValueError(f"AGENT_VOICE_REF_AUDIO is not readable: {ref_audio}")
+        elif not voice_id:
+            raise ValueError(
+                "Missing voice config for type_b: set AGENT_VOICE_REF_AUDIO or AGENT_VOICE_ID"
+            )
 
 
 def resolve_voice_config() -> dict[str, str | None]:
