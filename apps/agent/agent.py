@@ -147,17 +147,36 @@ async def entrypoint(ctx: JobContext):
             session_started = True
 
         logger.info(f"starting session for participant {participant.identity}")
+        try:
+            agent = Assistant(instructions=instructions, correlation_id=correlation_id)
+            logger.info("agent instance created", extra={"correlation_id": correlation_id})
 
-        agent = Assistant(instructions=instructions, correlation_id=correlation_id)
+            await session.start(room=ctx.room, agent=agent)
+            logger.info(
+                f"session.start() returned for {participant.identity}",
+                extra={"correlation_id": correlation_id},
+            )
 
-        await session.start(room=ctx.room, agent=agent)
-
-        logger.info(f"session started for {participant.identity}")
-
-        greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
-            .replace("{AGENT_NAME}", effective_agent_name) \
-            .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
-        await session.generate_reply(instructions=f"Begrüße den Nutzer freundlich mit folgendem Text: {greeting}")
+            greeting = os.getenv("INITIAL_GREETING", "Hello, I am {AGENT_NAME}. How can I help you today?") \
+                .replace("{AGENT_NAME}", effective_agent_name) \
+                .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
+            logger.info(
+                "calling generate_reply for greeting",
+                extra={"correlation_id": correlation_id},
+            )
+            await session.generate_reply(
+                instructions=f"Begrüße den Nutzer freundlich mit folgendem Text: {greeting}"
+            )
+            logger.info(
+                "greeting generate_reply returned",
+                extra={"correlation_id": correlation_id},
+            )
+        except Exception:
+            logger.exception(
+                "start_agent_session failed",
+                extra={"correlation_id": correlation_id},
+            )
+            raise
 
     async def cleanup_session_mcp():
         nonlocal mcp_cleanup_done
