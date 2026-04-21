@@ -36,7 +36,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
 
         tts_kwargs: dict[str, Any] = {}
         if voice["voice_id"]:
-            tts_kwargs["voice_id"] = voice["voice_id"]
+            tts_kwargs["voice"] = voice["voice_id"]
         if voice["ref_audio"]:
             tts_kwargs["ref_audio"] = voice["ref_audio"]
 
