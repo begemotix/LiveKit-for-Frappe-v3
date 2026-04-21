@@ -66,7 +66,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
             )
 
         tts_kwargs["response_format"] = "pcm"
-        llm_model = os.getenv("MISTRAL_LLM_MODEL") or "mistral-medium-latest"
+        llm_model = os.getenv("MISTRAL_LLM_MODEL") or "mistral-small-latest"
         stt_model = os.getenv("VOXTRAL_STT_MODEL", "")
         tts_model = os.getenv("VOXTRAL_TTS_MODEL", "")
         t_pipeline_build_ms = (time.perf_counter() - pipeline_build_started) * 1000

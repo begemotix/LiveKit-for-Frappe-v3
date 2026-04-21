@@ -143,19 +143,18 @@ async def entrypoint(ctx: JobContext):
         extra={"correlation_id": correlation_id, "mode": mode, "agent_name": effective_agent_name},
     )
 
-    filler_instructions = "IMPORTANT: When using a tool, always first say a brief natural filler in the user's language (e.g., 'Einen Moment, ich schaue nach' if German, 'One moment, I'll check that' if English) so the user knows you are working."
-    
     # Try to load instructions from Markdown file first (Punkt X - Baseline Training)
     md_instructions = load_agent_instructions()
+    pacing_instructions = "WICHTIG für Voice: Antworte IMMER in sehr kurzen, prägnanten Sätzen (max. 12 Wörter). Mache nach jedem Satz einen Punkt. Vermeide Schachtelsätze oder lange Aufzählungen. Wenn du ein Tool nutzt, antworte direkt mit den Daten, ohne vorher Füllwörter zu sagen."
     
     if md_instructions:
-        instructions = f"{md_instructions}\n\n{filler_instructions}"
+        instructions = f"{md_instructions}\n\n{pacing_instructions}"
     else:
         # Fallback to Environment Variables
         base_instructions = os.getenv("ROLE_DESCRIPTION", "You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.") \
             .replace("{AGENT_NAME}", effective_agent_name) \
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
-        instructions = f"{base_instructions}\n\n{filler_instructions}"
+        instructions = f"{base_instructions}\n\n{pacing_instructions}"
 
     frappe_server = build_frappe_mcp_server()
     frappe_toolset = mcp.MCPToolset(id="frappe_mcp", mcp_server=frappe_server)
@@ -174,7 +173,7 @@ async def entrypoint(ctx: JobContext):
             turn_detection="vad",
             interruption={
                 "mode": "vad",
-                "min_duration": 0.5,
+                "min_duration": 1.2,
                 "resume_false_interruption": True,
                 "false_interruption_timeout": 2.0,
             },
