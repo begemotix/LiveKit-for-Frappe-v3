@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.agents.llm import mcp
+from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
 from src.frappe_mcp import build_frappe_mcp_server
 from src.mcp_errors import is_permission_error, user_facing_permission_message
@@ -86,7 +87,7 @@ class Assistant(Agent):
 
 
 def prewarm_fnc(proc: JobProcess) -> None:
-    proc.userdata["vad"] = silero.VAD.load()
+    proc.userdata["vad"] = silero.VAD.load(sample_rate=8000)
 
 
 def resolve_num_idle_processes() -> int:
@@ -169,7 +170,15 @@ async def entrypoint(ctx: JobContext):
         llm=pipeline["llm"],
         stt=pipeline.get("stt"),
         tts=pipeline.get("tts"),
-        allow_interruptions=True,
+        turn_handling=TurnHandlingOptions(
+            turn_detection="vad",
+            interruption={
+                "mode": "vad",
+                "min_duration": 0.5,
+                "resume_false_interruption": True,
+                "false_interruption_timeout": 2.0,
+            },
+        ),
         vad=vad,
         tools=[frappe_toolset],
     )
