@@ -1,6 +1,7 @@
 import logging
 import os
 import asyncio
+import time
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agent, AgentSession
@@ -115,6 +116,26 @@ async def entrypoint(ctx: JobContext):
     mode = resolve_agent_mode()
     validate_mode_env(mode)
     pipeline = build_voice_pipeline(mode)
+    pipeline_metrics = pipeline.get("metrics", {})
+    logger.info(
+        "pipeline_timing",
+        extra={
+            "correlation_id": correlation_id,
+            "t_pipeline_build_ms": round(float(pipeline_metrics.get("t_pipeline_build_ms", 0.0)), 2),
+            "t_ref_audio_read_ms": round(float(pipeline_metrics.get("t_ref_audio_read_ms", 0.0)), 2),
+            "t_ref_audio_b64_ms": round(float(pipeline_metrics.get("t_ref_audio_b64_ms", 0.0)), 2),
+        },
+    )
+    tts_observability = pipeline.get("tts_observability", {})
+    logger.info(
+        "tts_session_config",
+        extra={
+            "correlation_id": correlation_id,
+            "tts_model": tts_observability.get("tts_model"),
+            "response_format": tts_observability.get("response_format"),
+            "voice_mode": tts_observability.get("voice_mode"),
+        },
+    )
     effective_agent_name = "voice-eu" if mode == "type_b" else os.getenv("AGENT_NAME", "AI")
     logger.info(
         "resolved_agent_mode",
@@ -172,6 +193,24 @@ async def entrypoint(ctx: JobContext):
             session_started = True
 
         logger.info(f"starting session for participant {participant.identity}")
+        greeting_flow_started = time.perf_counter()
+        greeting_call_started: float | None = None
+        t_tts_first_audio_ms: float | None = None
+
+        @session.on("agent_speech_started")
+        def on_agent_speech_started(_ev):
+            nonlocal t_tts_first_audio_ms
+            if t_tts_first_audio_ms is not None or greeting_call_started is None:
+                return
+            t_tts_first_audio_ms = (time.perf_counter() - greeting_call_started) * 1000
+            logger.info(
+                "greeting_tts_first_audio",
+                extra={
+                    "correlation_id": correlation_id,
+                    "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2),
+                },
+            )
+
         try:
             agent = Assistant(instructions=instructions, correlation_id=correlation_id)
             logger.info("agent instance created", extra={"correlation_id": correlation_id})
@@ -189,12 +228,20 @@ async def entrypoint(ctx: JobContext):
                 "calling generate_reply for greeting",
                 extra={"correlation_id": correlation_id},
             )
+            greeting_call_started = time.perf_counter()
             await session.generate_reply(
                 instructions=f"Begrüße den Nutzer freundlich mit folgendem Text: {greeting}"
             )
+            t_session_start_to_greeting_call_ms = (greeting_call_started - greeting_flow_started) * 1000
+            t_greeting_total_ms = (time.perf_counter() - greeting_flow_started) * 1000
             logger.info(
                 "greeting generate_reply returned",
-                extra={"correlation_id": correlation_id},
+                extra={
+                    "correlation_id": correlation_id,
+                    "t_session_start_to_greeting_call_ms": round(t_session_start_to_greeting_call_ms, 2),
+                    "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2) if t_tts_first_audio_ms is not None else None,
+                    "t_greeting_total_ms": round(t_greeting_total_ms, 2),
+                },
             )
         except Exception:
             logger.exception(
