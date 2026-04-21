@@ -136,11 +136,13 @@ async def test_interruption():
     class FakeAgentSession:
         last_instance = None
 
-        def __init__(self, llm, allow_interruptions, tools=None, mcp_servers=None):
+        def __init__(self, llm, allow_interruptions, tools=None, mcp_servers=None, stt=None, tts=None):
             self.llm = llm
             self.allow_interruptions = allow_interruptions
             self.tools = tools or []
             self.mcp_servers = mcp_servers or []
+            self.stt = stt
+            self.tts = tts
             self.generate_reply_calls = []
             FakeAgentSession.last_instance = self
 
@@ -163,7 +165,11 @@ async def test_interruption():
         created_tasks.append(task)
         return task
 
-    with patch("agent.openai.realtime.RealtimeModel", return_value=object()), \
+    pipeline = {"llm": object(), "stt": None, "tts": None}
+
+    with patch("agent.resolve_agent_mode", return_value="type_a"), \
+         patch("agent.validate_mode_env"), \
+         patch("agent.build_voice_pipeline", return_value=pipeline), \
          patch("agent.build_frappe_mcp_server", return_value=object()), \
          patch("agent.AgentSession", FakeAgentSession), \
          patch("agent.asyncio.create_task", side_effect=schedule_now):
@@ -262,4 +268,6 @@ async def test_entrypoint_uses_mode_pipeline_and_voice_eu_name_for_type_b():
     assert len(FakeAgentSession.last_instance.tools) == 1
     assert FakeAgentSession.last_instance.tools[0].id == "frappe_mcp"
     assert FakeAgentSession.last_instance.agent is not None
-    assert "voice-eu" in FakeAgentSession.last_instance.agent.instructions
+    reply_calls = FakeAgentSession.last_instance.generate_reply_calls
+    assert len(reply_calls) >= 1
+    assert "voice-eu" in reply_calls[0]
