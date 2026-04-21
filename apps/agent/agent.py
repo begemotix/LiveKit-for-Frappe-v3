@@ -205,6 +205,8 @@ async def entrypoint(ctx: JobContext):
         greeting_flow_started = time.perf_counter()
         greeting_call_started: float | None = None
         t_tts_first_audio_ms: float | None = None
+        t_tts_first_chunk_ms: float | None = None
+        stt_retry_count: int | None = None
 
         def _log_session_event(event_name: str):
             def _handler(_ev):
@@ -224,17 +226,26 @@ async def entrypoint(ctx: JobContext):
         ):
             @session.on(event_name)
             def _event_handler(_ev, _event_name=event_name):
-                nonlocal t_tts_first_audio_ms
+                nonlocal t_tts_first_audio_ms, t_tts_first_chunk_ms, stt_retry_count
                 if _event_name == "agent_started_speaking":
                     if t_tts_first_audio_ms is None and greeting_call_started is not None:
                         t_tts_first_audio_ms = (time.perf_counter() - greeting_call_started) * 1000
+                        t_tts_first_chunk_ms = t_tts_first_audio_ms
                         logger.info(
                             "greeting_tts_first_audio",
                             extra={
                                 "correlation_id": correlation_id,
                                 "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2),
+                                "t_tts_first_chunk_ms": round(t_tts_first_chunk_ms, 2),
                             },
                         )
+                if _event_name == "user_input_transcribed":
+                    if isinstance(_ev, dict) and isinstance(_ev.get("retry_count"), int):
+                        stt_retry_count = _ev["retry_count"]
+                    elif hasattr(_ev, "retry_count"):
+                        retry_count_attr = getattr(_ev, "retry_count")
+                        if isinstance(retry_count_attr, int):
+                            stt_retry_count = retry_count_attr
                 _log_session_event(_event_name)(_ev)
 
         try:
@@ -257,6 +268,7 @@ async def entrypoint(ctx: JobContext):
             greeting_call_started = time.perf_counter()
             await session.say("Hallo, wie kann ich helfen?")
             t_session_start_to_greeting_call_ms = (greeting_call_started - greeting_flow_started) * 1000
+            t_tts_generate_ms = (time.perf_counter() - greeting_call_started) * 1000
             t_greeting_total_ms = (time.perf_counter() - greeting_flow_started) * 1000
             logger.info(
                 "greeting session.say returned",
@@ -264,6 +276,9 @@ async def entrypoint(ctx: JobContext):
                     "correlation_id": correlation_id,
                     "t_session_start_to_greeting_call_ms": round(t_session_start_to_greeting_call_ms, 2),
                     "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2) if t_tts_first_audio_ms is not None else None,
+                    "t_tts_first_chunk_ms": round(t_tts_first_chunk_ms, 2) if t_tts_first_chunk_ms is not None else None,
+                    "t_tts_generate_ms": round(t_tts_generate_ms, 2),
+                    "stt_retry_count": stt_retry_count,
                     "t_greeting_total_ms": round(t_greeting_total_ms, 2),
                 },
             )
