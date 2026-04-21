@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.agents.llm import mcp
+from livekit.plugins import silero
 from src.frappe_mcp import build_frappe_mcp_server
 from src.mcp_errors import is_permission_error, user_facing_permission_message
 from src.mode_config import resolve_agent_mode, validate_mode_env
@@ -125,6 +126,7 @@ async def entrypoint(ctx: JobContext):
         stt=pipeline.get("stt"),
         tts=pipeline.get("tts"),
         allow_interruptions=True,
+        vad=silero.VAD.load(),
         tools=[frappe_toolset],
     )
     mcp_cleanup_done = False
