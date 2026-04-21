@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone v1.0 — vier Phasen abgeschlossen; Arbeitspaket Persona/Prompt-Sourcing aus Frappe Notes
-last_updated: "2026-04-20T18:08:08.378Z"
+status: executing
+last_updated: "2026-04-21T07:45:57.917Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 24
-  completed_plans: 23
+  total_plans: 26
+  completed_plans: 24
 ---
 
 # Project State
@@ -16,15 +16,15 @@ progress:
 ## Project Reference
 
 **Core Value:** Sichere, selbst-gehostete Sprach- und Text-Interaktion mit Frappe-Instanzen, bei der alle Berechtigungen strikt dem Frappe-User folgen und keine externen Cloud-Plattformen (außer LLM/TTS-APIs) für das Hosting des Produkts benötigt werden.
-**Current Focus:** Phase 05 — **EU-Voice-Agent (Typ B)** (aktiv nach Architektur-Pivot).
+**Current Focus:** Phase 05 — eu-voice-agent-typ-b
 
 ## Current Position
 
-Phase: **05** (eu-voice-agent) — **ACTIVE**  
+Phase: 05 (eu-voice-agent-typ-b) — EXECUTING
 Phase 04 (frappe-integration): **TRANSITIONED / CLOSED** — Live-Betrieb bestaetigt (stdio-MCP, `MCPToolset`, Voice+E2E gegen Frappe).
 
-Plan: 0 of TBD (Phase-5-Artefakte anlegen: Context, Requirements-Split aus ROADMAP, erster Plan)
-**Status:** Milestone v1.0 — vier Phasen abgeschlossen; Arbeitspaket Persona/Prompt-Sourcing aus Frappe Notes
+Plan: 2 of 2
+**Status:** Ready to execute
 Ausfuehrungslogik (verbindlich): `D -> A -> B -> E -> C -> F`.
 Wave-/Gate-Plane (Auszug): `04-05-PLAN.md`, `04-06-PLAN.md`, `04-07-PLAN.md`, `04-08-PLAN.md`, `04-09-PLAN.md`, `04-10-PLAN.md`.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
@@ -42,6 +42,8 @@ Progress (Project):
 
 - Phases Completed (manuell): **4/7** — Phase 04 inkl. Live-Verifikation abgeschlossen; **Phase 05 gestartet**
 - Requirements: INTG-01 bis INTG-05 laut REQUIREMENTS.md complete
+
+| Phase 05 P01 | 0h 12m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -100,6 +102,9 @@ Progress (Project):
 - [Phase 04]: Wave F: Phase-4-Gap-Closure dokumentarisch GO; Artefakte synchronisiert.
 - [Phase 04]: Verbindliche Ausfuehrungsreihenfolge D -> A -> B -> E -> C -> F in Handover, UAT, Verification, STATE.
 - [GSD 2026-04-21]: **`/gsd-transition`** ausgefuehrt — Phase 04 **closed**, Phase 05 **active**; `completed_phases: 4`, `completed_plans` auf aktuellen Ist-Stand 24/24 gesetzt.
+- [Phase 05]: AGENT_MODE resolves deterministically to type_b when unset.
+- [Phase 05]: No silent fallback from type_b to type_a is implemented.
+- [Phase 05]: Voice config prioritizes AGENT_VOICE_REF_AUDIO over AGENT_VOICE_ID.
 
 ### Blockers
 
@@ -116,4 +121,4 @@ Progress (Project):
 
 - **Last Action:** Architektur-Pivot umgesetzt — Fokus auf **Phase 05 (EU-Voice-Agent Typ B)** verschoben; `STATE`/`ROADMAP`/`PROJECT` synchronisiert.
 - **Current Goal:** Phase-5-Anforderungen und erste Plaene (Mistral + Voxtral STT/TTS Integration) ausarbeiten.
-- **Resume File:** .planning/phases/05-eu-voice-agent-typ-b/05-CONTEXT.md
+- **Resume File:** None

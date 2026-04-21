@@ -109,7 +109,11 @@
 3. Der Typ B Agent unterstützt Sprache-zu-Text und Text-zu-Sprache über die lokalen/EU-konformen Voxtral-Schnittstellen.
 4. Beide Agent-Modi laufen im selben Docker-Image, ohne dass unterschiedliche Container gebaut werden müssen.
 5. Der EU-Modus (Typ B, Mistral + Voxtral) ist der Default-Mode für Neu-Deployments. Typ A (OpenAI Realtime) bleibt per ENV wählbar für Kunden, die geringere Latenz über DSGVO-Konformität priorisieren.
-   **Plans**: TBD
+   **Plans**: 2 plans
+   Plans:
+
+- [x] 05-01-PLAN.md — Mode-Vertrag, Factory-Basis und Wave-0-Tests für Typ-A/Typ-B-Umschaltung umsetzen.
+- [ ] 05-02-PLAN.md — Entrypoint-Integration, Hard-Fail-Policy und technische AGNT-05-Verifikation finalisieren.
 
 ### Phase 6: Dynamisches Prompt-Management
 
