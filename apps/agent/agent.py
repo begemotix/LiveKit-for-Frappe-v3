@@ -3,7 +3,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
-from livekit.agents import JobContext, WorkerOptions, cli, llm, Agent, AgentSession
+from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agent, AgentSession
 from livekit.agents.llm import mcp
 from livekit.plugins import silero
 from src.frappe_mcp import build_frappe_mcp_server
@@ -83,6 +83,23 @@ class Assistant(Agent):
                 return {"status": "error", "message": user_message}
             raise
 
+
+def prewarm_fnc(proc: JobProcess) -> None:
+    proc.userdata["vad"] = silero.VAD.load()
+
+
+def resolve_num_idle_processes() -> int:
+    raw = (os.getenv("AGENT_NUM_IDLE_PROCESSES") or "").strip()
+    if not raw:
+        return 2
+    try:
+        parsed = int(raw)
+    except ValueError as exc:
+        raise ValueError("AGENT_NUM_IDLE_PROCESSES must be an integer") from exc
+    if parsed < 0:
+        raise ValueError("AGENT_NUM_IDLE_PROCESSES must be >= 0")
+    return parsed
+
 async def entrypoint(ctx: JobContext):
     # Derive correlation ID from room name (D-10)
     correlation_id = ctx.room.name
@@ -120,13 +137,19 @@ async def entrypoint(ctx: JobContext):
 
     frappe_server = build_frappe_mcp_server()
     frappe_toolset = mcp.MCPToolset(id="frappe_mcp", mcp_server=frappe_server)
+    vad = ctx.proc.userdata.get("vad")
+    if vad is None:
+        raise RuntimeError(
+            "VAD not prewarmed: ctx.proc.userdata['vad'] missing. "
+            "Ensure WorkerOptions(prewarm_fnc=prewarm_fnc) is configured."
+        )
 
     session = AgentSession(
         llm=pipeline["llm"],
         stt=pipeline.get("stt"),
         tts=pipeline.get("tts"),
         allow_interruptions=True,
-        vad=silero.VAD.load(),
+        vad=vad,
         tools=[frappe_toolset],
     )
     mcp_cleanup_done = False
@@ -210,4 +233,11 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     port = int(os.getenv("LIVEKIT_AGENT_PORT", 0))
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, port=port))
+    cli.run_app(
+        WorkerOptions(
+            entrypoint_fnc=entrypoint,
+            prewarm_fnc=prewarm_fnc,
+            num_idle_processes=resolve_num_idle_processes(),
+            port=port,
+        )
+    )
