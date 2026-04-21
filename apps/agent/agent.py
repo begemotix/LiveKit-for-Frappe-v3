@@ -197,19 +197,36 @@ async def entrypoint(ctx: JobContext):
         greeting_call_started: float | None = None
         t_tts_first_audio_ms: float | None = None
 
-        @session.on("agent_speech_started")
-        def on_agent_speech_started(_ev):
-            nonlocal t_tts_first_audio_ms
-            if t_tts_first_audio_ms is not None or greeting_call_started is None:
-                return
-            t_tts_first_audio_ms = (time.perf_counter() - greeting_call_started) * 1000
-            logger.info(
-                "greeting_tts_first_audio",
-                extra={
-                    "correlation_id": correlation_id,
-                    "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2),
-                },
-            )
+        def _log_session_event(event_name: str):
+            def _handler(_ev):
+                logger.info(
+                    event_name,
+                    extra={"correlation_id": correlation_id},
+                )
+            return _handler
+
+        for event_name in (
+            "speech_created",
+            "agent_started_speaking",
+            "agent_stopped_speaking",
+            "agent_speech_interrupted",
+            "user_started_speaking",
+            "user_input_transcribed",
+        ):
+            @session.on(event_name)
+            def _event_handler(_ev, _event_name=event_name):
+                nonlocal t_tts_first_audio_ms
+                if _event_name == "agent_started_speaking":
+                    if t_tts_first_audio_ms is None and greeting_call_started is not None:
+                        t_tts_first_audio_ms = (time.perf_counter() - greeting_call_started) * 1000
+                        logger.info(
+                            "greeting_tts_first_audio",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2),
+                            },
+                        )
+                _log_session_event(_event_name)(_ev)
 
         try:
             agent = Assistant(instructions=instructions, correlation_id=correlation_id)
@@ -225,17 +242,15 @@ async def entrypoint(ctx: JobContext):
                 .replace("{AGENT_NAME}", effective_agent_name) \
                 .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
             logger.info(
-                "calling generate_reply for greeting",
+                "calling session.say for greeting",
                 extra={"correlation_id": correlation_id},
             )
             greeting_call_started = time.perf_counter()
-            await session.generate_reply(
-                instructions=f"Begrüße den Nutzer freundlich mit folgendem Text: {greeting}"
-            )
+            await session.say("Hallo, wie kann ich helfen?")
             t_session_start_to_greeting_call_ms = (greeting_call_started - greeting_flow_started) * 1000
             t_greeting_total_ms = (time.perf_counter() - greeting_flow_started) * 1000
             logger.info(
-                "greeting generate_reply returned",
+                "greeting session.say returned",
                 extra={
                     "correlation_id": correlation_id,
                     "t_session_start_to_greeting_call_ms": round(t_session_start_to_greeting_call_ms, 2),
