@@ -113,7 +113,7 @@
    Plans:
 
 - [x] 05-01-PLAN.md — Mode-Vertrag, Factory-Basis und Wave-0-Tests für Typ-A/Typ-B-Umschaltung umsetzen.
-- [ ] 05-02-PLAN.md — Entrypoint-Integration, Hard-Fail-Policy und technische AGNT-05-Verifikation finalisieren.
+- [x] 05-02-PLAN.md — Entrypoint-Integration, Hard-Fail-Policy und technische AGNT-05-Verifikation finalisieren.
 
 ### Phase 6: Dynamisches Prompt-Management
 

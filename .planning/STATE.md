@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-21T07:45:57.917Z"
+status: verifying
+last_updated: "2026-04-21T07:51:27.085Z"
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -24,7 +24,7 @@ Phase: 05 (eu-voice-agent-typ-b) — EXECUTING
 Phase 04 (frappe-integration): **TRANSITIONED / CLOSED** — Live-Betrieb bestaetigt (stdio-MCP, `MCPToolset`, Voice+E2E gegen Frappe).
 
 Plan: 2 of 2
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 Ausfuehrungslogik (verbindlich): `D -> A -> B -> E -> C -> F`.
 Wave-/Gate-Plane (Auszug): `04-05-PLAN.md`, `04-06-PLAN.md`, `04-07-PLAN.md`, `04-08-PLAN.md`, `04-09-PLAN.md`, `04-10-PLAN.md`.
 Phase 01 (infrastructure-setup): **COMPLETE** — Realstack-Dokumentation formalisiert durch Plan `01-03` (Gap-Closure).
@@ -44,6 +44,7 @@ Progress (Project):
 - Requirements: INTG-01 bis INTG-05 laut REQUIREMENTS.md complete
 
 | Phase 05 P01 | 0h 12m | 2 tasks | 7 files |
+| Phase 05-eu-voice-agent-typ-b P02 | 24min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Progress (Project):
 - [Phase 05]: AGENT_MODE resolves deterministically to type_b when unset.
 - [Phase 05]: No silent fallback from type_b to type_a is implemented.
 - [Phase 05]: Voice config prioritizes AGENT_VOICE_REF_AUDIO over AGENT_VOICE_ID.
+- [Phase 05-eu-voice-agent-typ-b]: Entrypoint resolved AGENT_MODE before session startup and uses factory pipeline wiring with voice-eu identity for type_b.
+- [Phase 05-eu-voice-agent-typ-b]: Type-B provider failures are hard-fail only; tests explicitly prevent fallback to type_a.
 
 ### Blockers
 
