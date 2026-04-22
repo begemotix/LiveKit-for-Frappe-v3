@@ -65,7 +65,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
                 "Missing voice config for type_b: set AGENT_VOICE_REF_AUDIO or AGENT_VOICE_ID"
             )
 
-        tts_kwargs["response_format"] = "pcm"
+        tts_kwargs["response_format"] = "pcm_streamed"
         llm_model = os.getenv("MISTRAL_LLM_MODEL") or "mistral-small-latest"
         stt_model = os.getenv("VOXTRAL_STT_MODEL", "")
         tts_model = os.getenv("VOXTRAL_TTS_MODEL", "")

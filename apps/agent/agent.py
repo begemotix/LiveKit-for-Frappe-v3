@@ -213,7 +213,9 @@ async def entrypoint(ctx: JobContext):
         "1. Merke dir den gesamten Gesprächsverlauf und beziehe dich auf vorherige Aussagen. "
         "2. Antworte kontextuell und vermeide wörtliche Wiederholungen. "
         "3. Nutze natürliche, lebendige Sprache und variiere deine Formulierungen. "
-        "4. Wenn der User mehrfach das Gleiche sagt (z.B. 'Hallo'), reagiere jedes Mal anders."
+        "4. Wenn der User mehrfach das Gleiche sagt (z.B. 'Hallo'), reagiere jedes Mal anders. "
+        "5. Antworte IMMER mit maximal 50 Wörtern. "
+        "6. Wenn du Tools nutzt, fasse das Ergebnis kurz und prägnant zusammen."
     )
     
     final_pacing = pacing_instructions + (agentic_instructions if mode == "type_b" else "")
@@ -256,8 +258,8 @@ async def entrypoint(ctx: JobContext):
             },
             preemptive_generation={
                 "enabled": True if mode == "type_b" else False,
-                "preemptive_tts": False,
-                "max_speech_duration": 10.0,
+                "preemptive_tts": True,
+                "max_speech_duration": 6.0,
                 "max_retries": 3,
             },
         ),
