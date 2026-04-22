@@ -133,18 +133,19 @@ def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
                 
                 def make_wrapper(fnc):
                     async def wrapped_fnc(*tool_args, **tool_kwargs):
-                        # 1. Filler starten (unterbrechbar durch User)
-                        handle = session.say("Einen Moment, ich schaue kurz nach.", allow_interruptions=True)
+                        # 1. Filler starten (lokal, nicht im Chat-Kontext, unterbrechbar)
+                        handle = session.say(
+                            "Einen Moment, ich schaue kurz nach.", 
+                            allow_interruptions=True,
+                            add_to_chat_ctx=False
+                        )
                         
-                        # 2. Original Tool-Aufruf
-                        # Wir rufen die ursprüngliche Funktion auf und warten auf das Ergebnis.
-                        # Währenddessen spricht der Agent bereits den Filler.
+                        # 2. Original Tool-Aufruf (parallel zum Filler)
                         result = await fnc(*tool_args, **tool_kwargs)
                         
-                        # 3. Warten, bis der Filler fertig gesprochen wurde,
-                        # bevor das Ergebnis an das LLM zurückgegeben wird.
-                        # Dies verhindert, dass das LLM den Filler abschneidet.
-                        await handle.wait_for_playout()
+                        # 3. Filler unterbrechen, sobald das Ergebnis da ist
+                        # So wird die Antwort des LLM sofort möglich, ohne auf das Ende des Fillers zu warten.
+                        handle.interrupt()
                         
                         return result
                     return wrapped_fnc
@@ -358,6 +359,8 @@ async def entrypoint(ctx: JobContext):
                 extra={"correlation_id": correlation_id},
             )
             greeting_call_started = time.perf_counter()
+            # Begrüßung lokal auslösen (derzeit blockierend gewartet, 
+            # könnte in Zukunft als Task entkoppelt werden).
             await session.say("Hallo, wie kann ich helfen?")
             t_session_start_to_greeting_call_ms = (greeting_call_started - greeting_flow_started) * 1000
             t_tts_generate_ms = (time.perf_counter() - greeting_call_started) * 1000
