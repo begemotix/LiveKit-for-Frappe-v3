@@ -141,13 +141,29 @@ def test_no_runtime_credential_switch():
 
 
 def test_dynamic_tool_discovery_runtime_evidence():
+    """Phase-04 type_a guarantee: no LiveKit-side tool allowlist for type_a.
+
+    Phase-05 type_b no longer shares this guarantee — the Mistral
+    RunContext applies the read-only allowlist via
+    `tool_configuration={"include": allowed_tools}`. We therefore scope
+    the source-level check to the type_a branch of the entrypoint.
+    """
     with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
-    assert "MCPToolset" in source
-    assert "tools=[frappe_toolset]" in source
-    assert "allowed_tools" not in source
-    assert "tool_allowlist" not in source
+    # Split on the mode-dispatch boundary; the type_a block sits between
+    # `if mode == "type_a":` and the `else:` that introduces type_b.
+    type_a_start = source.index('if mode == "type_a":')
+    type_a_end = source.index("\n    else:", type_a_start)
+    type_a_block = source[type_a_start:type_a_end]
+
+    assert "MCPToolset" in type_a_block
+    assert "tools=[frappe_toolset]" in type_a_block
+    # No LiveKit-side allowlist is *wired* into the type_a toolset — the
+    # MCPToolset instantiation must not carry an `allowed_tools=` kwarg,
+    # and there must be no `tool_allowlist` identifier used in that block.
+    assert "allowed_tools=" not in type_a_block
+    assert "tool_allowlist" not in type_a_block
 
 
 def test_no_direct_frappe_api_calls():
@@ -160,11 +176,20 @@ def test_no_direct_frappe_api_calls():
     assert "frappe." not in source
 
 
-@patch("agent.openai.realtime.RealtimeModel", return_value=object())
 @pytest.mark.asyncio
-async def test_session_end_cleans_up_mcp_server(_model_patch):
-    class FakeMCPServer:
+async def test_session_end_cleans_up_mcp_server():
+    """type_a disconnect path: cleanup_session_mcp -> frappe_toolset.aclose().
+
+    Previously this test also patched `agent.openai.realtime.RealtimeModel`,
+    but agent.py never imported openai at module scope (the plugin is
+    lazily imported inside model_factory.build_voice_pipeline). Post
+    Phase-05, the test explicitly forces type_a and patches the pipeline
+    factory instead, matching the new mode-aware entrypoint flow.
+    """
+
+    class FakeToolset:
         def __init__(self):
+            self.id = "frappe_mcp"
             self.close_calls = 0
 
         async def aclose(self):
@@ -187,16 +212,19 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
         def __init__(self):
             self.room = FakeRoom()
             self.log_context_fields = {}
+            self.proc = SimpleNamespace(userdata={"vad": object()})
 
         async def connect(self):
             return None
 
     class FakeAgentSession:
-        def __init__(self, llm, allow_interruptions, tools=None, mcp_servers=None):
-            self.llm = llm
-            self.allow_interruptions = allow_interruptions
-            self.tools = tools or []
-            self.mcp_servers = mcp_servers
+        def __init__(self, *args, **kwargs):
+            self.tools = kwargs.get("tools") or []
+            # MetricsListener introspects these attributes during __init__;
+            # keep them present but inert so the fake session is accepted.
+            self.llm = kwargs.get("llm")
+            self.stt = kwargs.get("stt")
+            self.tts = kwargs.get("tts")
 
         def on(self, _event_name):
             def decorator(func):
@@ -208,10 +236,10 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
             self.room = room
             self.agent = agent
 
-        async def generate_reply(self, instructions):
-            return instructions
+        async def say(self, text, **_kwargs):
+            return text
 
-    fake_server = FakeMCPServer()
+    fake_toolset = FakeToolset()
     created_tasks = []
 
     def schedule_now(coro):
@@ -219,7 +247,13 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
         created_tasks.append(task)
         return task
 
-    with patch("agent.build_frappe_mcp_server", return_value=fake_server), \
+    pipeline = {"llm": object(), "stt": None, "tts": None}
+
+    with patch("agent.resolve_agent_mode", return_value="type_a"), \
+         patch("agent.validate_mode_env"), \
+         patch("agent.build_voice_pipeline", return_value=pipeline), \
+         patch("agent.build_frappe_mcp_server", return_value=object()), \
+         patch("agent.mcp.MCPToolset", return_value=fake_toolset), \
          patch("agent.AgentSession", FakeAgentSession), \
          patch("agent.asyncio.create_task", side_effect=schedule_now):
         ctx = FakeContext()
@@ -228,7 +262,7 @@ async def test_session_end_cleans_up_mcp_server(_model_patch):
         disconnect_handler(SimpleNamespace(identity="participant-1"))
         await asyncio.gather(*created_tasks)
 
-    assert fake_server.close_calls == 1
+    assert fake_toolset.close_calls == 1
 
 
 def test_permission_error_user_friendly_no_retry():
@@ -258,21 +292,33 @@ def test_permission_error_marker_detection(text):
     assert is_permission_error(Exception(text)) is True
 
 
-def test_permission_error_logged_with_correlation(caplog):
+def test_permission_error_logged_with_correlation():
+    """agent.py's logger has `propagate = False` so caplog-via-root doesn't
+    see the record. We attach a dedicated capture handler to the `agent`
+    logger for the duration of the call instead."""
+
     class FakePermissionError(Exception):
         pass
 
-    with caplog.at_level(logging.WARNING, logger="agent"):
+    captured: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record):  # noqa: D401
+            captured.append(record)
+
+    handler = _Capture(level=logging.WARNING)
+    agent_logger = logging.getLogger("agent")
+    agent_logger.addHandler(handler)
+    try:
         _ = agent_module.map_mcp_error_to_user_message(
             err=FakePermissionError("insufficient permissions"),
             correlation_id="corr-123",
             tool_name="frappe_get_doc",
         )
+    finally:
+        agent_logger.removeHandler(handler)
 
-    matching = [
-        record for record in caplog.records
-        if record.message == "mcp_permission_denied"
-    ]
+    matching = [rec for rec in captured if rec.message == "mcp_permission_denied"]
     assert matching, "Expected mcp_permission_denied warning log"
     assert matching[0].correlation_id == "corr-123"
     assert matching[0].tool == "frappe_get_doc"

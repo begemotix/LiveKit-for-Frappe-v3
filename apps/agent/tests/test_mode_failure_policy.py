@@ -1,46 +1,14 @@
 import asyncio
 import os
-import sys
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-if "livekit" not in sys.modules:
-    livekit_module = ModuleType("livekit")
-    agents_module = ModuleType("livekit.agents")
-    llm_module = ModuleType("livekit.agents.llm")
-    mcp_module = ModuleType("livekit.agents.llm.mcp")
-
-    class _FakeAgent:
-        def __init__(self, instructions=""):
-            self.instructions = instructions
-
-    class _FakeAgentSession:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    def _function_tool(*args, **kwargs):
-        def decorator(func):
-            return func
-        return decorator
-
-    agents_module.JobContext = object
-    agents_module.WorkerOptions = object
-    agents_module.cli = SimpleNamespace(run_app=lambda options: options)
-    agents_module.llm = llm_module
-    agents_module.Agent = _FakeAgent
-    agents_module.AgentSession = _FakeAgentSession
-    llm_module.function_tool = _function_tool
-    llm_module.mcp = mcp_module
-    mcp_module.MCPToolset = lambda id, mcp_server: SimpleNamespace(id=id, mcp_server=mcp_server)
-
-    livekit_module.agents = agents_module
-    sys.modules["livekit"] = livekit_module
-    sys.modules["livekit.agents"] = agents_module
-    sys.modules["livekit.agents.llm"] = llm_module
-    sys.modules["livekit.agents.llm.mcp"] = mcp_module
-
+# Phase-04 era this file stubbed livekit.agents in sys.modules. That is no
+# longer needed now that livekit-agents==1.5.5 is a pinned dependency —
+# keeping the stub would shadow the real package and drop symbols that
+# later-loaded test modules rely on (e.g. JobProcess, types.FlushSentinel).
 from agent import entrypoint
 
 
