@@ -11,6 +11,16 @@ requires-python = ">=3.10, <3.15"
 dependencies = [
     "livekit-agents[mcp,openai,mistralai,silero,turn-detector]==1.5.5",
     "livekit-plugins-ai-coustics~=0.2",
+    # Phase-05 type_b: Mistral Agents SDK drives its own MCP tool loop via
+    # mistralai.extra.mcp.stdio.MCPClientSTDIO. Kept explicit (not just as
+    # transitive of livekit-plugins-mistralai) so a future LiveKit bump
+    # cannot silently drop the EU-voice path.
+    # `griffe` is an undeclared peer dep of mistralai.extra.run.tools in
+    # 2.4.0 (import-time requirement for RunContext) — pinning it here
+    # until upstream fixes the wheel metadata.
+    "mistralai>=2.4.0,<3.0.0",
+    "mcp>=1.0.0",
+    "griffe>=0.49",
     "python-dotenv",
     "python-json-logger~=2.0.0",
 ]
