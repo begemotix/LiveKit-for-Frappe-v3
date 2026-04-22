@@ -143,9 +143,10 @@ def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
                         # 2. Original Tool-Aufruf (parallel zum Filler)
                         result = await fnc(*tool_args, **tool_kwargs)
                         
-                        # 3. Filler unterbrechen, sobald das Ergebnis da ist
+                        # 3. Filler unterbrechen, sobald das Ergebnis da ist (nur wenn er noch läuft)
                         # So wird die Antwort des LLM sofort möglich, ohne auf das Ende des Fillers zu warten.
-                        handle.interrupt()
+                        if not handle.done():
+                            handle.interrupt()
                         
                         return result
                     return wrapped_fnc
