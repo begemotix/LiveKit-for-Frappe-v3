@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
 if TYPE_CHECKING:
     from livekit.agents import mcp
+    from mistralai.extra.mcp.stdio import MCPClientSTDIO
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +49,21 @@ def _resolve_frappe_base_url() -> str:
     return ""
 
 
-def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
-    from livekit.agents import mcp
+def frappe_mcp_stdio_params() -> dict[str, Any]:
+    """Resolve stdio-sidecar parameters for the Frappe MCP server.
 
+    Single source of truth for the subprocess contract. Shared by:
+    - Type-A path via `build_frappe_mcp_server()` (LiveKit `MCPServerStdio`).
+    - Type-B path via `build_frappe_mistral_mcp_client()` (Mistral `MCPClientSTDIO`).
+
+    Returns a plain dict with keys `command`, `args`, `env`. Both consumers
+    accept these as kwargs (LiveKit) or via `StdioServerParameters(**params)`
+    (Mistral / modelcontextprotocol), so the helper stays transport-neutral.
+
+    Raises `ValueError` when any of FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET
+    is missing, or when the legacy FRAPPE_MCP_URL fallback is not a valid
+    absolute URL.
+    """
     frappe_url = _resolve_frappe_base_url()
     api_key = os.getenv("FRAPPE_API_KEY")
     api_secret = os.getenv("FRAPPE_API_SECRET")
@@ -62,7 +75,6 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
         missing.append("FRAPPE_API_KEY")
     if not api_secret:
         missing.append("FRAPPE_API_SECRET")
-
     if missing:
         raise ValueError(f"Missing required MCP env vars: {', '.join(missing)}")
 
@@ -70,42 +82,74 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
     args: list[str] = []
     if command == "npx":
         args = ["-y", "frappe-mcp-server"]
-    
+
     child_env = {
         "FRAPPE_URL": frappe_url,
         "FRAPPE_API_KEY": api_key,
         "FRAPPE_API_SECRET": api_secret,
     }
 
-    safe = _frappe_url_log_fields(frappe_url)
+    return {
+        "command": command,
+        "args": args,
+        "env": child_env,
+    }
+
+
+def _log_stdio_wiring(params: dict[str, Any], client_flavor: str) -> None:
+    safe = _frappe_url_log_fields(params["env"]["FRAPPE_URL"])
     logger.info(
         "using Frappe MCP via stdio",
         extra={
             **safe,
-            "mcp_sidecar_command": command,
-            "mcp_sidecar_args": list(args),
+            "mcp_sidecar_command": params["command"],
+            "mcp_sidecar_args": list(params["args"]),
             "mcp_effective_transport": "stdio",
-            "mcp_binary": command,
+            "mcp_binary": params["command"],
+            "mcp_client_flavor": client_flavor,
         },
     )
 
+
+def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
+    """Type-A: build a LiveKit `MCPServerStdio` consumed by `MCPToolset`."""
+    from livekit.agents import mcp
+
+    params = frappe_mcp_stdio_params()
+    _log_stdio_wiring(params, client_flavor="livekit_mcptoolset")
     return mcp.MCPServerStdio(
-        command=command,
-        args=args,
-        env=child_env,
+        command=params["command"],
+        args=params["args"],
+        env=params["env"],
     )
+
+
+def build_frappe_mistral_mcp_client() -> "MCPClientSTDIO":
+    """Type-B: build a Mistral `MCPClientSTDIO` consumed by the Mistral RunContext.
+
+    Same stdio sidecar as Type-A (`frappe-mcp-server` via npx, identical ENV
+    contract). Only the consuming client library differs: this returns a
+    `mistralai.extra.mcp.stdio.MCPClientSTDIO`, which the upcoming
+    MistralOrchestrator registers via `run_ctx.register_mcp_client(...)`.
+    """
+    from mcp import StdioServerParameters
+    from mistralai.extra.mcp.stdio import MCPClientSTDIO
+
+    params = frappe_mcp_stdio_params()
+    _log_stdio_wiring(params, client_flavor="mistral_mcpclient_stdio")
+    return MCPClientSTDIO(StdioServerParameters(**params))
 
 
 def get_allowed_tools_for_mode(mode: str) -> list[str] | None:
     """
     TEMPORARY_GUARD: Manueller Sicherheitsfilter für den EU-Voice-Modus (type_b).
-    
-    Diese Funktion wird in einer späteren Phase durch die generische Discovery-Logik 
-    'discover_mcp_capabilities(server) -> MCPDiscoveryResult' ersetzt, die 
+
+    Diese Funktion wird in einer späteren Phase durch die generische Discovery-Logik
+    'discover_mcp_capabilities(server) -> MCPDiscoveryResult' ersetzt, die
     dynamisch über Meta-Tools (z.B. get_frappe_usage_info) den Scope ermittelt.
     """
     if mode == "type_b":
-        # Restriktion auf Read-Only Tools zur Reduktion von LLM-Stottern 
+        # Restriktion auf Read-Only Tools zur Reduktion von LLM-Stottern
         # und zur Sicherstellung der Datenresidenz.
         return [
             "get_document",

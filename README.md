@@ -47,6 +47,9 @@ Variante mit Mistral und Voxtral (Typ B) ist in Vorbereitung.
   Tonalitaet)
 - [`readme/AGENT_PROMPT.md`](readme/AGENT_PROMPT.md)
   - Beispiel-Agentenpersoenlichkeit
+- [`readme/MISTRAL-AGENT.md`](readme/MISTRAL-AGENT.md)
+  - EU-Variante (Mistral + Voxtral): Coolify-Variablen und
+  Einstellungen in der Mistral Console
 
 **Fuer Uebergabe an Operatoren:**
 - [`.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md`](.planning/phases/04-frappe-integration/OPERATOR-HANDOVER.md)
