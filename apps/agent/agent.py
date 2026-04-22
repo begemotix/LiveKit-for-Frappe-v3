@@ -91,7 +91,14 @@ class Assistant(Agent):
 
 
 def prewarm_fnc(proc: JobProcess) -> None:
-    proc.userdata["vad"] = silero.VAD.load(sample_rate=8000)
+    proc.userdata["vad"] = silero.VAD.load(
+        min_speech_duration=0.25,
+        min_silence_duration=0.3,
+        prefix_padding_duration=0.25,
+        activation_threshold=0.5,
+        sample_rate=8000,
+        force_cpu=True,
+    )
 
 
 def resolve_num_idle_processes() -> int:
