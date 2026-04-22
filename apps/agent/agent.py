@@ -10,7 +10,9 @@ from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
-from src.mode_config import resolve_agent_mode, validate_mode_env
+from src.mistral_agent import MistralDrivenAgent
+from src.mistral_orchestrator import MistralOrchestrator
+from src.mode_config import resolve_agent_mode, resolve_mistral_config, validate_mode_env
 from src.model_factory import build_voice_pipeline
 
 # Load environment variables
@@ -117,6 +119,12 @@ def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
     """
     Phase 2: Wickelt alle Tools eines Toolsets in eine Filler-Logik ein.
     Der Agent spricht eine Filler-Phrase, während das Tool im Hintergrund läuft.
+
+    Phase-05 refactor: historically wired for type_b (EU voice path) before
+    the Mistral RunContext owned the tool loop. type_b no longer uses
+    LiveKit MCPToolsets at all (D-16), so the current code has **no call
+    site**. The helper is kept as a dormant option for type_a if an
+    operator later decides to add filler to the US path.
     """
     original_setup = toolset.setup
 
@@ -231,14 +239,6 @@ async def entrypoint(ctx: JobContext):
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
         instructions = f"{base_instructions}\n\n{final_pacing}"
 
-    frappe_server = build_frappe_mcp_server()
-    # TODO: In Phase 2/3 durch discover_mcp_capabilities(frappe_server) ersetzen.
-    # Dieser Aufruf ist aktuell ein TEMPORARY_GUARD für den EU-Modus.
-    allowed_tools = get_allowed_tools_for_mode(mode)
-    frappe_toolset = mcp.MCPToolset(
-        id="frappe_mcp", 
-        mcp_server=frappe_server
-    )
     vad = ctx.proc.userdata.get("vad")
     if vad is None:
         raise RuntimeError(
@@ -246,32 +246,79 @@ async def entrypoint(ctx: JobContext):
             "Ensure WorkerOptions(prewarm_fnc=prewarm_fnc) is configured."
         )
 
-    session = AgentSession(
-        llm=pipeline["llm"],
-        stt=pipeline.get("stt"),
-        tts=pipeline.get("tts"),
-        turn_handling=TurnHandlingOptions(
-            turn_detection="vad",
-            interruption={
-                "mode": "vad",
-                "min_duration": 1.2,
-                "resume_false_interruption": True,
-                "false_interruption_timeout": 2.0,
-            },
-            preemptive_generation={
-                "enabled": True if mode == "type_b" else False,
-                "preemptive_tts": True,
-                "max_speech_duration": 6.0,
-                "max_retries": 3,
-            },
-        ),
-        vad=vad,
-        tools=[frappe_toolset],
-    )
-    
-    # Phase 2: Filler-Phase Orchestrierung für EU-Modus
-    if mode == "type_b":
-        _apply_filler_to_toolset(session, frappe_toolset)
+    allowed_tools = get_allowed_tools_for_mode(mode)
+
+    # Mode-specific session wiring. type_a keeps the original LiveKit
+    # MCPToolset path; type_b hands the entire tool loop to the Mistral
+    # SDK via MistralOrchestrator and feeds plain text into LiveKit TTS
+    # through MistralDrivenAgent.llm_node (Phase-05 D-16, D-17).
+    frappe_toolset: llm.Toolset | None = None
+    orchestrator: MistralOrchestrator | None = None
+
+    if mode == "type_a":
+        frappe_server = build_frappe_mcp_server()
+        # TEMPORARY_GUARD — see frappe_mcp.get_allowed_tools_for_mode;
+        # the LiveKit MCPToolset consumes the full inventory and we
+        # rely on Frappe's per-user permissions for read-only guardrails.
+        frappe_toolset = mcp.MCPToolset(
+            id="frappe_mcp",
+            mcp_server=frappe_server,
+        )
+        session = AgentSession(
+            llm=pipeline["llm"],
+            stt=pipeline.get("stt"),
+            tts=pipeline.get("tts"),
+            turn_handling=TurnHandlingOptions(
+                turn_detection="vad",
+                interruption={
+                    "mode": "vad",
+                    "min_duration": 1.2,
+                    "resume_false_interruption": True,
+                    "false_interruption_timeout": 2.0,
+                },
+                preemptive_generation={
+                    "enabled": False,
+                    "preemptive_tts": True,
+                    "max_speech_duration": 6.0,
+                    "max_retries": 3,
+                },
+            ),
+            vad=vad,
+            tools=[frappe_toolset],
+        )
+    else:
+        # type_b — external Mistral orchestrator owns the LLM+MCP turn loop.
+        mistral_cfg = resolve_mistral_config()
+        orchestrator = MistralOrchestrator(
+            api_key=os.environ["MISTRAL_API_KEY"],
+            agent_id=mistral_cfg["agent_id"],
+            model=mistral_cfg["llm_model"],
+            allowed_tools=allowed_tools,
+            instructions=instructions,
+            correlation_id=correlation_id,
+        )
+        session = AgentSession(
+            llm=pipeline["llm"],  # NullLLM — opens the isinstance gate only
+            stt=pipeline.get("stt"),
+            tts=pipeline.get("tts"),
+            turn_handling=TurnHandlingOptions(
+                turn_detection="vad",
+                interruption={
+                    "mode": "vad",
+                    "min_duration": 1.2,
+                    "resume_false_interruption": True,
+                    "false_interruption_timeout": 2.0,
+                },
+                # preemptive_generation intentionally left at the LiveKit
+                # default (disabled): the TTS stream comes from the external
+                # Mistral orchestrator, not from a LiveKit LLM provider.
+            ),
+            vad=vad,
+            # D-16: type_b routes every tool through the Mistral RunContext.
+            # LiveKit-side tools must stay empty here — MistralDrivenAgent
+            # .llm_node asserts this at turn time as a regression guard.
+            tools=[],
+        )
     
     # Phase 5a: Metrik-Instrumentierung
     from src.metrics_listener import MetricsListener
@@ -343,7 +390,15 @@ async def entrypoint(ctx: JobContext):
                 _log_session_event(_event_name)(_ev)
 
         try:
-            agent = Assistant(instructions=instructions, correlation_id=correlation_id)
+            if mode == "type_b":
+                assert orchestrator is not None  # constructed in the type_b branch above
+                agent = MistralDrivenAgent(
+                    orchestrator=orchestrator,
+                    instructions=instructions,
+                    correlation_id=correlation_id,
+                )
+            else:
+                agent = Assistant(instructions=instructions, correlation_id=correlation_id)
             logger.info("agent instance created", extra={"correlation_id": correlation_id})
 
             await session.start(room=ctx.room, agent=agent)
@@ -390,7 +445,15 @@ async def entrypoint(ctx: JobContext):
         if mcp_cleanup_done:
             return
         mcp_cleanup_done = True
-        await frappe_toolset.aclose()
+        # type_a closes the LiveKit MCPToolset; type_b closes the Mistral
+        # orchestrator (which in turn closes the MCP stdio client via
+        # RunContext.__aexit__). Both implementations are idempotent, so
+        # MistralDrivenAgent.on_exit can safely also call aclose() without
+        # fighting this disconnect-driven cleanup path.
+        if frappe_toolset is not None:
+            await frappe_toolset.aclose()
+        elif orchestrator is not None:
+            await orchestrator.aclose()
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(_participant):

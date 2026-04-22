@@ -35,6 +35,8 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
     if mode == "type_b":
         from livekit.plugins import mistralai
 
+        from src.mistral_agent import NullLLM
+
         pipeline_build_started = time.perf_counter()
         stt_kwargs: dict[str, Any] = {}
         if voice["language"]:
@@ -66,14 +68,17 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
             )
 
         tts_kwargs["response_format"] = "pcm"
-        llm_model = os.getenv("MISTRAL_LLM_MODEL") or "mistral-small-latest"
         stt_model = os.getenv("VOXTRAL_STT_MODEL", "")
         tts_model = os.getenv("VOXTRAL_TTS_MODEL", "")
         t_pipeline_build_ms = (time.perf_counter() - pipeline_build_started) * 1000
 
+        # Phase-05 D-17: the real LLM is the external MistralOrchestrator
+        # driven from agent.py's type_b branch. NullLLM only exists so the
+        # LiveKit 1.5.5 `isinstance(session.llm, llm.LLM)` gate at
+        # agent_activity.py:1191 opens and the overridden `llm_node` runs.
         return {
             "provider": "mistral_voxtral",
-            "llm": mistralai.LLM(model=llm_model, temperature=0.8),
+            "llm": NullLLM(),
             "stt": mistralai.STT(model=stt_model, **stt_kwargs),
             "tts": mistralai.TTS(model=tts_model, **tts_kwargs),
             "metrics": {
