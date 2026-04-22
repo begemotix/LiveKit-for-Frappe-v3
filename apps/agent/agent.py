@@ -226,8 +226,7 @@ async def entrypoint(ctx: JobContext):
     allowed_tools = get_allowed_tools_for_mode(mode)
     frappe_toolset = mcp.MCPToolset(
         id="frappe_mcp", 
-        mcp_server=frappe_server,
-        allowed_tools=allowed_tools
+        mcp_server=frappe_server
     )
     vad = ctx.proc.userdata.get("vad")
     if vad is None:
