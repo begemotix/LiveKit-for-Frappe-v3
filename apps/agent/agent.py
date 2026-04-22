@@ -181,6 +181,10 @@ async def entrypoint(ctx: JobContext):
         vad=vad,
         tools=[frappe_toolset],
     )
+    
+    # Phase 5a: Metrik-Instrumentierung
+    from src.metrics_listener import MetricsListener
+    _metrics_listener = MetricsListener(session, correlation_id)
     mcp_cleanup_done = False
     session_started = False
     session_start_lock = asyncio.Lock()
