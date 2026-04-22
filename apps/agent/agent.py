@@ -247,7 +247,12 @@ async def entrypoint(ctx: JobContext):
                 "resume_false_interruption": True,
                 "false_interruption_timeout": 2.0,
             },
-            preemptive_generation=True if mode == "type_b" else False,
+            preemptive_generation={
+                "enabled": True if mode == "type_b" else False,
+                "preemptive_tts": False,
+                "max_speech_duration": 10.0,
+                "max_retries": 3,
+            },
         ),
         vad=vad,
         tools=[frappe_toolset],
