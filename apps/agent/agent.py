@@ -8,7 +8,7 @@ from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agen
 from livekit.agents.llm import mcp
 from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
-from src.frappe_mcp import build_frappe_mcp_server
+from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
 from src.mode_config import resolve_agent_mode, validate_mode_env
 from src.model_factory import build_voice_pipeline
@@ -106,6 +106,50 @@ def resolve_num_idle_processes() -> int:
         raise ValueError("AGENT_NUM_IDLE_PROCESSES must be >= 0")
     return parsed
 
+def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
+    """
+    Phase 2: Wickelt alle Tools eines Toolsets in eine Filler-Logik ein.
+    Der Agent spricht eine Filler-Phrase, während das Tool im Hintergrund läuft.
+    """
+    original_setup = toolset.setup
+
+    async def wrapped_setup(*args, **kwargs):
+        await original_setup(*args, **kwargs)
+        for tool in toolset.tools:
+            # Sicherstellen, dass wir nicht doppelt wrappen
+            if hasattr(tool, "_filler_wrapped"):
+                continue
+                
+            # In LiveKit Agents 1.5.x speichern Tools ihre Logik in _func
+            if hasattr(tool, "_func"):
+                original_func = tool._func
+                
+                def make_wrapper(fnc):
+                    async def wrapped_fnc(*tool_args, **tool_kwargs):
+                        # 1. Filler starten (unterbrechbar durch User)
+                        handle = session.say("Einen Moment, ich schaue kurz nach.", allow_interruptions=True)
+                        
+                        # 2. Original Tool-Aufruf
+                        # Wir rufen die ursprüngliche Funktion auf und warten auf das Ergebnis.
+                        # Währenddessen spricht der Agent bereits den Filler.
+                        result = await fnc(*tool_args, **tool_kwargs)
+                        
+                        # 3. Warten, bis der Filler fertig gesprochen wurde,
+                        # bevor das Ergebnis an das LLM zurückgegeben wird.
+                        # Dies verhindert, dass das LLM den Filler abschneidet.
+                        await handle.wait_for_playout()
+                        
+                        return result
+                    return wrapped_fnc
+                
+                tool._func = make_wrapper(original_func)
+                tool._filler_wrapped = True
+            
+        return toolset
+
+    toolset.setup = wrapped_setup
+
+
 async def entrypoint(ctx: JobContext):
     # Derive correlation ID from room name (D-10)
     correlation_id = ctx.room.name
@@ -149,19 +193,42 @@ async def entrypoint(ctx: JobContext):
 
     # Try to load instructions from Markdown file first (Punkt X - Baseline Training)
     md_instructions = load_agent_instructions()
-    pacing_instructions = "WICHTIG für Voice: Antworte IMMER in sehr kurzen, prägnanten Sätzen (max. 12 Wörter). Mache nach jedem Satz einen Punkt. Vermeide Schachtelsätze oder lange Aufzählungen. Wenn du ein Tool nutzt, antworte direkt mit den Daten, ohne vorher Füllwörter zu sagen."
+    
+    # Phase 4: Agentisches Prompting für EU-Modus
+    pacing_instructions = (
+        "WICHTIG für Voice: Antworte IMMER in sehr kurzen, prägnanten Sätzen (max. 12 Wörter). "
+        "Mache nach jedem Satz einen Punkt. Vermeide Schachtelsätze oder lange Aufzählungen. "
+        "Wenn du ein Tool nutzt, antworte direkt mit den Daten, ohne vorher Füllwörter zu sagen."
+    )
+    
+    agentic_instructions = (
+        "\n\nAGENTIC BEHAVIOR (EU-MODE): "
+        "1. Merke dir den gesamten Gesprächsverlauf und beziehe dich auf vorherige Aussagen. "
+        "2. Antworte kontextuell und vermeide wörtliche Wiederholungen. "
+        "3. Nutze natürliche, lebendige Sprache und variiere deine Formulierungen. "
+        "4. Wenn der User mehrfach das Gleiche sagt (z.B. 'Hallo'), reagiere jedes Mal anders."
+    )
+    
+    final_pacing = pacing_instructions + (agentic_instructions if mode == "type_b" else "")
     
     if md_instructions:
-        instructions = f"{md_instructions}\n\n{pacing_instructions}"
+        instructions = f"{md_instructions}\n\n{final_pacing}"
     else:
         # Fallback to Environment Variables
         base_instructions = os.getenv("ROLE_DESCRIPTION", "You are {AGENT_NAME}, a helpful assistant for {COMPANY_NAME}.") \
             .replace("{AGENT_NAME}", effective_agent_name) \
             .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
-        instructions = f"{base_instructions}\n\n{pacing_instructions}"
+        instructions = f"{base_instructions}\n\n{final_pacing}"
 
     frappe_server = build_frappe_mcp_server()
-    frappe_toolset = mcp.MCPToolset(id="frappe_mcp", mcp_server=frappe_server)
+    # TODO: In Phase 2/3 durch discover_mcp_capabilities(frappe_server) ersetzen.
+    # Dieser Aufruf ist aktuell ein TEMPORARY_GUARD für den EU-Modus.
+    allowed_tools = get_allowed_tools_for_mode(mode)
+    frappe_toolset = mcp.MCPToolset(
+        id="frappe_mcp", 
+        mcp_server=frappe_server,
+        allowed_tools=allowed_tools
+    )
     vad = ctx.proc.userdata.get("vad")
     if vad is None:
         raise RuntimeError(
@@ -181,14 +248,19 @@ async def entrypoint(ctx: JobContext):
                 "resume_false_interruption": True,
                 "false_interruption_timeout": 2.0,
             },
+            preemptive_generation=True if mode == "type_b" else False,
         ),
         vad=vad,
         tools=[frappe_toolset],
     )
     
+    # Phase 2: Filler-Phase Orchestrierung für EU-Modus
+    if mode == "type_b":
+        _apply_filler_to_toolset(session, frappe_toolset)
+    
     # Phase 5a: Metrik-Instrumentierung
     from src.metrics_listener import MetricsListener
-    _metrics_listener = MetricsListener(session, correlation_id)
+    _metrics_listener = MetricsListener(session, correlation_id, mode=mode)
     mcp_cleanup_done = False
     session_started = False
     session_start_lock = asyncio.Lock()

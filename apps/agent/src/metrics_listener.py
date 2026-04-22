@@ -2,6 +2,8 @@ import json
 import logging
 import time
 import asyncio
+import os
+from datetime import datetime
 from typing import Any, Dict, Optional, List
 from livekit.agents.voice.agent_session import AgentSession
 from livekit.agents.llm.chat_context import ChatMessage
@@ -54,13 +56,18 @@ def log_metric(event_type: str, data: Dict[str, Any], level: int = logging.INFO)
     logger.log(level, log_msg)
 
 class MetricsListener:
-    def __init__(self, session: AgentSession, correlation_id: str):
+    def __init__(self, session: AgentSession, correlation_id: str, mode: str = "type_a"):
         self._session = session
         self._correlation_id = correlation_id
+        self._mode = mode
         self._turn_count = 0
         self._start_time = time.time()
         self._last_stt_duration_s: Optional[float] = None
         self._current_turn_gaps: List[float] = []
+        
+        # Phase 3: Transcript Buffering
+        self._transcript_turns: List[Dict[str, Any]] = []
+        self._active_tool_calls: Dict[str, Any] = {} # call_id -> {name, input}
         
         self._attach_hooks()
         self._wrap_tts_if_present()
@@ -174,6 +181,10 @@ class MetricsListener:
             }
             log_metric("conversation_item", commit_data)
 
+            # Phase 3: Transcript Buffering (Nur EU-Modus)
+            if self._mode == "type_b":
+                self._buffer_transcript_turn(item)
+
             # 1. Per-Turn-Metriken (from item.metrics)
             if hasattr(item, "metrics") and item.metrics:
                 m = item.metrics
@@ -249,6 +260,10 @@ class MetricsListener:
 
             log_metric("session_end", session_data)
 
+            # Phase 3: Transcript speichern bei Session-Ende (Nur EU-Modus)
+            if self._mode == "type_b":
+                self._save_transcript(session_id)
+
         # session_usage_updated for ongoing session usage
         @self._session.on("session_usage_updated")
         def on_usage_updated(event):
@@ -319,3 +334,72 @@ class MetricsListener:
                     data[field] = value
         
         log_metric("plugin_metrics", data)
+
+    def _buffer_transcript_turn(self, item: ChatMessage):
+        """Phase 3: Sammelt Turns für das finale JSON Transcript."""
+        ts = datetime.now().isoformat()
+        
+        if item.role == "user":
+            self._transcript_turns.append({
+                "role": "user",
+                "content": item.text_content or "",
+                "timestamp": ts
+            })
+        elif item.role == "assistant":
+            # Agent-Text sammeln
+            if item.text_content:
+                self._transcript_turns.append({
+                    "role": "agent",
+                    "content": item.text_content,
+                    "timestamp": ts
+                })
+            # Tool-Calls für spätere Zusammenführung puffern
+            if item.tool_calls:
+                for tc in item.tool_calls:
+                    try:
+                        args = json.loads(tc.arguments) if isinstance(tc.arguments, str) else tc.arguments
+                    except:
+                        args = tc.arguments
+                    self._active_tool_calls[tc.call_id] = {
+                        "name": tc.name,
+                        "input": args
+                    }
+        elif item.role == "tool":
+            # Tool-Ergebnis mit Puffer-Daten (Name/Input) zusammenführen
+            tool_info = self._active_tool_calls.get(item.tool_call_id, {"name": "unknown", "input": {}})
+            
+            self._transcript_turns.append({
+                "role": "tool",
+                "tool_name": tool_info["name"],
+                "input": tool_info["input"],
+                "output": item.text_content or "",
+                "timestamp": ts
+            })
+
+    def _save_transcript(self, session_id: str):
+        """Phase 3: Schreibt das Transcript-Buffer als JSON Datei."""
+        data = {
+            "session_id": session_id,
+            "mode": self._mode,
+            "turns": self._transcript_turns
+        }
+        
+        # Pfad gemäß Zielvorgabe (Windows-kompatibel über os.path falls nötig, 
+        # aber /tmp ist Standard für Docker/Linux Zielumgebung)
+        path = f"/tmp/session_{self._correlation_id}.json"
+        
+        try:
+            # Verzeichnis sicherstellen
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            logger.info(f"Phase 3: Transcript saved to {path}")
+        except Exception as e:
+            # Fallback für lokale Windows-Tests ohne /tmp
+            alt_path = f"session_{self._correlation_id}.json"
+            try:
+                with open(alt_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                logger.info(f"Phase 3: Transcript saved to fallback {alt_path} (original path {path} failed)")
+            except:
+                logger.error(f"Phase 3: Failed to save transcript: {e}")

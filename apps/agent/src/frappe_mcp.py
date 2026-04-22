@@ -66,8 +66,11 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
     if missing:
         raise ValueError(f"Missing required MCP env vars: {', '.join(missing)}")
 
-    command = os.getenv("FRAPPE_MCP_BINARY", "/usr/local/bin/frappe-mcp-server")
+    command = os.getenv("FRAPPE_MCP_BINARY", "npx")
     args: list[str] = []
+    if command == "npx":
+        args = ["-y", "frappe-mcp-server"]
+    
     child_env = {
         "FRAPPE_URL": frappe_url,
         "FRAPPE_API_KEY": api_key,
@@ -91,3 +94,43 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
         args=args,
         env=child_env,
     )
+
+
+def get_allowed_tools_for_mode(mode: str) -> list[str] | None:
+    """
+    TEMPORARY_GUARD: Manueller Sicherheitsfilter für den EU-Voice-Modus (type_b).
+    
+    Diese Funktion wird in einer späteren Phase durch die generische Discovery-Logik 
+    'discover_mcp_capabilities(server) -> MCPDiscoveryResult' ersetzt, die 
+    dynamisch über Meta-Tools (z.B. get_frappe_usage_info) den Scope ermittelt.
+    """
+    if mode == "type_b":
+        # Restriktion auf Read-Only Tools zur Reduktion von LLM-Stottern 
+        # und zur Sicherstellung der Datenresidenz.
+        return [
+            "get_document",
+            "list_documents",
+            "get_doctype_schema",
+            "get_field_options",
+            "find_doctypes",
+            "get_module_list",
+            "get_frappe_usage_info",
+            "get_api_instructions",
+            "ping",
+            "version"
+        ]
+    return None
+
+# --- ARCHITEKTUR-VORSCHLAG FÜR PHASE 1c ---
+# class MCPDiscoveryResult:
+#     allowed_tools: list[str]
+#     is_read_only: bool
+#     supports_permissions_discovery: bool
+#     server_kind: str  # e.g., "frappe"
+#
+# async def discover_mcp_capabilities(mcp_server, context) -> MCPDiscoveryResult:
+#     """
+#     Generische Einstiegshöhle für die MCP-Discovery.
+#     Wird später in src/mcp/discovery.py ausgelagert.
+#     """
+#     pass

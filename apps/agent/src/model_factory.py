@@ -73,7 +73,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
 
         return {
             "provider": "mistral_voxtral",
-            "llm": mistralai.LLM(model=llm_model),
+            "llm": mistralai.LLM(model=llm_model, temperature=0.8),
             "stt": mistralai.STT(model=stt_model, **stt_kwargs),
             "tts": mistralai.TTS(model=tts_model, **tts_kwargs),
             "metrics": {
