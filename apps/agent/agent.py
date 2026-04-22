@@ -20,6 +20,10 @@ def configure_logging():
     logger = logging.getLogger("agent")
     logger.setLevel(logging.INFO)
     
+    # Phase 5a Follow-up: Disable propagation to avoid duplicate logs 
+    # when running under LiveKit CLI which configures the root logger.
+    logger.propagate = False
+    
     # Avoid duplicate handlers if re-initialized
     if not logger.handlers:
         handler = logging.StreamHandler()

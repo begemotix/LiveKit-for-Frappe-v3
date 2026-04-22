@@ -1,18 +1,39 @@
 import json
 import logging
 import time
-from typing import Any, Dict, Optional
+import asyncio
+from typing import Any, Dict, Optional, List
 from livekit.agents.voice.agent_session import AgentSession
 from livekit.agents.llm.chat_context import ChatMessage
 from livekit.agents.voice.events import ConversationItemAddedEvent
 
 logger = logging.getLogger("agent.metrics")
 
+def ensure_serializable(data: Any) -> Any:
+    """Recursively ensures that data is JSON serializable, handling coroutines and other objects."""
+    if isinstance(data, dict):
+        return {k: ensure_serializable(v) for k, v in data.items()}
+    if isinstance(data, (list, tuple)):
+        return [ensure_serializable(v) for v in data]
+    if asyncio.iscoroutine(data):
+        return "<coroutine>"
+    if isinstance(data, (int, float, str, bool, type(None))):
+        return data
+    # Handle Pydantic models or other objects with model_dump or __dict__
+    if hasattr(data, "model_dump"):
+        try:
+            return ensure_serializable(data.model_dump(mode="json"))
+        except:
+            pass
+    if hasattr(data, "__dict__"):
+        return str(data)
+    return str(data)
+
 def log_metric(event_type: str, data: Dict[str, Any], level: int = logging.INFO):
     """Logs a structured metric in JSON format with 'METRIC:' prefix."""
-    # Ensure all time values are integers (milliseconds) unless they are explicitly _s
     processed_data = {}
     for k, v in data.items():
+        # Ensure all time values are integers (milliseconds) unless they are explicitly _s
         if k.endswith("_ms") and isinstance(v, (int, float)):
             processed_data[k] = int(round(v))
         elif k.endswith("_s") and isinstance(v, (int, float)):
@@ -26,10 +47,10 @@ def log_metric(event_type: str, data: Dict[str, Any], level: int = logging.INFO)
         else:
             processed_data[k] = v
             
-    # Remove any None values from the log
-    processed_data = {k: v for k, v in processed_data.items() if v is not None}
+    # Remove any None values and ensure serializability
+    final_data = {k: ensure_serializable(v) for k, v in processed_data.items() if v is not None}
     
-    log_msg = f"METRIC: {json.dumps({'event': event_type, **processed_data})}"
+    log_msg = f"METRIC: {json.dumps({'event': event_type, **final_data})}"
     logger.log(level, log_msg)
 
 class MetricsListener:
@@ -39,8 +60,95 @@ class MetricsListener:
         self._turn_count = 0
         self._start_time = time.time()
         self._last_stt_duration_s: Optional[float] = None
+        self._current_turn_gaps: List[float] = []
         
         self._attach_hooks()
+        self._wrap_tts_if_present()
+
+    def record_gap(self, gap_ms: float):
+        """Records a gap between audio chunks."""
+        self._current_turn_gaps.append(gap_ms)
+
+    def _get_gap_metrics(self) -> Dict[str, int]:
+        """Calculates avg, max, p95 for current turn gaps."""
+        if not self._current_turn_gaps:
+            return {
+                "inter_chunk_gap_avg_ms": 0,
+                "inter_chunk_gap_max_ms": 0,
+                "inter_chunk_gap_p95_ms": 0,
+            }
+        
+        gaps = sorted(self._current_turn_gaps)
+        avg = sum(gaps) / len(gaps)
+        mx = gaps[-1]
+        # Simple p95 calculation
+        p95_idx = max(0, int(0.95 * len(gaps)) - 1)
+        p95 = gaps[p95_idx]
+        
+        return {
+            "inter_chunk_gap_avg_ms": int(round(avg)),
+            "inter_chunk_gap_max_ms": int(round(mx)),
+            "inter_chunk_gap_p95_ms": int(round(p95)),
+        }
+
+    def _wrap_tts_if_present(self):
+        """Wraps the TTS plugin to measure inter-chunk gaps if possible."""
+        if not hasattr(self._session, "tts") or not self._session.tts:
+            return
+        
+        tts = self._session.tts
+        listener = self
+        
+        # Monkey-patch synthesize and stream to wrap returned streams
+        if hasattr(tts, "synthesize"):
+            orig_synthesize = tts.synthesize
+            def wrapped_synthesize(*args, **kwargs):
+                stream = orig_synthesize(*args, **kwargs)
+                return self._wrap_stream(stream)
+            tts.synthesize = wrapped_synthesize
+            
+        if hasattr(tts, "stream"):
+            orig_stream = tts.stream
+            def wrapped_stream(*args, **kwargs):
+                stream = orig_stream(*args, **kwargs)
+                return self._wrap_stream(stream)
+            tts.stream = wrapped_stream
+
+    def _wrap_stream(self, stream: Any) -> Any:
+        """Wraps a ChunkedStream or SynthesizeStream to measure gaps."""
+        listener = self
+        
+        class StreamWrapper:
+            def __init__(self, original):
+                self._original = original
+                self._last_chunk_time = None
+                
+            def __getattr__(self, name):
+                return getattr(self._original, name)
+            
+            def __aiter__(self):
+                return self
+            
+            async def __anext__(self):
+                # We catch the result of the original __anext__
+                chunk = await self._original.__anext__()
+                now = time.perf_counter()
+                if self._last_chunk_time is not None:
+                    gap_ms = (now - self._last_chunk_time) * 1000
+                    listener.record_gap(gap_ms)
+                self._last_chunk_time = now
+                return chunk
+            
+            async def __aenter__(self):
+                if hasattr(self._original, "__aenter__"):
+                    await self._original.__aenter__()
+                return self
+            
+            async def __aexit__(self, exc_type, exc, tb):
+                if hasattr(self._original, "__aexit__"):
+                    return await self._original.__aexit__(exc_type, exc, tb)
+                
+        return StreamWrapper(stream)
 
     def _attach_hooks(self):
         # 1. Per-Turn-Metriken & 2. Conversation-Commit-Events
@@ -74,12 +182,19 @@ class MetricsListener:
                     "turn_id": self._turn_count,
                     "llm_ttft": m.get("llm_node_ttft"),
                     "tts_ttfb": m.get("tts_node_ttfb"),
-                    "stt_duration_ms": self._last_stt_duration_s * 1000 if self._last_stt_duration_s is not None else None,
+                    "stt_duration": self._last_stt_duration_s, # will be converted to stt_duration_ms
                     "e2e_latency": m.get("e2e_latency"),
                     "end_of_turn_delay": m.get("end_of_turn_delay"),
                 }
-                # Filter out None values and log
+                
+                # Add inter-chunk gap metrics if available (only for assistant)
+                if item.role == "assistant":
+                    turn_data.update(self._get_gap_metrics())
+                    # Clear gaps for next turn
+                    self._current_turn_gaps = []
+                
                 log_metric("turn_metrics", turn_data)
+                
                 # Reset STT duration for next turn
                 if item.role == "assistant":
                     self._last_stt_duration_s = None
@@ -88,9 +203,23 @@ class MetricsListener:
         @self._session.on("close")
         def on_close(event):
             duration_s = time.time() - self._start_time
+            
+            # Safe session ID retrieval to avoid coroutine issues
+            session_id = "unknown"
+            try:
+                room_io = getattr(self._session, "room_io", None)
+                if room_io:
+                    room = getattr(room_io, "room", None)
+                    if room and hasattr(room, "sid"):
+                        sid_val = room.sid
+                        if not asyncio.iscoroutine(sid_val):
+                            session_id = str(sid_val)
+            except:
+                pass
+
             session_data = {
                 "correlation_id": self._correlation_id,
-                "session_id": getattr(self._session.room_io.room, "sid", "unknown") if hasattr(self._session, "room_io") else "unknown",
+                "session_id": session_id,
                 "duration_s": int(round(duration_s)),
                 "turn_count": self._turn_count,
                 "error_present": event.error is not None,
@@ -99,7 +228,10 @@ class MetricsListener:
             if event.error:
                 error_source = str(getattr(event.error, "type", "UNKNOWN")).upper()
                 error_recoverable = getattr(event.error, "recoverable", False)
-                error_type = type(event.error.error).__name__ if hasattr(event.error, "error") and event.error.error else "UnknownError"
+                
+                # Safely get error type name
+                err_obj = getattr(event.error, "error", None)
+                error_type = type(err_obj).__name__ if err_obj else "UnknownError"
                 
                 session_data.update({
                     "error_recoverable": error_recoverable,
