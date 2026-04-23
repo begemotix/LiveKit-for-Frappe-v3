@@ -596,7 +596,16 @@ async def entrypoint(ctx: JobContext):
                             for frame in cached_frames:
                                 yield frame
 
-                        await session.say(text=greeting, audio=_frames_iter())
+                        # Phase 1 follow-up fix: explicit
+                        # allow_interruptions=True. Without it, LiveKit's
+                        # default for session.say(audio=...) plays the
+                        # pre-rendered frames uninterruptibly — the user
+                        # reported „man kann sie nicht unterbrechen".
+                        await session.say(
+                            text=greeting,
+                            audio=_frames_iter(),
+                            allow_interruptions=True,
+                        )
                     else:
                         logger.info(
                             "greeting_live_fallback",
@@ -606,7 +615,7 @@ async def entrypoint(ctx: JobContext):
                                 "key_match": cached_key == greeting,
                             },
                         )
-                        await session.say(greeting)
+                        await session.say(greeting, allow_interruptions=True)
                 except Exception:
                     logger.exception(
                         "greeting_say_failed",
