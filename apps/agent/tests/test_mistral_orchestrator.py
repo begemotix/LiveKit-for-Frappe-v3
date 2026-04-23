@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mistralai.client.models import Function, FunctionTool
+from mistralai.client.models.functioncallevent import FunctionCallEvent
 from mistralai.client.models.messageoutputevent import MessageOutputEvent
 from mistralai.client.models.responseerrorevent import ResponseErrorEvent
 from mistralai.client.models.toolexecutionstartedevent import (
@@ -119,10 +120,25 @@ def _error_event(message: str = "bad request", code: int = 400) -> RunResultEven
 
 
 def _tool_started_event(name: str = "get_document") -> RunResultEvents:
+    """Server-side tool execution event (Mistral built-in connectors)."""
     return RunResultEvents(
         event="tool.execution.started",
         data=ToolExecutionStartedEvent(
             id="tool-call-1", name=name, arguments="{}"
+        ),
+    )
+
+
+def _function_call_event(name: str = "get_document") -> RunResultEvents:
+    """Local function/tool call event — what MCP-via-RunContext produces.
+    The LLM emits this when it wants our Python SDK to dispatch a tool."""
+    return RunResultEvents(
+        event="function.call.delta",
+        data=FunctionCallEvent(
+            id="fn-1",
+            name=name,
+            tool_call_id="call-abc",
+            arguments="{}",
         ),
     )
 
@@ -551,6 +567,45 @@ async def test_run_turn_invokes_tool_started_callback_once_per_turn():
     assert callback_invocations == ["get_document"]
     # The actual reply text was still streamed.
     assert chunks == ["Antwort an den Nutzer."]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_fires_filler_on_function_call_event_for_local_mcp_dispatch():
+    """Regression of the 2026-04-23 production finding: locally
+    dispatched MCP tools (RunContext.register_mcp_client path) do
+    NOT emit ToolExecutionStartedEvent — that event is reserved for
+    Mistral server-side connectors. What actually arrives in the
+    stream for our architecture is FunctionCallEvent
+    (function.call.delta). The filler must trigger on that too."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["get_document"])
+    fake_mistral = FakeMistralClient(events=[
+        _function_call_event("get_document"),
+        _msg_event("Das Projekt heißt Phase-05."),
+    ])
+
+    callback_invocations: list[str] = []
+
+    def _callback(tool_name: str) -> None:
+        callback_invocations.append(tool_name)
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-function-call-filler",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    orch.set_tool_started_callback(_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("Projekt?")]
+
+    assert callback_invocations == ["get_document"]
+    assert chunks == ["Das Projekt heißt Phase-05."]
 
     await orch.aclose()
 

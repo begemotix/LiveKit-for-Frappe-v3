@@ -93,13 +93,23 @@ class Assistant(Agent):
 
 
 def prewarm_fnc(proc: JobProcess) -> None:
+    # Silero VAD settings — tuned for production voice agents.
+    # sample_rate=16000 is the LiveKit Silero default and matches the
+    # STT plugin's internal SAMPLE_RATE=16000. Earlier we set 8000
+    # (telephony quality) which forced resampling in the pipeline and
+    # caused the classic "inference is slower than realtime" backlog
+    # when multiple Cloud calls (Voxtral STT/TTS + Mistral) ran in
+    # parallel — visible in production logs as a 0.4-1.4s VAD delay
+    # and audible to the user as a stuttering reply cadence.
+    # force_cpu is left unset so LiveKit picks GPU if available and
+    # falls back to CPU otherwise; forcing CPU was a preliminary
+    # safety that doesn't match what LiveKit's own quick-start ships.
     proc.userdata["vad"] = silero.VAD.load(
         min_speech_duration=0.25,
         min_silence_duration=0.3,
         prefix_padding_duration=0.25,
         activation_threshold=0.5,
-        sample_rate=8000,
-        force_cpu=True,
+        sample_rate=16000,
     )
 
 

@@ -284,6 +284,7 @@ class MistralOrchestrator:
 
         # Late imports so tests that monkey-patch these symbols don't
         # have to reach into a module-level cache.
+        from mistralai.client.models.functioncallevent import FunctionCallEvent
         from mistralai.client.models.messageoutputevent import MessageOutputEvent
         from mistralai.client.models.responseerrorevent import ResponseErrorEvent
         from mistralai.client.models.toolexecutionstartedevent import (
@@ -356,11 +357,17 @@ class MistralOrchestrator:
                     yield chunk
                 continue
 
-            if isinstance(data, ToolExecutionStartedEvent):
-                # First tool call of this turn → ask the wired callback
-                # (typically MistralDrivenAgent → session.say(filler))
-                # to play a filler sentence so the user doesn't sit in
-                # silence while the MCP call resolves.
+            if isinstance(data, ToolExecutionStartedEvent) or isinstance(
+                data, FunctionCallEvent
+            ):
+                # Two events can trigger the filler:
+                # - ToolExecutionStartedEvent: fires for server-side tool
+                #   runs (Mistral built-in connectors like WebSearch).
+                # - FunctionCallEvent (function.call.delta): fires when
+                #   the LLM emits a local function/tool call — this is
+                #   what MCP-via-RunContext produces because the SDK
+                #   dispatches the tool in our Python process.
+                # Either way, the user should hear a filler sentence.
                 if not filler_fired and self._on_tool_started_callback is not None:
                     tool_name = getattr(data, "name", None) or "tool"
                     try:
@@ -381,6 +388,7 @@ class MistralOrchestrator:
                         extra={
                             "correlation_id": self._correlation_id,
                             "tool_name": tool_name,
+                            "event_class": type(data).__name__,
                         },
                     )
                 continue
