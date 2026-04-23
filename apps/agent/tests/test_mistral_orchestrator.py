@@ -611,6 +611,142 @@ async def test_run_turn_fires_filler_on_function_call_event_for_local_mcp_dispat
 
 
 @pytest.mark.asyncio
+async def test_run_turn_fires_filler_by_timer_when_no_recognisable_tool_event():
+    """Production regression (2026-04-23): Mistral SDK dispatched an MCP
+    tool call (Frappe API was hit) but emitted only events whose .data
+    was neither FunctionCallEvent nor ToolExecutionStartedEvent — the
+    filler never fired. The orchestrator must have a time-based safety
+    net: if no text chunk arrives within `filler_delay_s`, speak the
+    filler regardless of event typing."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["get_document"])
+    # Simulate a slow stream with ONLY an unrelated event (neither a
+    # text chunk nor a recognised tool event) before the reply shows
+    # up much later. With the old event-matching logic this yielded no
+    # filler at all.
+    class _SlowStream:
+        def __aiter__(self):
+            return self._aiter()
+
+        async def _aiter(self):
+            # Unrelated event that slips past all isinstance() checks.
+            yield type("Unknown", (), {"data": object(), "event": "some.opaque.event"})()
+            # Long pause — longer than the filler_delay_s the test sets.
+            await asyncio.sleep(0.3)
+            yield _msg_event("Das Ergebnis.")
+
+    class _SlowClient:
+        def __init__(self):
+            self.calls: list = []
+            self.beta = MagicMock()
+            self.beta.conversations = MagicMock()
+            self.beta.conversations.run_stream_async = self._run_stream_async
+
+        async def _run_stream_async(self, **kwargs):
+            self.calls.append(kwargs)
+            return _SlowStream()
+
+    slow_client = _SlowClient()
+    callback_invocations: list[tuple[str, ...]] = []
+
+    def _callback(tool_name: str) -> None:
+        callback_invocations.append((tool_name,))
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-timer-filler",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=lambda api_key: slow_client,
+        filler_delay_s=0.1,  # short for test speed
+    )
+    orch.set_tool_started_callback(_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("was gibt's?")]
+
+    # Timer-based filler fired with the sentinel tool_name "delayed",
+    # and exactly once (we don't care what slips past afterwards — the
+    # `filler_state["fired"]=True` gate is idempotent).
+    assert callback_invocations == [("delayed",)]
+    assert chunks == ["Das Ergebnis."]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_does_not_fire_timer_filler_when_text_arrives_quickly():
+    """If Mistral streams text within `filler_delay_s`, the timer must
+    be cancelled so the user does not hear a superfluous filler."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[_msg_event("Hallo sofort.")])
+
+    callback_invocations: list[str] = []
+
+    def _callback(tool_name: str) -> None:
+        callback_invocations.append(tool_name)
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-no-filler",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        filler_delay_s=1.0,  # generous, should never elapse
+    )
+    orch.set_tool_started_callback(_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("hi")]
+
+    assert chunks == ["Hallo sofort."]
+    assert callback_invocations == []  # no filler because text was quick
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_event_based_filler_wins_over_timer():
+    """When a recognised tool event DOES arrive before the timer
+    elapses, the filler fires via the event path (with the real tool
+    name) and the timer path becomes a no-op."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["get_document"])
+    fake_mistral = FakeMistralClient(events=[
+        _function_call_event("get_document"),
+        _msg_event("Fertig."),
+    ])
+
+    callback_invocations: list[str] = []
+
+    def _callback(tool_name: str) -> None:
+        callback_invocations.append(tool_name)
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-event-wins",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        filler_delay_s=1.0,  # longer than the synchronous event path
+    )
+    orch.set_tool_started_callback(_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("frag")]
+
+    # Event-based trigger won: tool_name is the real one, not "delayed".
+    assert callback_invocations == ["get_document"]
+    assert chunks == ["Fertig."]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
 async def test_run_turn_callback_exception_does_not_break_turn():
     """If the wired callback raises, the turn must still complete
     successfully — filler is best-effort, never essential."""

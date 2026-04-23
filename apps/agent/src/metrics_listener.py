@@ -214,19 +214,14 @@ class MetricsListener:
         @self._session.on("close")
         def on_close(event):
             duration_s = time.time() - self._start_time
-            
-            # Safe session ID retrieval to avoid coroutine issues
+
+            # livekit-rtc >=1.1 exposes Room.sid as an awaitable property.
+            # Merely reading `room.sid` from this sync event handler
+            # creates a coroutine that's never awaited and triggers:
+            #   RuntimeWarning: coroutine 'Room.sid' was never awaited
+            # We skip the lookup entirely — session_id here is
+            # informational only (used for the transcript filename).
             session_id = "unknown"
-            try:
-                room_io = getattr(self._session, "room_io", None)
-                if room_io:
-                    room = getattr(room_io, "room", None)
-                    if room and hasattr(room, "sid"):
-                        sid_val = room.sid
-                        if not asyncio.iscoroutine(sid_val):
-                            session_id = str(sid_val)
-            except:
-                pass
 
             session_data = {
                 "correlation_id": self._correlation_id,
@@ -353,12 +348,18 @@ class MetricsListener:
                     "content": item.text_content,
                     "timestamp": ts
                 })
-            # Tool-Calls für spätere Zusammenführung puffern
-            if item.tool_calls:
-                for tc in item.tool_calls:
+            # Tool-Calls für spätere Zusammenführung puffern.
+            # LiveKit 1.5.5 ChatMessage has no `tool_calls` attribute (it
+            # raises AttributeError on access via pydantic __getattr__);
+            # tool calls arrive as separate ChatMessage items with
+            # role="tool". Use getattr so older/newer LiveKit variants
+            # that DO expose tool_calls still populate the buffer.
+            tool_calls = getattr(item, "tool_calls", None)
+            if tool_calls:
+                for tc in tool_calls:
                     try:
                         args = json.loads(tc.arguments) if isinstance(tc.arguments, str) else tc.arguments
-                    except:
+                    except Exception:
                         args = tc.arguments
                     self._active_tool_calls[tc.call_id] = {
                         "name": tc.name,
@@ -366,7 +367,8 @@ class MetricsListener:
                     }
         elif item.role == "tool":
             # Tool-Ergebnis mit Puffer-Daten (Name/Input) zusammenführen
-            tool_info = self._active_tool_calls.get(item.tool_call_id, {"name": "unknown", "input": {}})
+            tool_call_id = getattr(item, "tool_call_id", None)
+            tool_info = self._active_tool_calls.get(tool_call_id, {"name": "unknown", "input": {}})
             
             self._transcript_turns.append({
                 "role": "tool",
