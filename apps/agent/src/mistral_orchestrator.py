@@ -151,7 +151,53 @@ class MistralOrchestrator:
         if self._run_ctx is not None:
             # RunContext.__aexit__ closes the exit_stack (MCP subprocess)
             # and calls aclose() on every registered MCP client.
-            await self._run_ctx.__aexit__(None, None, None)
+            #
+            # Known-harmless failure mode: MCPClientSTDIO.initialize
+            # enters stdio_client(...) which opens an anyio TaskGroup
+            # bound to the *initializing* task. LiveKit's AgentActivity
+            # invokes on_enter and on_exit on different asyncio tasks
+            # in some teardown paths; AnyIO then refuses the exit with
+            #   RuntimeError: Attempted to exit cancel scope in a
+            #   different task than it was entered in
+            # We catch exactly that condition and log a WARNING — the
+            # stdio subprocess is reaped by the OS when the agent
+            # process unwinds on participant disconnect, so functional
+            # impact is zero. Any other RuntimeError is re-raised so we
+            # don't mask real bugs.
+            try:
+                await self._run_ctx.__aexit__(None, None, None)
+            except RuntimeError as exc:
+                msg = str(exc)
+                if "cancel scope" in msg and "different task" in msg:
+                    logger.warning(
+                        "mistral_orchestrator_cross_task_close_suppressed",
+                        extra={
+                            "correlation_id": self._correlation_id,
+                            "detail": msg,
+                        },
+                    )
+                else:
+                    raise
+            except BaseExceptionGroup as exc_group:  # type: ignore[misc]
+                # AnyIO wraps the cross-task RuntimeError in an
+                # ExceptionGroup when the task-group unwinds; the inner
+                # cause is what we need to match on.
+                inner = [
+                    e for e in exc_group.exceptions
+                    if isinstance(e, RuntimeError)
+                    and "cancel scope" in str(e)
+                    and "different task" in str(e)
+                ]
+                if inner and len(inner) == len(exc_group.exceptions):
+                    logger.warning(
+                        "mistral_orchestrator_cross_task_close_suppressed",
+                        extra={
+                            "correlation_id": self._correlation_id,
+                            "detail": str(inner[0]),
+                        },
+                    )
+                else:
+                    raise
         logger.info(
             "mistral_orchestrator_closed",
             extra={"correlation_id": self._correlation_id},
@@ -208,9 +254,19 @@ class MistralOrchestrator:
         stream_errored = False
         event_count = 0
 
-        async for event in self._client.beta.conversations.run_stream_async(
+        # mistralai.client.conversations.run_stream_async is declared
+        # `async def ... -> AsyncGenerator[...]` and decorated with the
+        # sync `@run_requirements` wrapper. Calling it therefore returns
+        # a **coroutine** (not an async-iterator directly); awaiting the
+        # coroutine yields the real async generator. Iterating the
+        # coroutine with `async for` raises
+        #   TypeError: async for requires an object with __aiter__
+        # so we must `await` first, then iterate.
+        stream = await self._client.beta.conversations.run_stream_async(
             **stream_kwargs
-        ):
+        )
+
+        async for event in stream:
             event_count += 1
 
             # The last yielded object is a RunResult summary; we stop there.

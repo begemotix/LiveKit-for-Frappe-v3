@@ -82,7 +82,12 @@ class _FakeStream:
 
 
 class FakeMistralClient:
-    """Just enough surface to satisfy `orch._client.beta.conversations.run_stream_async`."""
+    """Mirrors the real SDK contract: `run_stream_async` is declared
+    `async def ... -> AsyncGenerator[...]`, so calling it returns a
+    coroutine that must be awaited before iteration. Emulating this
+    shape is what actually guards the orchestrator against the
+    production `TypeError: async for requires an object with __aiter__`
+    regression."""
 
     def __init__(self, events: list):
         self._events = events
@@ -91,7 +96,7 @@ class FakeMistralClient:
         self.beta.conversations = MagicMock()
         self.beta.conversations.run_stream_async = self._run_stream_async
 
-    def _run_stream_async(self, **kwargs):
+    async def _run_stream_async(self, **kwargs):
         self.calls.append(kwargs)
         return _FakeStream(self._events)
 
@@ -407,6 +412,42 @@ async def test_run_turn_yields_fallback_on_empty_stream(caplog):
 
 
 @pytest.mark.asyncio
+async def test_run_turn_awaits_coroutine_returned_by_run_stream_async():
+    """Regression: mistralai's run_stream_async is `async def`, decorated
+    with the sync `run_requirements` wrapper, so calling it returns a
+    coroutine. Iterating that coroutine directly (pre-fix behaviour)
+    raises `TypeError: async for requires __aiter__`. This test hardens
+    the fix: the orchestrator must `await` the returned coroutine first,
+    then iterate the resulting async generator."""
+    import inspect
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[_msg_event("pong")])
+
+    # Sanity-check the fake mirrors the real SDK shape: the method must
+    # be a coroutine function (calling it returns a coroutine).
+    assert inspect.iscoroutinefunction(
+        fake_mistral.beta.conversations.run_stream_async
+    ), "Fake must mimic real SDK: run_stream_async is async def"
+
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="corr-coro",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    await orch.initialize()
+
+    # Must not raise `TypeError: async for requires an object with __aiter__`.
+    chunks = [c async for c in orch.run_turn("hallo")]
+    assert chunks == ["pong"]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
 async def test_run_turn_before_initialize_raises():
     from src.mistral_orchestrator import MistralOrchestrator
 
@@ -461,6 +502,119 @@ async def test_aclose_closes_mcp_client_via_run_context():
     # RunContext.__aexit__ calls aclose() on every registered MCP client.
     assert fake_mcp.aclose_calls == 1
     assert orch.is_closed is True
+
+
+@pytest.mark.asyncio
+async def test_aclose_swallows_anyio_cross_task_runtime_error(caplog):
+    """Regression: on LiveKit session teardown, on_enter and on_exit run
+    in different asyncio tasks in some paths; the anyio TaskGroup that
+    MCPClientSTDIO opened via stdio_client() refuses a cross-task exit
+    with:
+      RuntimeError: Attempted to exit cancel scope in a different task
+      than it was entered in
+    The orchestrator must log WARNING and continue — the stdio
+    subprocess is reaped by the OS on agent shutdown, so functional
+    impact is zero, and crashing here would pollute prod logs and
+    potentially disturb the agent's shutdown path."""
+    import logging
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="corr-cross-task",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
+    )
+    await orch.initialize()
+
+    # Swap RunContext.__aexit__ with one that raises the exact anyio
+    # cross-task error we see in production.
+    async def raising_aexit(*_args, **_kwargs):
+        raise RuntimeError(
+            "Attempted to exit cancel scope in a different task than "
+            "it was entered in"
+        )
+
+    orch._run_ctx.__aexit__ = raising_aexit  # type: ignore[assignment]
+
+    with caplog.at_level(logging.WARNING, logger="src.mistral_orchestrator"):
+        # Must not raise.
+        await orch.aclose()
+
+    assert orch.is_closed is True
+    suppressed = [
+        rec for rec in caplog.records
+        if rec.message == "mistral_orchestrator_cross_task_close_suppressed"
+    ]
+    assert suppressed, "Expected suppressed-log for cross-task aclose"
+    assert "different task" in suppressed[0].detail
+
+
+@pytest.mark.asyncio
+async def test_aclose_swallows_anyio_cross_task_error_wrapped_in_exception_group(caplog):
+    """AnyIO sometimes wraps the cross-task RuntimeError in an
+    ExceptionGroup when the task group unwinds. The suppression must
+    cover that shape too."""
+    import logging
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="corr-cross-task-group",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
+    )
+    await orch.initialize()
+
+    async def raising_aexit(*_args, **_kwargs):
+        raise BaseExceptionGroup(
+            "unhandled errors in a TaskGroup",
+            [
+                RuntimeError(
+                    "Attempted to exit cancel scope in a different "
+                    "task than it was entered in"
+                )
+            ],
+        )
+
+    orch._run_ctx.__aexit__ = raising_aexit  # type: ignore[assignment]
+
+    with caplog.at_level(logging.WARNING, logger="src.mistral_orchestrator"):
+        await orch.aclose()
+
+    assert orch.is_closed is True
+    assert any(
+        rec.message == "mistral_orchestrator_cross_task_close_suppressed"
+        for rec in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_aclose_reraises_unrelated_runtime_error():
+    """Don't mask bugs: unrelated RuntimeErrors during close must surface."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="corr-unrelated-err",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
+    )
+    await orch.initialize()
+
+    async def raising_aexit(*_args, **_kwargs):
+        raise RuntimeError("something else entirely went wrong")
+
+    orch._run_ctx.__aexit__ = raising_aexit  # type: ignore[assignment]
+
+    with pytest.raises(RuntimeError, match="something else entirely"):
+        await orch.aclose()
 
 
 @pytest.mark.asyncio
