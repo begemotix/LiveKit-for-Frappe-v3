@@ -19,8 +19,9 @@ Architecture notes (Phase-05 D-16, D-17):
 """
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import AsyncIterator, TYPE_CHECKING
+from typing import AsyncIterator, Optional, TYPE_CHECKING
 
 from livekit.agents import llm as lk_llm
 from livekit.agents.types import FlushSentinel
@@ -30,6 +31,12 @@ if TYPE_CHECKING:
     from src.mistral_orchestrator import MistralOrchestrator
 
 logger = logging.getLogger(__name__)
+
+# Default filler sentence spoken once per turn whenever the LLM
+# triggers an MCP tool call. Single sentence by design (Phase 1) — a
+# small audio-clip rotation is planned but explicitly out of scope
+# for this change.
+DEFAULT_FILLER_TEXT = "Ich sehe im System nach, einen Moment bitte."
 
 
 # ---------------------------------------------------------------------------
@@ -79,23 +86,96 @@ class MistralDrivenAgent(Agent):
         orchestrator: "MistralOrchestrator",
         instructions: str,
         correlation_id: str,
+        filler_text: str = DEFAULT_FILLER_TEXT,
     ) -> None:
         super().__init__(instructions=instructions)
         self._orchestrator = orchestrator
         self._correlation_id = correlation_id
+        self._filler_text = filler_text
+        self._init_task: Optional[asyncio.Task] = None
 
     async def on_enter(self) -> None:
+        """Returns immediately. Two side effects are scheduled in the
+        background so the greeting (fired by agent.py right after
+        session.start) is not blocked by MCP-subprocess spawn or any
+        Mistral-side handshake:
+
+        1. Wire the orchestrator's tool-started callback so we can
+           speak the filler sentence as soon as Mistral signals the
+           start of a tool execution.
+        2. Run orchestrator.initialize() as a background asyncio task.
+           If the user speaks before init finishes, run_turn() will
+           wait briefly (up to ~10 s) on the orchestrator's
+           init_complete event before either proceeding or yielding
+           the fallback reply.
+        """
         logger.info(
             "mistral_agent_on_enter",
             extra={"correlation_id": self._correlation_id},
         )
-        await self._orchestrator.initialize()
+        self._orchestrator.set_tool_started_callback(self._speak_filler)
+        self._init_task = asyncio.create_task(
+            self._initialize_orchestrator_in_background()
+        )
+
+    async def _initialize_orchestrator_in_background(self) -> None:
+        try:
+            await self._orchestrator.initialize()
+        except Exception:
+            logger.exception(
+                "mistral_orchestrator_background_init_failed",
+                extra={"correlation_id": self._correlation_id},
+            )
+
+    def _speak_filler(self, tool_name: str) -> None:
+        """Invoked by the orchestrator on the first ToolExecutionStartedEvent
+        of a turn. Queues the filler sentence into LiveKit's speech
+        queue. The subsequent LLM reply will be queued *after* the
+        filler (FIFO ordering at the same priority), so sentences
+        never get cut mid-word. The user can interrupt either with
+        their voice (allow_interruptions=True is LiveKit's default).
+        """
+        # Agent.session is a property that raises if no activity is
+        # bound. Guard with try/except rather than a `is None` check
+        # so we degrade quietly during the brief race where the
+        # orchestrator emits a tool event before the LiveKit session
+        # is fully wired.
+        try:
+            session = self.session
+        except Exception:
+            logger.warning(
+                "mistral_agent_filler_skipped_no_session",
+                extra={"correlation_id": self._correlation_id},
+            )
+            return
+
+        try:
+            session.say(
+                self._filler_text,
+                allow_interruptions=True,
+                add_to_chat_ctx=False,
+            )
+            logger.info(
+                "mistral_agent_filler_spoken",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "tool_name": tool_name,
+                    "filler_text_length": len(self._filler_text),
+                },
+            )
+        except Exception:
+            logger.exception(
+                "mistral_agent_filler_failed",
+                extra={"correlation_id": self._correlation_id},
+            )
 
     async def on_exit(self) -> None:
         logger.info(
             "mistral_agent_on_exit",
             extra={"correlation_id": self._correlation_id},
         )
+        if self._init_task is not None and not self._init_task.done():
+            self._init_task.cancel()
         await self._orchestrator.aclose()
 
     async def llm_node(

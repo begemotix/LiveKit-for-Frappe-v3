@@ -19,8 +19,9 @@ Architecture notes (Phase-05 D-17, D-18):
 """
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import TYPE_CHECKING, AsyncIterator, Optional
+from typing import TYPE_CHECKING, AsyncIterator, Callable, Optional
 
 from src.frappe_mcp import build_frappe_mistral_mcp_client
 
@@ -34,6 +35,11 @@ logger = logging.getLogger(__name__)
 _FALLBACK_REPLY = (
     "Entschuldigung, ich habe gerade ein Problem mit meinem Hintergrundsystem."
 )
+
+# How long run_turn() waits for a still-running background initialize()
+# before falling back. Tuned generously — MCP-stdio spawn typically needs
+# ~600 ms; a slow first run might take a couple of seconds.
+_INIT_WAIT_TIMEOUT_S = 10.0
 
 
 class MistralOrchestrator:
@@ -62,6 +68,7 @@ class MistralOrchestrator:
         correlation_id: str,
         mcp_client_factory=build_frappe_mistral_mcp_client,
         mistral_client_factory=None,
+        init_wait_timeout_s: float = _INIT_WAIT_TIMEOUT_S,
     ) -> None:
         # Exactly one of agent_id / model must be set (Mistral SDK
         # enforces this in RunContext.__post_init__, but we fail earlier
@@ -83,12 +90,32 @@ class MistralOrchestrator:
         self._correlation_id = correlation_id
         self._mcp_client_factory = mcp_client_factory
         self._mistral_client_factory = mistral_client_factory
+        self._init_wait_timeout_s = init_wait_timeout_s
 
         self._client: Optional["Mistral"] = None
         self._run_ctx: Optional["RunContext"] = None
         self._mcp_client: Optional["MCPClientProtocol"] = None
         self._initialized = False
         self._closed = False
+        # Signaled when initialize() finishes. Allows run_turn() to be
+        # invoked before initialize() completes (e.g. when the caller
+        # has parallelised init for low-latency greeting) — run_turn
+        # then briefly waits before either proceeding or yielding the
+        # fallback text.
+        self._init_complete: asyncio.Event = asyncio.Event()
+        # Optional callback fired once per turn when Mistral signals
+        # the start of a tool execution. Wired by MistralDrivenAgent
+        # to trigger a session.say() filler sentence in LiveKit.
+        self._on_tool_started_callback: Optional[Callable[[str], None]] = None
+
+    def set_tool_started_callback(
+        self, callback: Optional[Callable[[str], None]]
+    ) -> None:
+        """Register / unregister a callback that fires when Mistral
+        signals tool execution start within run_turn(). The callback
+        receives the tool name (best-effort) and is invoked at most
+        once per user turn."""
+        self._on_tool_started_callback = callback
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -143,6 +170,7 @@ class MistralOrchestrator:
         )
 
         self._initialized = True
+        self._init_complete.set()
 
     async def aclose(self) -> None:
         if self._closed:
@@ -221,17 +249,46 @@ class MistralOrchestrator:
         stream ends without yielding any text (e.g. silent failure,
         tool-only turn), the same fallback is emitted so the user never
         faces a mute agent.
+
+        Init contract: if initialize() is still running in the
+        background (e.g. when MistralDrivenAgent kicked it off as a
+        non-blocking task to keep the greeting snappy), this method
+        waits up to `_INIT_WAIT_TIMEOUT_S` seconds for it to finish
+        before raising. That way a user who speaks immediately after
+        the greeting doesn't get a hard error.
         """
-        if not self._initialized:
-            raise RuntimeError("run_turn() called before initialize()")
         if self._closed:
             raise RuntimeError("run_turn() called after aclose()")
+
+        if not self._initialized:
+            try:
+                await asyncio.wait_for(
+                    self._init_complete.wait(),
+                    timeout=self._init_wait_timeout_s,
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "mistral_run_turn_init_timeout",
+                    extra={
+                        "correlation_id": self._correlation_id,
+                        "timeout_s": self._init_wait_timeout_s,
+                    },
+                )
+                # Yield the fallback so the user hears *something*
+                # rather than facing a crash. The session can recover
+                # if init eventually succeeds before the next turn.
+                yield _FALLBACK_REPLY
+                return
+
         assert self._client is not None and self._run_ctx is not None
 
         # Late imports so tests that monkey-patch these symbols don't
         # have to reach into a module-level cache.
         from mistralai.client.models.messageoutputevent import MessageOutputEvent
         from mistralai.client.models.responseerrorevent import ResponseErrorEvent
+        from mistralai.client.models.toolexecutionstartedevent import (
+            ToolExecutionStartedEvent,
+        )
         from mistralai.extra.run.result import RunResult
 
         # Instructions: only override in stateless mode.
@@ -253,6 +310,10 @@ class MistralOrchestrator:
         yielded_any_text = False
         stream_errored = False
         event_count = 0
+        # Filler is fired at most once per turn even if Mistral runs
+        # multiple tool calls back-to-back — the user should hear "Ich
+        # sehe im System nach…" once, not three times.
+        filler_fired = False
 
         # mistralai.client.conversations.run_stream_async is declared
         # `async def ... -> AsyncGenerator[...]` and decorated with the
@@ -295,9 +356,39 @@ class MistralOrchestrator:
                     yield chunk
                 continue
 
-            # Non-text, non-error events (function.call.delta, tool.execution.*,
-            # conversation.response.started/done, agent.handoff.*, etc.) —
-            # informational only; log on DEBUG to aid diagnosis without noise.
+            if isinstance(data, ToolExecutionStartedEvent):
+                # First tool call of this turn → ask the wired callback
+                # (typically MistralDrivenAgent → session.say(filler))
+                # to play a filler sentence so the user doesn't sit in
+                # silence while the MCP call resolves.
+                if not filler_fired and self._on_tool_started_callback is not None:
+                    tool_name = getattr(data, "name", None) or "tool"
+                    try:
+                        self._on_tool_started_callback(tool_name)
+                    except Exception:
+                        # Filler is best-effort — never let a callback
+                        # error tear down the whole turn.
+                        logger.exception(
+                            "mistral_tool_started_callback_failed",
+                            extra={
+                                "correlation_id": self._correlation_id,
+                                "tool_name": tool_name,
+                            },
+                        )
+                    filler_fired = True
+                    logger.info(
+                        "mistral_tool_execution_started",
+                        extra={
+                            "correlation_id": self._correlation_id,
+                            "tool_name": tool_name,
+                        },
+                    )
+                continue
+
+            # Non-text, non-error events (function.call.delta,
+            # tool.execution.done, conversation.response.started/done,
+            # agent.handoff.*, etc.) — informational only; log on DEBUG
+            # to aid diagnosis without noise.
             logger.debug(
                 "mistral_stream_unhandled_event",
                 extra={

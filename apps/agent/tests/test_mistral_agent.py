@@ -34,6 +34,10 @@ class FakeOrchestrator:
         self.initialize_calls = 0
         self.aclose_calls = 0
         self.run_turn_calls: list[str] = []
+        self.tool_started_callback = None
+
+    def set_tool_started_callback(self, callback) -> None:
+        self.tool_started_callback = callback
 
     async def initialize(self) -> None:
         self.initialize_calls += 1
@@ -93,7 +97,12 @@ def test_null_llm_chat_raises_with_clear_message():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_on_enter_calls_orchestrator_initialize():
+async def test_on_enter_returns_immediately_and_initializes_in_background():
+    """Phase-N change: on_enter must return immediately so the
+    greeting fires without waiting for the MCP-subprocess spawn /
+    Mistral handshake. Initialize then runs in a background asyncio
+    task whose handle is exposed as agent._init_task for testing."""
+    import asyncio
     from src.mistral_agent import MistralDrivenAgent
 
     orch = FakeOrchestrator()
@@ -101,9 +110,99 @@ async def test_on_enter_calls_orchestrator_initialize():
         orchestrator=orch, instructions="sys", correlation_id="c-1"
     )
 
+    # The await on on_enter() itself returns ~instantly because the
+    # heavy init was scheduled as a Task. Yield control to the loop
+    # once so the background task gets to run for the assertion.
     await agent.on_enter()
+    assert agent._init_task is not None  # background task scheduled
+    await agent._init_task             # let it finish for the assertion
+
     assert orch.initialize_calls == 1
     assert orch.aclose_calls == 0
+    # Tool-started callback was wired during on_enter (before init).
+    assert orch.tool_started_callback is not None
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_uses_session_say_with_default_text_and_interruptions_allowed():
+    """When the orchestrator signals tool execution start, the agent
+    must call session.say() with the configured filler text and
+    allow_interruptions=True (so the user can still cut in)."""
+    from src.mistral_agent import DEFAULT_FILLER_TEXT, MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch, instructions="sys", correlation_id="c-filler"
+    )
+
+    # Inject a fake session that records say() calls.
+    say_calls: list[dict] = []
+
+    class _FakeSession:
+        def say(self, text, *, allow_interruptions=False, add_to_chat_ctx=True):
+            say_calls.append({
+                "text": text,
+                "allow_interruptions": allow_interruptions,
+                "add_to_chat_ctx": add_to_chat_ctx,
+            })
+
+    # The Agent base class exposes session via @property; we patch the
+    # underlying private attribute to avoid spinning up a real session.
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+
+    agent._speak_filler("get_document")
+
+    assert len(say_calls) == 1
+    assert say_calls[0]["text"] == DEFAULT_FILLER_TEXT
+    assert say_calls[0]["allow_interruptions"] is True
+    assert say_calls[0]["add_to_chat_ctx"] is False
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_skips_safely_when_session_unavailable(caplog):
+    """If the filler callback fires before the session is wired up
+    (race during init), the call must log a warning and return
+    cleanly — never raise into the orchestrator's stream loop."""
+    import logging
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch, instructions="sys", correlation_id="c-no-session"
+    )
+
+    with caplog.at_level(logging.WARNING, logger="src.mistral_agent"):
+        # Should not raise even without a session bound.
+        agent._speak_filler("get_document")
+
+    assert any(
+        rec.message == "mistral_agent_filler_skipped_no_session"
+        for rec in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_filler_text_is_configurable_via_constructor():
+    """Operators may override the filler text per deployment."""
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch,
+        instructions="sys",
+        correlation_id="c-cfg",
+        filler_text="Moment, ich prüfe das.",
+    )
+    say_calls: list[str] = []
+
+    class _FakeSession:
+        def say(self, text, **_kwargs):
+            say_calls.append(text)
+
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+    agent._speak_filler("anytool")
+
+    assert say_calls == ["Moment, ich prüfe das."]
 
 
 @pytest.mark.asyncio

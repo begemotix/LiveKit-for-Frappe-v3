@@ -18,6 +18,9 @@ import pytest
 from mistralai.client.models import Function, FunctionTool
 from mistralai.client.models.messageoutputevent import MessageOutputEvent
 from mistralai.client.models.responseerrorevent import ResponseErrorEvent
+from mistralai.client.models.toolexecutionstartedevent import (
+    ToolExecutionStartedEvent,
+)
 from mistralai.extra.run.result import RunResultEvents
 
 
@@ -112,6 +115,15 @@ def _error_event(message: str = "bad request", code: int = 400) -> RunResultEven
     return RunResultEvents(
         event="conversation.response.error",
         data=ResponseErrorEvent(message=message, code=code),
+    )
+
+
+def _tool_started_event(name: str = "get_document") -> RunResultEvents:
+    return RunResultEvents(
+        event="tool.execution.started",
+        data=ToolExecutionStartedEvent(
+            id="tool-call-1", name=name, arguments="{}"
+        ),
     )
 
 
@@ -448,18 +460,130 @@ async def test_run_turn_awaits_coroutine_returned_by_run_stream_async():
 
 
 @pytest.mark.asyncio
-async def test_run_turn_before_initialize_raises():
-    from src.mistral_orchestrator import MistralOrchestrator
+async def test_run_turn_before_initialize_yields_fallback_after_timeout():
+    """Phase-N change: run_turn() no longer raises immediately when
+    called before initialize() — it briefly waits for the background
+    init Event and, on timeout, yields the fallback reply so the user
+    hears something instead of facing a crash."""
+    from src.mistral_orchestrator import MistralOrchestrator, _FALLBACK_REPLY
 
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
         mcp_client_factory=lambda: FakeMCPClient([]),
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
+        init_wait_timeout_s=0.1,  # short timeout for tests
     )
-    with pytest.raises(RuntimeError, match="before initialize"):
-        async for _ in orch.run_turn("x"):
-            pass
+    chunks = [c async for c in orch.run_turn("x")]
+    assert chunks == [_FALLBACK_REPLY]
+
+
+@pytest.mark.asyncio
+async def test_run_turn_waits_for_background_init_then_proceeds():
+    """If initialize() is running in parallel and finishes within
+    timeout, run_turn() should pick up cleanly without yielding the
+    fallback."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[_msg_event("hallo")])
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-init-race",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        init_wait_timeout_s=2.0,
+    )
+
+    # Schedule initialize() with a tiny delay; run_turn() will start
+    # before it completes and should wait on the init_complete event.
+    async def delayed_init():
+        await asyncio.sleep(0.05)
+        await orch.initialize()
+
+    init_task = asyncio.create_task(delayed_init())
+    try:
+        chunks = [c async for c in orch.run_turn("hi")]
+    finally:
+        await init_task
+
+    assert chunks == ["hallo"]
+    assert orch.is_initialized is True
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_invokes_tool_started_callback_once_per_turn():
+    """Mistral can emit multiple ToolExecutionStartedEvents in one
+    turn (multi-tool prompts). The filler callback must fire only on
+    the first one — otherwise the user hears the same filler sentence
+    stacked up multiple times."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["get_document", "list_documents"])
+    fake_mistral = FakeMistralClient(events=[
+        _tool_started_event("get_document"),
+        _tool_started_event("list_documents"),  # second tool same turn
+        _msg_event("Antwort an den Nutzer."),
+    ])
+
+    callback_invocations: list[str] = []
+
+    def _callback(tool_name: str) -> None:
+        callback_invocations.append(tool_name)
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-filler-debounce",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    orch.set_tool_started_callback(_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("input")]
+
+    # Filler fired exactly once on the FIRST tool, even though two
+    # tool.execution.started events arrived.
+    assert callback_invocations == ["get_document"]
+    # The actual reply text was still streamed.
+    assert chunks == ["Antwort an den Nutzer."]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_callback_exception_does_not_break_turn():
+    """If the wired callback raises, the turn must still complete
+    successfully — filler is best-effort, never essential."""
+    from src.mistral_orchestrator import MistralOrchestrator
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[
+        _tool_started_event("ping"),
+        _msg_event("Trotzdem geantwortet."),
+    ])
+
+    def _broken_callback(_tool_name: str) -> None:
+        raise RuntimeError("callback exploded on purpose")
+
+    orch = MistralOrchestrator(
+        api_key="k", agent_id="ag", model=None,
+        allowed_tools=None, instructions="",
+        correlation_id="c-broken-cb",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    orch.set_tool_started_callback(_broken_callback)
+    await orch.initialize()
+
+    chunks = [c async for c in orch.run_turn("input")]
+    assert chunks == ["Trotzdem geantwortet."]
+
+    await orch.aclose()
 
 
 @pytest.mark.asyncio
