@@ -41,17 +41,6 @@ _FALLBACK_REPLY = (
 # ~600 ms; a slow first run might take a couple of seconds.
 _INIT_WAIT_TIMEOUT_S = 10.0
 
-# If no text chunk has reached LiveKit within this many seconds of
-# run_turn() starting, fire the filler callback as a timer-based safety
-# net. The production finding on 2026-04-23 was that relying purely on
-# `isinstance(data, FunctionCallEvent | ToolExecutionStartedEvent)` in
-# the Mistral stream misses cases where the SDK has changed the event
-# shape or dispatches the tool without emitting a classifiable event —
-# the Frappe API call shows up in logs but no filler is heard. A timer
-# decouples the filler from Mistral's event typing and also covers
-# pure "slow LLM" turns (no tool, just slow generation).
-_FILLER_DELAY_S = 1.2
-
 
 class MistralOrchestrator:
     """Runs the type_b Mistral tool loop outside LiveKit's AgentSession.
@@ -80,7 +69,6 @@ class MistralOrchestrator:
         mcp_client_factory=build_frappe_mistral_mcp_client,
         mistral_client_factory=None,
         init_wait_timeout_s: float = _INIT_WAIT_TIMEOUT_S,
-        filler_delay_s: float = _FILLER_DELAY_S,
     ) -> None:
         # Exactly one of agent_id / model must be set (Mistral SDK
         # enforces this in RunContext.__post_init__, but we fail earlier
@@ -103,7 +91,11 @@ class MistralOrchestrator:
         self._mcp_client_factory = mcp_client_factory
         self._mistral_client_factory = mistral_client_factory
         self._init_wait_timeout_s = init_wait_timeout_s
-        self._filler_delay_s = filler_delay_s
+        # Per-turn gate: reset to False at the top of every run_turn()
+        # and flipped to True by _fire_filler_if_needed(). Keeps the
+        # filler at most-once-per-turn even if Mistral dispatches
+        # multiple MCP tools sequentially.
+        self._filler_fired_this_turn = False
 
         self._client: Optional["Mistral"] = None
         self._run_ctx: Optional["RunContext"] = None
@@ -130,6 +122,47 @@ class MistralOrchestrator:
         once per user turn."""
         self._on_tool_started_callback = callback
 
+    def _fire_filler_if_needed(self, tool_name: str) -> None:
+        """Called by the FillerAwareMCPClient wrapper immediately
+        before each MCP tool dispatch. Forwards to the registered
+        tool-started callback (typically MistralDrivenAgent._speak_filler,
+        which calls session.say()) at most once per turn.
+
+        This is the sole filler trigger. Earlier revisions tried to
+        match `FunctionCallEvent`/`ToolExecutionStartedEvent` in the
+        Mistral stream — but the SDK (at least as of 2026-04-23) does
+        not emit a recognisable pre-tool event for MCP dispatch, so
+        that path never fired in production. A timer-based fallback
+        was dropped because it lied to the user: speaking "Ich sehe im
+        System nach" when the LLM was merely thinking slowly without
+        calling any tool is not humane conversation behaviour.
+        """
+        if self._filler_fired_this_turn:
+            return
+        if self._on_tool_started_callback is None:
+            return
+        try:
+            self._on_tool_started_callback(tool_name)
+        except Exception:
+            # Filler is best-effort — never let a callback error tear
+            # down the whole turn (or worse, block the tool dispatch).
+            logger.exception(
+                "mistral_tool_started_callback_failed",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "tool_name": tool_name,
+                },
+            )
+        self._filler_fired_this_turn = True
+        logger.info(
+            "mistral_filler_fired",
+            extra={
+                "correlation_id": self._correlation_id,
+                "tool_name": tool_name,
+                "trigger": "mcp_pre_invoke",
+            },
+        )
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -154,7 +187,14 @@ class MistralOrchestrator:
         )
         await self._run_ctx.__aenter__()
 
-        self._mcp_client = self._mcp_client_factory()
+        # Hand the filler hook to the factory so the returned MCP
+        # client can fire _fire_filler_if_needed(tool_name) from
+        # inside its execute_tool() — the documented extension point
+        # per the 2026-04-23 research. Test factories that don't use
+        # the keyword can be written as `lambda **_: fake_mcp`.
+        self._mcp_client = self._mcp_client_factory(
+            on_tool_execute=self._fire_filler_if_needed
+        )
 
         tool_configuration = None
         if self._allowed_tools is not None:
@@ -297,12 +337,8 @@ class MistralOrchestrator:
 
         # Late imports so tests that monkey-patch these symbols don't
         # have to reach into a module-level cache.
-        from mistralai.client.models.functioncallevent import FunctionCallEvent
         from mistralai.client.models.messageoutputevent import MessageOutputEvent
         from mistralai.client.models.responseerrorevent import ResponseErrorEvent
-        from mistralai.client.models.toolexecutionstartedevent import (
-            ToolExecutionStartedEvent,
-        )
         from mistralai.extra.run.result import RunResult
 
         # Instructions: only override in stateless mode.
@@ -321,60 +357,14 @@ class MistralOrchestrator:
             },
         )
 
+        # Reset the per-turn filler gate. Filler fires from the MCP
+        # client wrapper (FillerAwareMCPClient.execute_tool) via
+        # _fire_filler_if_needed(); this flag keeps it to once per turn.
+        self._filler_fired_this_turn = False
+
         yielded_any_text = False
         stream_errored = False
         event_count = 0
-        # Filler is fired at most once per turn even if Mistral runs
-        # multiple tool calls back-to-back — the user should hear "Ich
-        # sehe im System nach…" once, not three times. A dict is used
-        # rather than a plain bool so the timer task below can flip it
-        # without needing `nonlocal`.
-        filler_state = {"fired": False}
-
-        def _try_fire_filler(tool_name: str, trigger: str) -> None:
-            """Idempotent filler trigger. Called from two places:
-            - the event-based path (ToolExecutionStartedEvent /
-              FunctionCallEvent) when Mistral still emits a recognisable
-              event shape, and
-            - the timer-based path when no text has been yielded within
-              `filler_delay_s` — which happens when the SDK changes its
-              event shape (production regression 2026-04-23) or when the
-              LLM is just slow.
-            Whichever fires first wins; the other becomes a no-op."""
-            if filler_state["fired"]:
-                return
-            if self._on_tool_started_callback is None:
-                return
-            try:
-                self._on_tool_started_callback(tool_name)
-            except Exception:
-                # Filler is best-effort — never let a callback error
-                # tear down the whole turn.
-                logger.exception(
-                    "mistral_tool_started_callback_failed",
-                    extra={
-                        "correlation_id": self._correlation_id,
-                        "tool_name": tool_name,
-                    },
-                )
-            filler_state["fired"] = True
-            logger.info(
-                "mistral_filler_fired",
-                extra={
-                    "correlation_id": self._correlation_id,
-                    "tool_name": tool_name,
-                    "trigger": trigger,
-                },
-            )
-
-        async def _filler_timer() -> None:
-            """Fire the filler if run_turn() produced no text within the
-            configured delay. Robust to Mistral SDK event-shape drift."""
-            try:
-                await asyncio.sleep(self._filler_delay_s)
-            except asyncio.CancelledError:
-                return
-            _try_fire_filler(tool_name="delayed", trigger="timer")
 
         # mistralai.client.conversations.run_stream_async is declared
         # `async def ... -> AsyncGenerator[...]` and decorated with the
@@ -388,86 +378,49 @@ class MistralOrchestrator:
             **stream_kwargs
         )
 
-        # Start the timer AFTER the stream call returns — that way the
-        # delay is measured from the moment we're actually waiting for
-        # Mistral, not from the SDK setup.
-        filler_timer_task = asyncio.create_task(_filler_timer())
+        async for event in stream:
+            event_count += 1
 
-        try:
-            async for event in stream:
-                event_count += 1
+            # The last yielded object is a RunResult summary; we stop there.
+            if isinstance(event, RunResult):
+                break
 
-                # The last yielded object is a RunResult summary; we stop there.
-                if isinstance(event, RunResult):
-                    break
+            data = getattr(event, "data", None)
 
-                data = getattr(event, "data", None)
-
-                if isinstance(data, ResponseErrorEvent):
-                    stream_errored = True
-                    logger.error(
-                        "mistral_stream_response_error",
-                        extra={
-                            "correlation_id": self._correlation_id,
-                            "agent_id": self._agent_id,
-                            "model": self._model,
-                            "error_message": getattr(data, "message", None),
-                            "error_code": getattr(data, "code", None),
-                        },
-                    )
-                    continue
-
-                if isinstance(data, MessageOutputEvent):
-                    for chunk in self._extract_text(data):
-                        if not yielded_any_text:
-                            # First text chunk reaches LiveKit now — the
-                            # real reply is imminent, so we don't need
-                            # a filler anymore.
-                            if not filler_timer_task.done():
-                                filler_timer_task.cancel()
-                        yielded_any_text = True
-                        yield chunk
-                    continue
-
-                if isinstance(data, ToolExecutionStartedEvent) or isinstance(
-                    data, FunctionCallEvent
-                ):
-                    # Two events historically triggered the filler:
-                    # - ToolExecutionStartedEvent: fires for server-side
-                    #   tool runs (Mistral built-in connectors).
-                    # - FunctionCallEvent (function.call.delta): fires
-                    #   when the LLM emits a local function/tool call.
-                    # The timer covers the case where neither arrives
-                    # in a recognisable shape.
-                    tool_name = getattr(data, "name", None) or "tool"
-                    _try_fire_filler(tool_name=tool_name, trigger=type(data).__name__)
-                    continue
-
-                # Any other event (conversation.response.started/done,
-                # function.call.*, tool.execution.done, agent.handoff.*)
-                # — previously logged at DEBUG. Raised to INFO so we can
-                # diagnose *which* event types Mistral actually emits
-                # for our MCP dispatch path in production logs.
-                logger.info(
-                    "mistral_stream_unhandled_event",
+            if isinstance(data, ResponseErrorEvent):
+                stream_errored = True
+                logger.error(
+                    "mistral_stream_response_error",
                     extra={
                         "correlation_id": self._correlation_id,
-                        "event_type": type(data).__name__ if data is not None else "None",
-                        "event_envelope": type(event).__name__,
-                        "event_name": getattr(event, "event", None),
+                        "agent_id": self._agent_id,
+                        "model": self._model,
+                        "error_message": getattr(data, "message", None),
+                        "error_code": getattr(data, "code", None),
                     },
                 )
-        finally:
-            # Whatever happens, release the timer task so it can't fire
-            # after the generator is done.
-            if not filler_timer_task.done():
-                filler_timer_task.cancel()
-            # Drain any cancellation so the task doesn't leak a warning
-            # on the event loop shutdown.
-            try:
-                await filler_timer_task
-            except (asyncio.CancelledError, Exception):
-                pass
+                continue
+
+            if isinstance(data, MessageOutputEvent):
+                for chunk in self._extract_text(data):
+                    yielded_any_text = True
+                    yield chunk
+                continue
+
+            # Everything else (conversation.response.started/done,
+            # function.call.*, function.result, tool.execution.*,
+            # agent.handoff.*) is informational here — the filler no
+            # longer depends on matching any of them, it fires from
+            # the MCP client wrapper when a tool actually dispatches.
+            logger.debug(
+                "mistral_stream_unhandled_event",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "event_type": type(data).__name__ if data is not None else "None",
+                    "event_envelope": type(event).__name__,
+                    "event_name": getattr(event, "event", None),
+                },
+            )
 
         if not yielded_any_text:
             logger.warning(

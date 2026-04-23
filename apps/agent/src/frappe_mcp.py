@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Optional
 from urllib.parse import urlparse, urlunparse
 
 if TYPE_CHECKING:
     from livekit.agents import mcp
-    from mistralai.extra.mcp.stdio import MCPClientSTDIO
 
 logger = logging.getLogger(__name__)
 
@@ -124,20 +123,98 @@ def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
     )
 
 
-def build_frappe_mistral_mcp_client() -> "MCPClientSTDIO":
-    """Type-B: build a Mistral `MCPClientSTDIO` consumed by the Mistral RunContext.
+class FillerAwareMCPClient:
+    """Mistral `MCPClientSTDIO` subclass that fires a callback before
+    every tool dispatch. Constructed lazily via
+    `_get_filler_aware_mcp_client_class()` so this module stays
+    import-cheap for the type_a path that doesn't touch mistralai.
 
-    Same stdio sidecar as Type-A (`frappe-mcp-server` via npx, identical ENV
-    contract). Only the consuming client library differs: this returns a
-    `mistralai.extra.mcp.stdio.MCPClientSTDIO`, which the upcoming
-    MistralOrchestrator registers via `run_ctx.register_mcp_client(...)`.
+    The callback receives the tool name and is invoked synchronously
+    (inside the async `execute_tool` method but before the awaited
+    `super().execute_tool(...)`), so it must be cheap and non-blocking
+    — typically it just schedules a `session.say(...)` in LiveKit.
+
+    Rationale: type_b hands the tool loop to Mistral's SDK, which
+    means LiveKit's own `function_call_start`-style event never fires
+    (verified via the 1.5.5 source: no such event exists in
+    `livekit/agents/voice/events.py`). The only observable pre-invoke
+    point is the MCP client's `execute_tool()` method, which the
+    research on 2026-04-23 flagged as the documented extension point
+    (`mistralai.extra.mcp.base.MCPClientBase` is a non-final class with
+    a public async `execute_tool`). See readme/... for the decision.
+    """
+
+    # The real class body is built lazily inside
+    # _get_filler_aware_mcp_client_class() so import costs stay in
+    # type_b-only code paths. This stub exists so static checkers and
+    # documentation tools see something meaningful at module level.
+
+
+_filler_aware_class_cache: Optional[type] = None
+
+
+def _get_filler_aware_mcp_client_class() -> type:
+    """Lazily build (once) a real MCPClientSTDIO subclass with the
+    filler hook. Caches the class so repeated calls are free."""
+    global _filler_aware_class_cache
+    if _filler_aware_class_cache is not None:
+        return _filler_aware_class_cache
+
+    from mistralai.extra.mcp.stdio import MCPClientSTDIO
+
+    class _FillerAwareMCPClient(MCPClientSTDIO):
+        def __init__(
+            self,
+            *args: Any,
+            on_tool_execute: Optional[Callable[[str], None]] = None,
+            **kwargs: Any,
+        ) -> None:
+            super().__init__(*args, **kwargs)
+            self._on_tool_execute = on_tool_execute
+
+        async def execute_tool(self, name: str, arguments: dict) -> Any:
+            # Fire the filler FIRST so the user hears bridging speech
+            # while the MCP round-trip (subprocess + Frappe HTTP) runs.
+            # Callback must be sync & cheap — LiveKit's session.say()
+            # fits that contract.
+            if self._on_tool_execute is not None:
+                try:
+                    self._on_tool_execute(name)
+                except Exception:
+                    logger.exception(
+                        "filler_aware_mcp_callback_failed",
+                        extra={"tool_name": name},
+                    )
+            return await super().execute_tool(name, arguments)
+
+    _filler_aware_class_cache = _FillerAwareMCPClient
+    return _FillerAwareMCPClient
+
+
+def build_frappe_mistral_mcp_client(
+    on_tool_execute: Optional[Callable[[str], None]] = None,
+) -> Any:
+    """Type-B: build a Mistral MCP client consumed by the Mistral RunContext.
+
+    Same stdio sidecar as Type-A (`frappe-mcp-server` via npx, identical
+    ENV contract). The returned client is a `FillerAwareMCPClient` (a
+    transparent `MCPClientSTDIO` subclass) that fires `on_tool_execute`
+    just before each tool dispatch — this is how we bridge Mistral-SDK-
+    owned tool calls into LiveKit's `session.say()` filler path, since
+    LiveKit never sees these invocations in the type_b architecture.
+
+    Passing `on_tool_execute=None` (the default) preserves exact
+    previous behaviour: a plain stdio client with no pre-invoke hook.
     """
     from mcp import StdioServerParameters
-    from mistralai.extra.mcp.stdio import MCPClientSTDIO
 
     params = frappe_mcp_stdio_params()
     _log_stdio_wiring(params, client_flavor="mistral_mcpclient_stdio")
-    return MCPClientSTDIO(StdioServerParameters(**params))
+    cls = _get_filler_aware_mcp_client_class()
+    return cls(
+        StdioServerParameters(**params),
+        on_tool_execute=on_tool_execute,
+    )
 
 
 def get_allowed_tools_for_mode(mode: str) -> list[str] | None:

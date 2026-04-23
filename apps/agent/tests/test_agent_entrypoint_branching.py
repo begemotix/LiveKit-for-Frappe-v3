@@ -156,7 +156,7 @@ def _patched_orchestrator_factory(fake_mcp: FakeMCPClient):
             allowed_tools=allowed_tools,
             instructions=instructions,
             correlation_id=correlation_id,
-            mcp_client_factory=lambda: fake_mcp,
+            mcp_client_factory=lambda **_: fake_mcp,
             mistral_client_factory=_make_mistral_client_factory(),
         )
     return _build

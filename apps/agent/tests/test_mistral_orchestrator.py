@@ -16,12 +16,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from mistralai.client.models import Function, FunctionTool
-from mistralai.client.models.functioncallevent import FunctionCallEvent
 from mistralai.client.models.messageoutputevent import MessageOutputEvent
 from mistralai.client.models.responseerrorevent import ResponseErrorEvent
-from mistralai.client.models.toolexecutionstartedevent import (
-    ToolExecutionStartedEvent,
-)
 from mistralai.extra.run.result import RunResultEvents
 
 
@@ -119,30 +115,6 @@ def _error_event(message: str = "bad request", code: int = 400) -> RunResultEven
     )
 
 
-def _tool_started_event(name: str = "get_document") -> RunResultEvents:
-    """Server-side tool execution event (Mistral built-in connectors)."""
-    return RunResultEvents(
-        event="tool.execution.started",
-        data=ToolExecutionStartedEvent(
-            id="tool-call-1", name=name, arguments="{}"
-        ),
-    )
-
-
-def _function_call_event(name: str = "get_document") -> RunResultEvents:
-    """Local function/tool call event — what MCP-via-RunContext produces.
-    The LLM emits this when it wants our Python SDK to dispatch a tool."""
-    return RunResultEvents(
-        event="function.call.delta",
-        data=FunctionCallEvent(
-            id="fn-1",
-            name=name,
-            tool_call_id="call-abc",
-            arguments="{}",
-        ),
-    )
-
-
 def _mistral_factory_builder(client: FakeMistralClient):
     def _factory(api_key: str):
         # api_key is passed through from the orchestrator; tests don't
@@ -202,7 +174,7 @@ async def test_initialize_registers_mcp_client_and_filters_by_allowlist():
         allowed_tools=["get_document", "list_documents", "ping"],
         instructions="ignored in agent mode",
         correlation_id="corr-1",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
 
@@ -234,7 +206,7 @@ async def test_initialize_with_none_allowlist_registers_all_tools():
         allowed_tools=None,
         instructions="be concise",
         correlation_id="corr-2",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
 
@@ -251,7 +223,7 @@ async def test_initialize_is_idempotent():
     orch = MistralOrchestrator(
         api_key="test-key", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -279,7 +251,7 @@ async def test_run_turn_yields_text_chunks_from_message_output_events():
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=["ping"], instructions="",
         correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -312,7 +284,7 @@ async def test_run_turn_forwards_instructions_in_stateless_mode():
         api_key="test-key", agent_id=None, model="mistral-small-latest",
         allowed_tools=["ping"], instructions="You are terse.",
         correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -351,7 +323,7 @@ async def test_run_turn_ignores_non_message_events():
     orch = MistralOrchestrator(
         api_key="test-key", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -378,7 +350,7 @@ async def test_run_turn_logs_response_error_event_and_yields_fallback(caplog):
     orch = MistralOrchestrator(
         api_key="test-key", agent_id="ag_wrong", model=None,
         allowed_tools=None, instructions="", correlation_id="corr-err",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -420,7 +392,7 @@ async def test_run_turn_yields_fallback_on_empty_stream(caplog):
     orch = MistralOrchestrator(
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="", correlation_id="corr-empty",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -463,7 +435,7 @@ async def test_run_turn_awaits_coroutine_returned_by_run_stream_async():
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="",
         correlation_id="corr-coro",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
     )
     await orch.initialize()
@@ -486,7 +458,7 @@ async def test_run_turn_before_initialize_yields_fallback_after_timeout():
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: FakeMCPClient([]),
+        mcp_client_factory=lambda **_:FakeMCPClient([]),
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
         init_wait_timeout_s=0.1,  # short timeout for tests
     )
@@ -508,7 +480,7 @@ async def test_run_turn_waits_for_background_init_then_proceeds():
         api_key="k", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="",
         correlation_id="c-init-race",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(fake_mistral),
         init_wait_timeout_s=2.0,
     )
@@ -531,248 +503,137 @@ async def test_run_turn_waits_for_background_init_then_proceeds():
 
 
 @pytest.mark.asyncio
-async def test_run_turn_invokes_tool_started_callback_once_per_turn():
-    """Mistral can emit multiple ToolExecutionStartedEvents in one
-    turn (multi-tool prompts). The filler callback must fire only on
-    the first one — otherwise the user hears the same filler sentence
-    stacked up multiple times."""
+async def test_initialize_passes_filler_callback_to_mcp_factory():
+    """Wiring contract: the orchestrator hands its internal
+    _fire_filler_if_needed to the MCP client factory as
+    `on_tool_execute`. This is the only way the FillerAwareMCPClient
+    knows whom to notify when a tool dispatches — and the sole
+    mechanism by which the filler fires in type_b now."""
     from src.mistral_orchestrator import MistralOrchestrator
 
-    fake_mcp = FakeMCPClient(tool_names=["get_document", "list_documents"])
-    fake_mistral = FakeMistralClient(events=[
-        _tool_started_event("get_document"),
-        _tool_started_event("list_documents"),  # second tool same turn
-        _msg_event("Antwort an den Nutzer."),
-    ])
+    captured_kwargs: list[dict] = []
 
-    callback_invocations: list[str] = []
-
-    def _callback(tool_name: str) -> None:
-        callback_invocations.append(tool_name)
+    def _recording_factory(**kwargs):
+        captured_kwargs.append(kwargs)
+        return FakeMCPClient(tool_names=["get_document"])
 
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="",
-        correlation_id="c-filler-debounce",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        correlation_id="c-wiring",
+        mcp_client_factory=_recording_factory,
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
-    orch.set_tool_started_callback(_callback)
     await orch.initialize()
 
-    chunks = [c async for c in orch.run_turn("input")]
-
-    # Filler fired exactly once on the FIRST tool, even though two
-    # tool.execution.started events arrived.
-    assert callback_invocations == ["get_document"]
-    # The actual reply text was still streamed.
-    assert chunks == ["Antwort an den Nutzer."]
+    assert len(captured_kwargs) == 1
+    cb = captured_kwargs[0].get("on_tool_execute")
+    assert callable(cb)
+    # Calling the captured callback must route into the orchestrator's
+    # tool-started callback (the one MistralDrivenAgent registers).
+    received: list[str] = []
+    orch.set_tool_started_callback(lambda name: received.append(name))
+    cb("list_documents")
+    assert received == ["list_documents"]
 
     await orch.aclose()
 
 
 @pytest.mark.asyncio
-async def test_run_turn_fires_filler_on_function_call_event_for_local_mcp_dispatch():
-    """Regression of the 2026-04-23 production finding: locally
-    dispatched MCP tools (RunContext.register_mcp_client path) do
-    NOT emit ToolExecutionStartedEvent — that event is reserved for
-    Mistral server-side connectors. What actually arrives in the
-    stream for our architecture is FunctionCallEvent
-    (function.call.delta). The filler must trigger on that too."""
+async def test_fire_filler_is_debounced_per_turn_and_resets_next_turn():
+    """MCP dispatches multiple tools in one turn → only one filler.
+    New turn → filler gate resets so the next tool call can fire it
+    again. Validates both idempotence and per-turn reset."""
     from src.mistral_orchestrator import MistralOrchestrator
-
-    fake_mcp = FakeMCPClient(tool_names=["get_document"])
-    fake_mistral = FakeMistralClient(events=[
-        _function_call_event("get_document"),
-        _msg_event("Das Projekt heißt Phase-05."),
-    ])
-
-    callback_invocations: list[str] = []
-
-    def _callback(tool_name: str) -> None:
-        callback_invocations.append(tool_name)
 
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="",
-        correlation_id="c-function-call-filler",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        correlation_id="c-debounce",
+        mcp_client_factory=lambda **_: FakeMCPClient(tool_names=["a", "b"]),
+        mistral_client_factory=_mistral_factory_builder(
+            FakeMistralClient(events=[_msg_event("ok")])
+        ),
     )
-    orch.set_tool_started_callback(_callback)
+    received: list[str] = []
+    orch.set_tool_started_callback(lambda name: received.append(name))
     await orch.initialize()
 
-    chunks = [c async for c in orch.run_turn("Projekt?")]
+    # Simulate three back-to-back MCP dispatches within one turn.
+    # (In production this would be the FillerAwareMCPClient calling
+    # _fire_filler_if_needed on every execute_tool().)
+    async for _ in orch.run_turn("first turn"):
+        orch._fire_filler_if_needed("a")  # pylint: disable=protected-access
+        orch._fire_filler_if_needed("b")  # pylint: disable=protected-access
+        orch._fire_filler_if_needed("a")  # pylint: disable=protected-access
 
-    assert callback_invocations == ["get_document"]
-    assert chunks == ["Das Projekt heißt Phase-05."]
+    assert received == ["a"], "only the FIRST tool of the turn fires the filler"
+
+    # Second turn: gate must reset so the first tool can fire again.
+    async for _ in orch.run_turn("second turn"):
+        orch._fire_filler_if_needed("b")  # pylint: disable=protected-access
+
+    assert received == ["a", "b"]
 
     await orch.aclose()
 
 
 @pytest.mark.asyncio
-async def test_run_turn_fires_filler_by_timer_when_no_recognisable_tool_event():
-    """Production regression (2026-04-23): Mistral SDK dispatched an MCP
-    tool call (Frappe API was hit) but emitted only events whose .data
-    was neither FunctionCallEvent nor ToolExecutionStartedEvent — the
-    filler never fired. The orchestrator must have a time-based safety
-    net: if no text chunk arrives within `filler_delay_s`, speak the
-    filler regardless of event typing."""
+async def test_fire_filler_is_noop_when_no_callback_registered():
+    """If no filler callback is registered (e.g. direct orchestrator
+    use in a test), _fire_filler_if_needed must silently no-op — not
+    raise. Otherwise a single forgotten set_tool_started_callback()
+    would crash every tool dispatch in production."""
     from src.mistral_orchestrator import MistralOrchestrator
-
-    fake_mcp = FakeMCPClient(tool_names=["get_document"])
-    # Simulate a slow stream with ONLY an unrelated event (neither a
-    # text chunk nor a recognised tool event) before the reply shows
-    # up much later. With the old event-matching logic this yielded no
-    # filler at all.
-    class _SlowStream:
-        def __aiter__(self):
-            return self._aiter()
-
-        async def _aiter(self):
-            # Unrelated event that slips past all isinstance() checks.
-            yield type("Unknown", (), {"data": object(), "event": "some.opaque.event"})()
-            # Long pause — longer than the filler_delay_s the test sets.
-            await asyncio.sleep(0.3)
-            yield _msg_event("Das Ergebnis.")
-
-    class _SlowClient:
-        def __init__(self):
-            self.calls: list = []
-            self.beta = MagicMock()
-            self.beta.conversations = MagicMock()
-            self.beta.conversations.run_stream_async = self._run_stream_async
-
-        async def _run_stream_async(self, **kwargs):
-            self.calls.append(kwargs)
-            return _SlowStream()
-
-    slow_client = _SlowClient()
-    callback_invocations: list[tuple[str, ...]] = []
-
-    def _callback(tool_name: str) -> None:
-        callback_invocations.append((tool_name,))
 
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="",
-        correlation_id="c-timer-filler",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=lambda api_key: slow_client,
-        filler_delay_s=0.1,  # short for test speed
+        correlation_id="c-no-cb",
+        mcp_client_factory=lambda **_: FakeMCPClient(tool_names=["x"]),
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
-    orch.set_tool_started_callback(_callback)
     await orch.initialize()
 
-    chunks = [c async for c in orch.run_turn("was gibt's?")]
-
-    # Timer-based filler fired with the sentinel tool_name "delayed",
-    # and exactly once (we don't care what slips past afterwards — the
-    # `filler_state["fired"]=True` gate is idempotent).
-    assert callback_invocations == [("delayed",)]
-    assert chunks == ["Das Ergebnis."]
+    # No set_tool_started_callback() call — must not raise.
+    orch._fire_filler_if_needed("x")  # pylint: disable=protected-access
 
     await orch.aclose()
 
 
 @pytest.mark.asyncio
-async def test_run_turn_does_not_fire_timer_filler_when_text_arrives_quickly():
-    """If Mistral streams text within `filler_delay_s`, the timer must
-    be cancelled so the user does not hear a superfluous filler."""
+async def test_fire_filler_swallows_callback_exception(caplog):
+    """Filler is best-effort — a crashing callback must not break the
+    tool dispatch (which would abort the whole turn). Exception gets
+    logged at ERROR for diagnosis, filler gate still flips so the bad
+    callback isn't called twice per turn."""
+    import logging
     from src.mistral_orchestrator import MistralOrchestrator
-
-    fake_mcp = FakeMCPClient(tool_names=["ping"])
-    fake_mistral = FakeMistralClient(events=[_msg_event("Hallo sofort.")])
-
-    callback_invocations: list[str] = []
-
-    def _callback(tool_name: str) -> None:
-        callback_invocations.append(tool_name)
-
-    orch = MistralOrchestrator(
-        api_key="k", agent_id="ag", model=None,
-        allowed_tools=None, instructions="",
-        correlation_id="c-no-filler",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=_mistral_factory_builder(fake_mistral),
-        filler_delay_s=1.0,  # generous, should never elapse
-    )
-    orch.set_tool_started_callback(_callback)
-    await orch.initialize()
-
-    chunks = [c async for c in orch.run_turn("hi")]
-
-    assert chunks == ["Hallo sofort."]
-    assert callback_invocations == []  # no filler because text was quick
-
-    await orch.aclose()
-
-
-@pytest.mark.asyncio
-async def test_run_turn_event_based_filler_wins_over_timer():
-    """When a recognised tool event DOES arrive before the timer
-    elapses, the filler fires via the event path (with the real tool
-    name) and the timer path becomes a no-op."""
-    from src.mistral_orchestrator import MistralOrchestrator
-
-    fake_mcp = FakeMCPClient(tool_names=["get_document"])
-    fake_mistral = FakeMistralClient(events=[
-        _function_call_event("get_document"),
-        _msg_event("Fertig."),
-    ])
-
-    callback_invocations: list[str] = []
-
-    def _callback(tool_name: str) -> None:
-        callback_invocations.append(tool_name)
-
-    orch = MistralOrchestrator(
-        api_key="k", agent_id="ag", model=None,
-        allowed_tools=None, instructions="",
-        correlation_id="c-event-wins",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=_mistral_factory_builder(fake_mistral),
-        filler_delay_s=1.0,  # longer than the synchronous event path
-    )
-    orch.set_tool_started_callback(_callback)
-    await orch.initialize()
-
-    chunks = [c async for c in orch.run_turn("frag")]
-
-    # Event-based trigger won: tool_name is the real one, not "delayed".
-    assert callback_invocations == ["get_document"]
-    assert chunks == ["Fertig."]
-
-    await orch.aclose()
-
-
-@pytest.mark.asyncio
-async def test_run_turn_callback_exception_does_not_break_turn():
-    """If the wired callback raises, the turn must still complete
-    successfully — filler is best-effort, never essential."""
-    from src.mistral_orchestrator import MistralOrchestrator
-
-    fake_mcp = FakeMCPClient(tool_names=["ping"])
-    fake_mistral = FakeMistralClient(events=[
-        _tool_started_event("ping"),
-        _msg_event("Trotzdem geantwortet."),
-    ])
-
-    def _broken_callback(_tool_name: str) -> None:
-        raise RuntimeError("callback exploded on purpose")
 
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="",
         correlation_id="c-broken-cb",
-        mcp_client_factory=lambda: fake_mcp,
-        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+        mcp_client_factory=lambda **_: FakeMCPClient(tool_names=["x"]),
+        mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
-    orch.set_tool_started_callback(_broken_callback)
+
+    def _broken(_name):
+        raise RuntimeError("callback exploded on purpose")
+
+    orch.set_tool_started_callback(_broken)
     await orch.initialize()
 
-    chunks = [c async for c in orch.run_turn("input")]
-    assert chunks == ["Trotzdem geantwortet."]
+    with caplog.at_level(logging.ERROR, logger="src.mistral_orchestrator"):
+        # Must not raise.
+        orch._fire_filler_if_needed("x")  # pylint: disable=protected-access
+
+    assert any(
+        rec.message == "mistral_tool_started_callback_failed"
+        for rec in caplog.records
+    )
+    # Gate still flipped so the bad callback isn't retried this turn.
+    assert orch._filler_fired_this_turn is True  # pylint: disable=protected-access
 
     await orch.aclose()
 
@@ -785,7 +646,7 @@ async def test_run_turn_after_aclose_raises():
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -807,7 +668,7 @@ async def test_aclose_closes_mcp_client_via_run_context():
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -839,7 +700,7 @@ async def test_aclose_swallows_anyio_cross_task_runtime_error(caplog):
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="",
         correlation_id="corr-cross-task",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -880,7 +741,7 @@ async def test_aclose_swallows_anyio_cross_task_error_wrapped_in_exception_group
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="",
         correlation_id="corr-cross-task-group",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -918,7 +779,7 @@ async def test_aclose_reraises_unrelated_runtime_error():
         api_key="test-key", agent_id="ag_1", model=None,
         allowed_tools=None, instructions="",
         correlation_id="corr-unrelated-err",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -940,7 +801,7 @@ async def test_aclose_is_idempotent():
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: fake_mcp,
+        mcp_client_factory=lambda **_:fake_mcp,
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()
@@ -956,7 +817,7 @@ async def test_initialize_after_aclose_raises():
     orch = MistralOrchestrator(
         api_key="k", agent_id="ag", model=None,
         allowed_tools=None, instructions="", correlation_id="c",
-        mcp_client_factory=lambda: FakeMCPClient([]),
+        mcp_client_factory=lambda **_:FakeMCPClient([]),
         mistral_client_factory=_mistral_factory_builder(FakeMistralClient([])),
     )
     await orch.initialize()

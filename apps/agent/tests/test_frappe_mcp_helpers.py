@@ -103,6 +103,8 @@ def test_build_frappe_mistral_mcp_client_returns_stdio_client(frappe_env):
 
     client = build_frappe_mistral_mcp_client()
 
+    # FillerAwareMCPClient is a subclass of MCPClientSTDIO; the isinstance
+    # check keeps Mistral's RunContext.register_mcp_client() happy.
     assert isinstance(client, MCPClientSTDIO)
     # Mistral's client stores its transport config as `_stdio_params`.
     stdio_params = client._stdio_params  # pylint: disable=protected-access
@@ -114,6 +116,97 @@ def test_build_frappe_mistral_mcp_client_returns_stdio_client(frappe_env):
         "FRAPPE_API_KEY": "agent-key",
         "FRAPPE_API_SECRET": "agent-secret",
     }
+
+
+# ---------------------------------------------------------------------------
+# FillerAwareMCPClient — filler hook fires before MCP tool dispatch
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_filler_aware_client_calls_callback_before_super_execute_tool(frappe_env):
+    """The wrap must invoke the callback BEFORE the real MCP round-trip
+    starts, so the filler speech kicks in while the tool is still
+    pending — that's the whole point of bridging Mistral-SDK-owned
+    tool calls into LiveKit's session.say() path."""
+    from unittest.mock import AsyncMock, patch
+    from src.frappe_mcp import build_frappe_mistral_mcp_client
+
+    order: list[str] = []
+
+    def _callback(name: str) -> None:
+        order.append(f"filler:{name}")
+
+    client = build_frappe_mistral_mcp_client(on_tool_execute=_callback)
+
+    # Patch the parent MCPClientSTDIO.execute_tool so we never actually
+    # talk to an MCP server; record that it was called *after* the filler.
+    async def _fake_super_execute_tool(self, name, arguments):
+        order.append(f"super:{name}")
+        return [{"type": "text", "text": "ok"}]
+
+    with patch(
+        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
+        new=_fake_super_execute_tool,
+    ):
+        result = await client.execute_tool("get_document", {"name": "PROJ-0013"})
+
+    assert result == [{"type": "text", "text": "ok"}]
+    assert order == ["filler:get_document", "super:get_document"]
+
+
+@pytest.mark.asyncio
+async def test_filler_aware_client_proceeds_when_callback_raises(frappe_env, caplog):
+    """Filler is best-effort. A raising callback must NOT block the
+    tool dispatch — otherwise a trivial filler bug would break every
+    MCP call in production. The wrap logs the callback error and
+    still hands off to super().execute_tool()."""
+    import logging
+    from unittest.mock import patch
+    from src.frappe_mcp import build_frappe_mistral_mcp_client
+
+    def _broken(_name: str) -> None:
+        raise RuntimeError("callback exploded on purpose")
+
+    client = build_frappe_mistral_mcp_client(on_tool_execute=_broken)
+
+    async def _fake_super_execute_tool(self, name, arguments):
+        return [{"type": "text", "text": "still-dispatched"}]
+
+    with patch(
+        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
+        new=_fake_super_execute_tool,
+    ):
+        with caplog.at_level(logging.ERROR, logger="src.frappe_mcp"):
+            result = await client.execute_tool("ping", {})
+
+    assert result == [{"type": "text", "text": "still-dispatched"}]
+    assert any(
+        rec.message == "filler_aware_mcp_callback_failed"
+        for rec in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_filler_aware_client_no_callback_is_transparent(frappe_env):
+    """Default case (`on_tool_execute=None`) must behave exactly like
+    a plain MCPClientSTDIO: no filler fired, tool still dispatched
+    normally. Guards against accidental breakage of the type_b path
+    when the filler hook is deliberately disabled."""
+    from unittest.mock import patch
+    from src.frappe_mcp import build_frappe_mistral_mcp_client
+
+    client = build_frappe_mistral_mcp_client()  # no callback
+
+    async def _fake_super_execute_tool(self, name, arguments):
+        return [{"type": "text", "text": "direct"}]
+
+    with patch(
+        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
+        new=_fake_super_execute_tool,
+    ):
+        result = await client.execute_tool("ping", {})
+
+    assert result == [{"type": "text", "text": "direct"}]
 
 
 def test_build_frappe_mistral_mcp_client_propagates_env_error(monkeypatch):
