@@ -92,6 +92,85 @@ class Assistant(Agent):
             raise
 
 
+def _resolve_effective_agent_name(mode: str) -> str:
+    """Mirror the entrypoint's effective_agent_name logic so the prewarm
+    phase can build the exact same greeting text that the session will
+    later request. If the two diverge, cache lookup will miss."""
+    return "voice-eu" if mode == "type_b" else os.getenv("AGENT_NAME", "AI")
+
+
+def _build_greeting_text(mode: str) -> str:
+    """Resolve INITIAL_GREETING with the same placeholder substitutions
+    the entrypoint applies. Used at prewarm time to pre-synthesize, and
+    at session start time to look up the cache."""
+    agent_name = _resolve_effective_agent_name(mode)
+    company = os.getenv("COMPANY_NAME", "Company")
+    default_greeting = "Hello, I am {AGENT_NAME}. How can I help you today?"
+    return (
+        os.getenv("INITIAL_GREETING", default_greeting)
+        .replace("{AGENT_NAME}", agent_name)
+        .replace("{COMPANY_NAME}", company)
+    )
+
+
+async def _collect_greeting_frames_async(tts, text: str) -> list:
+    """Drive the TTS synthesize() stream to completion and return the
+    collected AudioFrame list. The StreamAdapter-wrapped Voxtral TTS
+    yields SynthesizedAudio items, each with a .frame attribute."""
+    frames: list = []
+    async with tts.synthesize(text) as stream:
+        async for synthesized_audio in stream:
+            frame = getattr(synthesized_audio, "frame", None)
+            if frame is not None:
+                frames.append(frame)
+    return frames
+
+
+def _prewarm_greeting_audio(proc: JobProcess, mode: str) -> None:
+    """Pre-synthesize the greeting once per worker and cache the audio
+    frames in proc.userdata. Best-effort: any exception during this
+    step is logged and swallowed — start_agent_session falls back to
+    live synthesis, so a failed prewarm is not fatal for the worker.
+
+    Prewarm is defined as a *sync* callable by LiveKit Agents; we use
+    asyncio.run() to drive the async TTS synthesize() generator from
+    this sync context. No running loop exists at prewarm time, so
+    asyncio.run() is safe here and fails loudly if misused elsewhere.
+    """
+    try:
+        text = _build_greeting_text(mode)
+        pipeline = build_voice_pipeline(mode)
+        tts = pipeline.get("tts")
+        if tts is None:
+            # type_a uses OpenAI Realtime which doesn't expose a TTS
+            # instance — there's nothing to pre-synthesize on that path.
+            logger.info(
+                "greeting_prewarm_skipped_no_tts", extra={"mode": mode}
+            )
+            return
+        frames = asyncio.run(_collect_greeting_frames_async(tts, text))
+        if not frames:
+            logger.warning(
+                "greeting_prewarm_empty_frames",
+                extra={"mode": mode, "text_length": len(text)},
+            )
+            return
+        proc.userdata["greeting_audio"] = frames
+        proc.userdata["greeting_audio_key"] = text
+        logger.info(
+            "greeting_prewarm_cached",
+            extra={
+                "mode": mode,
+                "frame_count": len(frames),
+                "text_length": len(text),
+            },
+        )
+    except Exception:
+        # Never fail the worker over greeting caching — live fallback
+        # exists in start_agent_session.
+        logger.exception("greeting_prewarm_skipped")
+
+
 def prewarm_fnc(proc: JobProcess) -> None:
     # Silero VAD settings — tuned for production voice agents.
     # sample_rate=16000 is the LiveKit Silero default and matches the
@@ -118,6 +197,20 @@ def prewarm_fnc(proc: JobProcess) -> None:
         activation_threshold=0.5,
         sample_rate=16000,
     )
+
+    # Phase 1 / Commit 1: pre-synthesize the greeting once so
+    # session.say can play it from cache instead of triggering a live
+    # Voxtral-TTS roundtrip on every call. See session.say(audio=...)
+    # docs at https://docs.livekit.io/agents/multimodality/audio/.
+    try:
+        mode = resolve_agent_mode()
+        validate_mode_env(mode)
+        _prewarm_greeting_audio(proc, mode)
+    except Exception:
+        # ENV validation / mode resolution failures here are logged but
+        # non-fatal: the entrypoint will re-raise them with full context
+        # when it runs.
+        logger.exception("greeting_prewarm_outer_failure")
 
 
 def resolve_num_idle_processes() -> int:
@@ -445,19 +538,43 @@ async def entrypoint(ctx: JobContext):
             )
             greeting_call_started = time.perf_counter()
 
-            # Humanisierung Tier 1: Begrüßung entblocken.
-            # Vorher: `await session.say("Hallo, wie kann ich helfen?")`
-            # ignorierte den aufgelösten `greeting`-String komplett und
-            # blockierte `start_agent_session` bis das Audio fertig war
-            # (300-800 ms Voxtral-HTTP-Roundtrip). Jetzt: den echten
-            # Greeting-Text als Hintergrundtask auslösen — das erste
-            # Audio-Chunk kommt unverändert schnell (TTFA wird weiter
-            # über `agent_started_speaking` gemessen), aber der Caller
-            # kann sofort zurückkehren.
+            # Phase 1 / Commit 1: play greeting from cache if the
+            # prewarm step synthesized it. Cache key is the fully
+            # resolved greeting text, so any change to INITIAL_GREETING
+            # or AGENT_NAME between prewarm and now correctly misses and
+            # falls back to live synthesis. See
+            # https://docs.livekit.io/agents/multimodality/audio/.
+            cached_frames = ctx.proc.userdata.get("greeting_audio")
+            cached_key = ctx.proc.userdata.get("greeting_audio_key")
+            greeting_from_cache = bool(cached_frames) and cached_key == greeting
+
             async def _speak_greeting():
                 t_say_start = time.perf_counter()
                 try:
-                    await session.say(greeting)
+                    if greeting_from_cache:
+                        logger.info(
+                            "Greeting from cache",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "frame_count": len(cached_frames),
+                            },
+                        )
+
+                        async def _frames_iter():
+                            for frame in cached_frames:
+                                yield frame
+
+                        await session.say(text=greeting, audio=_frames_iter())
+                    else:
+                        logger.info(
+                            "greeting_live_fallback",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "cache_present": cached_frames is not None,
+                                "key_match": cached_key == greeting,
+                            },
+                        )
+                        await session.say(greeting)
                 except Exception:
                     logger.exception(
                         "greeting_say_failed",
@@ -470,6 +587,7 @@ async def entrypoint(ctx: JobContext):
                     "greeting session.say returned",
                     extra={
                         "correlation_id": correlation_id,
+                        "from_cache": greeting_from_cache,
                         "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2) if t_tts_first_audio_ms is not None else None,
                         "t_tts_first_chunk_ms": round(t_tts_first_chunk_ms, 2) if t_tts_first_chunk_ms is not None else None,
                         "t_tts_generate_ms": round(t_tts_generate_ms, 2),
