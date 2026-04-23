@@ -173,6 +173,25 @@ def _get_filler_aware_mcp_client_class() -> type:
             self._on_tool_execute = on_tool_execute
 
         async def execute_tool(self, name: str, arguments: dict) -> Any:
+            # Phase-1 filler hotfix: diagnostic log so production makes
+            # it observable whether this hook is ever reached at all.
+            # Research on 2026-04-23 confirmed this IS the correct
+            # Mistral-SDK dispatch point (`tools.py:230` → `run_tool.
+            # mcp_client.execute_tool(...)`), and a live in-process
+            # test proved the override fires. But production logs show
+            # no `mistral_filler_fired` trace despite real tool calls.
+            # So we need runtime evidence: does this log show up in
+            # prod? If yes → the hook fires but `_on_tool_execute` is
+            # None at runtime (init-ordering bug). If no → the SDK has
+            # a path that bypasses our override and we need a deeper
+            # fix (re-hook).
+            logger.info(
+                "filler hook reached",
+                extra={
+                    "tool_name": name,
+                    "has_callback": self._on_tool_execute is not None,
+                },
+            )
             # Fire the filler FIRST so the user hears bridging speech
             # while the MCP round-trip (subprocess + Frappe HTTP) runs.
             # Callback must be sync & cheap — LiveKit's session.say()
@@ -185,6 +204,13 @@ def _get_filler_aware_mcp_client_class() -> type:
                         "filler_aware_mcp_callback_failed",
                         extra={"tool_name": name},
                     )
+            else:
+                # Silent no-op here used to mask the root cause in prod.
+                # Log at WARNING so it's grep-findable.
+                logger.warning(
+                    "filler_hook_reached_but_no_callback",
+                    extra={"tool_name": name},
+                )
             return await super().execute_tool(name, arguments)
 
     _filler_aware_class_cache = _FillerAwareMCPClient
