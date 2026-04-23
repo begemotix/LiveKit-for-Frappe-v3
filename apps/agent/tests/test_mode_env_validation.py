@@ -64,8 +64,10 @@ def test_type_b_ref_audio_wins_over_voice_id_in_pipeline(
     from src.model_factory import build_voice_pipeline
 
     pipeline = build_voice_pipeline("type_b")
+    # model_factory now wraps Voxtral TTS in a StreamAdapter (for sentence
+    # pacing); the Voxtral-specific _opts live on the inner wrapped_tts.
     tts = pipeline["tts"]
-    tts_opts = tts._opts  # pylint: disable=protected-access
+    tts_opts = tts._wrapped_tts._opts  # pylint: disable=protected-access
 
     assert tts_opts.ref_audio is not None
     assert tts_opts.voice is None

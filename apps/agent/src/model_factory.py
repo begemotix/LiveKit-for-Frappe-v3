@@ -6,6 +6,8 @@ import os
 import time
 from typing import Any
 
+from livekit.agents import tts as lk_tts
+
 from src.mode_config import resolve_voice_config, validate_mode_env
 
 logger = logging.getLogger("agent")
@@ -70,6 +72,18 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
         tts_kwargs["response_format"] = "pcm"
         stt_model = os.getenv("VOXTRAL_STT_MODEL", "")
         tts_model = os.getenv("VOXTRAL_TTS_MODEL", "")
+
+        # Voxtral TTS has `capabilities.streaming=False` (it's a per-request
+        # HTTP call). LiveKit's default tts_node wraps non-streaming TTS in
+        # a StreamAdapter that synthesises one sentence at a time — so every
+        # sentence boundary costs a full HTTP round-trip to Mistral. In
+        # production that was audible as stuttering / long pauses mid-reply.
+        # We wrap it explicitly with text_pacing=True so the built-in
+        # SentenceStreamPacer batches sentences (up to ~300 chars) before
+        # each TTS call, which smooths the audio and reduces API calls.
+        voxtral_tts = mistralai.TTS(model=tts_model, **tts_kwargs)
+        paced_tts = lk_tts.StreamAdapter(tts=voxtral_tts, text_pacing=True)
+
         t_pipeline_build_ms = (time.perf_counter() - pipeline_build_started) * 1000
 
         # Phase-05 D-17: the real LLM is the external MistralOrchestrator
@@ -80,7 +94,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
             "provider": "mistral_voxtral",
             "llm": NullLLM(),
             "stt": mistralai.STT(model=stt_model, **stt_kwargs),
-            "tts": mistralai.TTS(model=tts_model, **tts_kwargs),
+            "tts": paced_tts,
             "metrics": {
                 "t_pipeline_build_ms": t_pipeline_build_ms,
                 "t_ref_audio_read_ms": t_ref_audio_read_ms,
@@ -90,6 +104,9 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
                 "tts_model": tts_model,
                 "response_format": tts_kwargs["response_format"],
                 "voice_mode": tts_voice_mode,
+                "stt_model": stt_model,
+                "stt_streaming": "realtime" in stt_model,
+                "tts_pacer_enabled": True,
             },
         }
 
