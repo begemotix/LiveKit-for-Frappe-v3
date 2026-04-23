@@ -14,6 +14,7 @@ from src.mistral_agent import MistralDrivenAgent
 from src.mistral_orchestrator import MistralOrchestrator
 from src.mode_config import resolve_agent_mode, resolve_mistral_config, validate_mode_env
 from src.model_factory import build_voice_pipeline
+from src.tts_text_transforms import NumberTransform, PronunciationTransform
 
 # Load environment variables
 load_dotenv()
@@ -358,6 +359,19 @@ async def entrypoint(ctx: JobContext):
 
     allowed_tools = get_allowed_tools_for_mode(mode)
 
+    # Phase 1 / Commit 2: LLM output is normalised through these
+    # transforms before it reaches the TTS plugin. NumberTransform
+    # rewrites HH:MM times so Voxtral doesn't pronounce the colon;
+    # PronunciationTransform fixes proper-name pronunciation that
+    # Voxtral reliably gets wrong ("Frappe" as English).
+    # Both are lightweight callable instances — constructed once per
+    # session, shared internally across all TTS chunks. The list order
+    # matters: numbers first, then pronunciation fix-ups.
+    tts_transforms = [
+        NumberTransform(),
+        PronunciationTransform({"Frappe": "Frapp"}),
+    ]
+
     # Mode-specific session wiring. type_a keeps the original LiveKit
     # MCPToolset path; type_b hands the entire tool loop to the Mistral
     # SDK via MistralOrchestrator and feeds plain text into LiveKit TTS
@@ -401,6 +415,7 @@ async def entrypoint(ctx: JobContext):
             ),
             vad=vad,
             tools=[frappe_toolset],
+            tts_text_transforms=tts_transforms,
         )
     else:
         # type_b — external Mistral orchestrator owns the LLM+MCP turn loop.
@@ -440,6 +455,7 @@ async def entrypoint(ctx: JobContext):
             # LiveKit-side tools must stay empty here — MistralDrivenAgent
             # .llm_node asserts this at turn time as a regression guard.
             tools=[],
+            tts_text_transforms=tts_transforms,
         )
     
     # Phase 5a: Metrik-Instrumentierung
