@@ -184,16 +184,16 @@ def prewarm_fnc(proc: JobProcess) -> None:
     # force_cpu is left unset so LiveKit picks GPU if available and
     # falls back to CPU otherwise; forcing CPU was a preliminary
     # safety that doesn't match what LiveKit's own quick-start ships.
-    # Humanisierung Tier 1: min_silence_duration von 0.3 → 0.2 s.
-    # 0.3 s war konservativ genug für laute Umgebungen, kostet aber in
-    # ruhigen Büro-/Headset-Szenarien ~100 ms zusätzliche Wartezeit nach
-    # jedem User-Turn. Silero bei 16 kHz ist präzise genug, dass 0.2 s
-    # keine messbaren False-Positives verursachen (siehe LiveKit Turn-
-    # Detector Doku). Bei Beschwerden über abgeschnittene User-Sätze
-    # wieder auf 0.3 s erhöhen.
+    # Phase 1 / Commit 3: min_silence_duration auf 0.25 s justiert.
+    # Vorher war 0.2 s (Humanisierung Tier 1) an der Untergrenze für
+    # Silero — im realen Frontend-Test schnitt es vereinzelt User-
+    # Satzenden ab. 0.25 s ist der Kompromiss: kürzer als der LiveKit-
+    # Default (0.3 s), aber sicherer Puffer gegen halbe Sekundenpausen
+    # mitten im Satz. Bei weiteren Abschnitten wieder in Richtung 0.3
+    # erhöhen.
     proc.userdata["vad"] = silero.VAD.load(
         min_speech_duration=0.25,
-        min_silence_duration=0.2,
+        min_silence_duration=0.25,
         prefix_padding_duration=0.25,
         activation_threshold=0.5,
         sample_rate=16000,
@@ -404,7 +404,15 @@ async def entrypoint(ctx: JobContext):
                     # greifen. resume_false_interruption fängt den Rest.
                     "min_duration": 0.6,
                     "resume_false_interruption": True,
-                    "false_interruption_timeout": 2.0,
+                    # Phase 1 / Commit 3: false_interruption_timeout
+                    # 2.0 → 1.0 s. Der Agent nimmt nach einer
+                    # fälschlich erkannten Unterbrechung die Rede
+                    # schneller wieder auf, was den Gesprächsfluss
+                    # beschleunigt. 1.0 s ist immer noch lang genug,
+                    # damit ein echtes Barge-in nicht überschrieben
+                    # wird; darunter würden echte Unterbrechungen
+                    # unterdrückt.
+                    "false_interruption_timeout": 1.0,
                 },
                 preemptive_generation={
                     "enabled": False,
@@ -444,7 +452,15 @@ async def entrypoint(ctx: JobContext):
                     # greifen. resume_false_interruption fängt den Rest.
                     "min_duration": 0.6,
                     "resume_false_interruption": True,
-                    "false_interruption_timeout": 2.0,
+                    # Phase 1 / Commit 3: false_interruption_timeout
+                    # 2.0 → 1.0 s. Der Agent nimmt nach einer
+                    # fälschlich erkannten Unterbrechung die Rede
+                    # schneller wieder auf, was den Gesprächsfluss
+                    # beschleunigt. 1.0 s ist immer noch lang genug,
+                    # damit ein echtes Barge-in nicht überschrieben
+                    # wird; darunter würden echte Unterbrechungen
+                    # unterdrückt.
+                    "false_interruption_timeout": 1.0,
                 },
                 # preemptive_generation intentionally left at the LiveKit
                 # default (disabled): the TTS stream comes from the external
