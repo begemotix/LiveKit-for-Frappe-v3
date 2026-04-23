@@ -33,16 +33,16 @@ def test_build_voice_pipeline_type_b_returns_null_llm(
     monkeypatch.setenv("AGENT_VOICE_REF_AUDIO", str(ref_audio_file))
     monkeypatch.delenv("AGENT_VOICE_ID", raising=False)
 
-    from src.mistral_agent import NullLLM
     from src.model_factory import build_voice_pipeline
 
     pipeline = build_voice_pipeline("type_b")
 
     assert pipeline["provider"] == "mistral_voxtral"
-    # The contract-critical change: llm is our compat-stub, not a real
-    # mistralai.LLM — the real brain is the external MistralOrchestrator.
-    assert isinstance(pipeline["llm"], NullLLM)
-    assert isinstance(pipeline["llm"], lk_llm.LLM)  # opens the 1.5.5 gate
+    # Phase-2 change: pipeline no longer owns the LLM for type_b. The
+    # LLM is constructed in agent.py (MistralAgentLLM with agent_id) and
+    # passed directly to AgentSession. The factory returns only
+    # STT + TTS + observability.
+    assert pipeline["llm"] is None
 
     # STT/TTS are still real livekit-mistralai plugins.
     assert pipeline["stt"] is not None

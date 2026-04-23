@@ -110,17 +110,97 @@ def _log_stdio_wiring(params: dict[str, Any], client_flavor: str) -> None:
     )
 
 
-def build_frappe_mcp_server() -> "mcp.MCPServerStdio":
-    """Type-A: build a LiveKit `MCPServerStdio` consumed by `MCPToolset`."""
+def build_frappe_mcp_server(
+    allowed_tools: list[str] | None = None,
+) -> "mcp.MCPServerStdio":
+    """Build a LiveKit ``MCPServerStdio`` for the Frappe MCP subprocess.
+
+    Used by both modes after the Phase-2 standardisation:
+    - type_a passes it to ``AgentSession(tools=[MCPToolset(mcp_server=…)])``.
+    - type_b passes it to ``AgentSession(mcp_servers=[…])``.
+
+    When ``allowed_tools`` is provided, the returned server's
+    ``list_tools()`` is filtered to the allowlist — same semantics as
+    LiveKit's upstream ``MCPServerHTTP(allowed_tools=…)``, but for the
+    stdio transport which doesn't expose that kwarg natively.
+    """
     from livekit.agents import mcp
 
     params = frappe_mcp_stdio_params()
     _log_stdio_wiring(params, client_flavor="livekit_mcptoolset")
-    return mcp.MCPServerStdio(
+
+    if not allowed_tools:
+        return mcp.MCPServerStdio(
+            command=params["command"],
+            args=params["args"],
+            env=params["env"],
+        )
+
+    cls = _get_filtered_mcp_server_stdio_class()
+    return cls(
         command=params["command"],
         args=params["args"],
         env=params["env"],
+        allowed_tools=allowed_tools,
     )
+
+
+_filtered_mcp_server_stdio_cache: Optional[type] = None
+
+
+def _get_filtered_mcp_server_stdio_class() -> type:
+    """Lazily build a ``MCPServerStdio`` subclass with a tool-allowlist.
+
+    LiveKit's upstream ``MCPServerStdio`` has no native allowed_tools
+    parameter — only ``MCPServerHTTP`` does. This helper produces a
+    subclass that mirrors the HTTP transport's filter behaviour, so
+    type_b can run on the LiveKit-standard ``mcp_servers=[…]`` path and
+    still restrict the Frappe MCP surface to the read-only allowlist
+    documented in ``get_allowed_tools_for_mode``.
+
+    Lazy + cached to keep type_a imports cheap; the LiveKit mcp module
+    is only imported when the type_b filter path is actually used.
+    """
+    global _filtered_mcp_server_stdio_cache
+    if _filtered_mcp_server_stdio_cache is not None:
+        return _filtered_mcp_server_stdio_cache
+
+    from livekit.agents import mcp as _lkmcp
+    from livekit.agents.llm.tool_context import (
+        get_function_info,
+        get_raw_function_info,
+        is_function_tool,
+        is_raw_function_tool,
+    )
+
+    class _FilteredMCPServerStdio(_lkmcp.MCPServerStdio):
+        def __init__(
+            self,
+            *,
+            command: str,
+            args: list[str],
+            env: dict[str, str],
+            allowed_tools: list[str],
+        ) -> None:
+            super().__init__(command=command, args=args, env=env)
+            self._allowed_tools_set = set(allowed_tools)
+
+        async def list_tools(self):  # type: ignore[override]
+            all_tools = await super().list_tools()
+            filtered = []
+            for tool in all_tools:
+                if is_function_tool(tool):
+                    name = get_function_info(tool).name
+                elif is_raw_function_tool(tool):
+                    name = get_raw_function_info(tool).name
+                else:
+                    continue
+                if name in self._allowed_tools_set:
+                    filtered.append(tool)
+            return filtered
+
+    _filtered_mcp_server_stdio_cache = _FilteredMCPServerStdio
+    return _FilteredMCPServerStdio
 
 
 class FillerAwareMCPClient:

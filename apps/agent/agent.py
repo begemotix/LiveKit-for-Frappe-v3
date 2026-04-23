@@ -1,7 +1,9 @@
 import logging
 import os
 import asyncio
+import random
 import time
+from typing import AsyncIterable
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
 from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agent, AgentSession
@@ -10,11 +12,19 @@ from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
-from src.mistral_agent import MistralDrivenAgent
-from src.mistral_orchestrator import MistralOrchestrator
+from src.mistral_llm import MistralAgentLLM
 from src.mode_config import resolve_agent_mode, resolve_mistral_config, validate_mode_env
 from src.model_factory import build_voice_pipeline
 from src.tts_text_transforms import NumberTransform, PronunciationTransform
+
+# Default filler phrases for the type_b path. Randomly rotated so the
+# agent doesn't parrot the same sentence on every tool call.
+DEFAULT_FILLER_TEXTS: list[str] = [
+    "Einen Moment, ich schaue nach.",
+    "Ich prüfe das kurz.",
+    "Lassen Sie mich das nachsehen.",
+    "Moment bitte, ich recherchiere.",
+]
 
 # Load environment variables
 load_dotenv()
@@ -91,6 +101,103 @@ class Assistant(Agent):
             if user_message is not None:
                 return {"status": "error", "message": user_message}
             raise
+
+
+class VoxtralAgent(Agent):
+    """Type-B agent that runs on the LiveKit-standard ``AgentSession``
+    pipeline with a Mistral LLM (Console-agent or stateless) and an
+    MCP toolset mounted via ``mcp_servers=[…]``.
+
+    Filler wiring:
+    LiveKit 1.5.x emits no pre-dispatch ``function_call_start`` event.
+    The only reliable pre-dispatch observation point is the LLM's own
+    stream: as soon as a ``ChatChunk`` with a ``tool_calls`` delta
+    appears, we know a tool is about to be dispatched. We override
+    ``llm_node`` to delegate to the default pipeline AND eavesdrop on
+    the chunks flowing through — when a tool-call chunk arrives, we
+    fire one filler sentence via ``session.say`` (at most once per
+    turn). The chunk is then forwarded unchanged; we never interfere
+    with the LLM-to-tool-dispatch path.
+    """
+
+    def __init__(
+        self,
+        *,
+        instructions: str,
+        correlation_id: str,
+        filler_texts: list[str] | None = None,
+    ) -> None:
+        super().__init__(instructions=instructions)
+        self._correlation_id = correlation_id
+        self._filler_texts = list(filler_texts) if filler_texts else list(DEFAULT_FILLER_TEXTS)
+        self._filler_fired_this_turn = False
+
+    async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        # New user turn → reset the per-turn filler gate so the next
+        # tool call can speak a filler again.
+        self._filler_fired_this_turn = False
+
+    async def llm_node(
+        self,
+        chat_ctx: llm.ChatContext,
+        tools,
+        model_settings,
+    ):
+        # Delegate to LiveKit's default LLM pipeline but intercept the
+        # chunks flowing out so we can fire the filler on the first
+        # tool-call of the turn.
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            if not self._filler_fired_this_turn and _chunk_has_tool_call(chunk):
+                self._fire_filler()
+                self._filler_fired_this_turn = True
+            yield chunk
+
+    def _fire_filler(self) -> None:
+        try:
+            session = self.session
+        except Exception:
+            logger.warning(
+                "voxtral_agent_filler_skipped_no_session",
+                extra={"correlation_id": self._correlation_id},
+            )
+            return
+        phrase = random.choice(self._filler_texts)
+        try:
+            session.say(
+                phrase,
+                allow_interruptions=True,
+                add_to_chat_ctx=False,
+            )
+            logger.info(
+                "voxtral_agent_filler_spoken",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "filler_text_length": len(phrase),
+                    "filler_pool_size": len(self._filler_texts),
+                },
+            )
+        except Exception:
+            logger.exception(
+                "voxtral_agent_filler_failed",
+                extra={"correlation_id": self._correlation_id},
+            )
+
+
+def _chunk_has_tool_call(chunk) -> bool:
+    """Return True if the LLM ChatChunk carries a function/tool call.
+
+    LiveKit's ``ChatChunk`` exposes the incremental delta under
+    ``chunk.delta`` (``ChoiceDelta``) which has ``tool_calls`` when the
+    provider is emitting function-call arguments. The exact shape
+    varies across LLM plugins, so we stay defensive — any non-empty
+    tool_calls attribute is treated as a tool-call signal."""
+    delta = getattr(chunk, "delta", None)
+    if delta is None:
+        return False
+    tool_calls = getattr(delta, "tool_calls", None)
+    if tool_calls:
+        return True
+    return False
 
 
 def _resolve_effective_agent_name(mode: str) -> str:
@@ -372,12 +479,14 @@ async def entrypoint(ctx: JobContext):
         PronunciationTransform({"Frappe": "Frapp"}),
     ]
 
-    # Mode-specific session wiring. type_a keeps the original LiveKit
-    # MCPToolset path; type_b hands the entire tool loop to the Mistral
-    # SDK via MistralOrchestrator and feeds plain text into LiveKit TTS
-    # through MistralDrivenAgent.llm_node (Phase-05 D-16, D-17).
+    # Mode-specific session wiring.
+    # - type_a: OpenAI Realtime model + ``tools=[MCPToolset(…)]`` (unchanged).
+    # - type_b (Phase-2): LiveKit-standard pipeline with mistralai.LLM
+    #   subclass (``MistralAgentLLM``) + ``mcp_servers=[…]``. No custom
+    #   orchestrator, no ``llm_node`` bypass — the filler hangs on the
+    #   LLM chat stream via ``VoxtralAgent.llm_node``.
     frappe_toolset: llm.Toolset | None = None
-    orchestrator: MistralOrchestrator | None = None
+    type_b_frappe_server = None
 
     if mode == "type_a":
         frappe_server = build_frappe_mcp_server()
@@ -426,51 +535,36 @@ async def entrypoint(ctx: JobContext):
             tts_text_transforms=tts_transforms,
         )
     else:
-        # type_b — external Mistral orchestrator owns the LLM+MCP turn loop.
+        # type_b (Phase-2) — LiveKit-standard pipeline. Mistral LLM (with
+        # agent_id routing where configured), Voxtral STT/TTS, Frappe MCP
+        # mounted via mcp_servers, Function-Calling loop owned by LiveKit.
         mistral_cfg = resolve_mistral_config()
-        orchestrator = MistralOrchestrator(
+        type_b_llm = MistralAgentLLM(
             api_key=os.environ["MISTRAL_API_KEY"],
             agent_id=mistral_cfg["agent_id"],
             model=mistral_cfg["llm_model"],
+        )
+        # Frappe MCP subprocess, allowlist-filtered (read-only tools
+        # only for type_b — see ``get_allowed_tools_for_mode`` for the
+        # rationale).
+        type_b_frappe_server = build_frappe_mcp_server(
             allowed_tools=allowed_tools,
-            instructions=instructions,
-            correlation_id=correlation_id,
         )
         session = AgentSession(
-            llm=pipeline["llm"],  # NullLLM — opens the isinstance gate only
+            llm=type_b_llm,
             stt=pipeline.get("stt"),
             tts=pipeline.get("tts"),
             turn_handling=TurnHandlingOptions(
                 turn_detection="vad",
                 interruption={
                     "mode": "vad",
-                    # Humanisierung Tier 1: min_duration 1.2 → 0.6 s.
-                    # 1.2 s fühlte sich "taub" an — der Agent reagierte
-                    # erst auf Barge-in nach über einer Sekunde. 0.6 s ist
-                    # LiveKits Default, genug gegen Huster/Räuspern, aber
-                    # so reaktiv, dass echte Unterbrechungen sofort
-                    # greifen. resume_false_interruption fängt den Rest.
                     "min_duration": 0.6,
                     "resume_false_interruption": True,
-                    # Phase 1 / Commit 3: false_interruption_timeout
-                    # 2.0 → 1.0 s. Der Agent nimmt nach einer
-                    # fälschlich erkannten Unterbrechung die Rede
-                    # schneller wieder auf, was den Gesprächsfluss
-                    # beschleunigt. 1.0 s ist immer noch lang genug,
-                    # damit ein echtes Barge-in nicht überschrieben
-                    # wird; darunter würden echte Unterbrechungen
-                    # unterdrückt.
                     "false_interruption_timeout": 1.0,
                 },
-                # preemptive_generation intentionally left at the LiveKit
-                # default (disabled): the TTS stream comes from the external
-                # Mistral orchestrator, not from a LiveKit LLM provider.
             ),
             vad=vad,
-            # D-16: type_b routes every tool through the Mistral RunContext.
-            # LiveKit-side tools must stay empty here — MistralDrivenAgent
-            # .llm_node asserts this at turn time as a regression guard.
-            tools=[],
+            mcp_servers=[type_b_frappe_server],
             tts_text_transforms=tts_transforms,
         )
     
@@ -545,9 +639,9 @@ async def entrypoint(ctx: JobContext):
 
         try:
             if mode == "type_b":
-                assert orchestrator is not None  # constructed in the type_b branch above
-                agent = MistralDrivenAgent(
-                    orchestrator=orchestrator,
+                # Phase-2: standard Agent subclass — the filler hangs
+                # in llm_node, not on a Mistral-SDK hook.
+                agent = VoxtralAgent(
                     instructions=instructions,
                     correlation_id=correlation_id,
                 )

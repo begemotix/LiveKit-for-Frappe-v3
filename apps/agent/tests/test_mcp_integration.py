@@ -122,12 +122,16 @@ def test_build_frappe_mcp_server_missing_env_raises():
 
 
 def test_session_has_mcp_toolset():
+    """Phase-2: type_a continues using the tools=[MCPToolset(...)] path;
+    type_b now uses the LiveKit-standard mcp_servers=[...] path."""
     with open(_AGENT_PY, encoding="utf-8") as source_file:
         source = source_file.read()
 
+    # type_a still mounts Frappe via MCPToolset in the tools list.
     assert "MCPToolset" in source
     assert "tools=[frappe_toolset]" in source
-    assert "mcp_servers=" not in source
+    # type_b now uses the standard mcp_servers parameter.
+    assert "mcp_servers=[type_b_frappe_server]" in source
 
 
 def test_no_runtime_credential_switch():
