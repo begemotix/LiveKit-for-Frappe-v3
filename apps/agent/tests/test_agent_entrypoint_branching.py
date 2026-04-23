@@ -294,11 +294,17 @@ async def test_mistral_driven_agent_llm_node_d16_assertion():
 
 
 # ---------------------------------------------------------------------------
-# 4. cleanup_session_mcp (type_b) closes the orchestrator, not a toolset
+# 4. cleanup_session_mcp (type_b) must NOT close the orchestrator.
+#    RunContext.__aexit__ opens an anyio cancel scope inside the agent-
+#    activity task via stdio_client; closing it from the fresh
+#    asyncio.Task that participant_disconnected spawns raises
+#    RuntimeError("Attempted to exit cancel scope in a different task").
+#    MistralDrivenAgent.on_exit is LiveKit's official teardown hook and
+#    runs in the correct task — that's where aclose() belongs for type_b.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_cleanup_session_mcp_type_b_calls_orchestrator_aclose(monkeypatch):
+async def test_type_b_disconnect_does_not_trigger_orchestrator_aclose(monkeypatch):
     import agent as agent_module
 
     monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
@@ -317,10 +323,6 @@ async def test_cleanup_session_mcp_type_b_calls_orchestrator_aclose(monkeypatch)
         captured_orchestrators.append(orch)
         return orch
 
-    # This mock flags any accidental MCPToolset aclose so the test would
-    # fail loud if the refactor regressed back to the LiveKit-tool path.
-    livekit_toolset_aclose = MagicMock()
-
     with patch("agent.resolve_agent_mode", return_value="type_b"), \
          patch("agent.validate_mode_env"), \
          patch("agent.build_voice_pipeline", return_value=pipeline), \
@@ -331,15 +333,17 @@ async def test_cleanup_session_mcp_type_b_calls_orchestrator_aclose(monkeypatch)
         await agent_module.entrypoint(ctx)
         await asyncio.gather(*created_tasks)
 
-        # Trigger participant_disconnected — the cleanup path under test.
+        # Trigger participant_disconnected — cleanup_session_mcp runs but
+        # is now a no-op for type_b.
         disconnect_handler = ctx.room._handlers["participant_disconnected"]
         disconnect_handler(SimpleNamespace(identity="participant-1"))
-        await asyncio.gather(*asyncio.all_tasks() - {asyncio.current_task()})
+        pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        if pending:
+            await asyncio.gather(*pending)
 
     orch = captured_orchestrators[0]
-    # cleanup_session_mcp() must have routed to orchestrator.aclose().
-    assert orch.is_closed is True
-    # RunContext.__aexit__ fans aclose() out to every registered MCP client.
-    assert fake_mcp.aclose_calls == 1
-    # And we definitely did not close a ghost LiveKit toolset.
-    livekit_toolset_aclose.assert_not_called()
+    # orchestrator.aclose() must NOT have been called from the disconnect
+    # task. The MCP client's aclose() only fires when RunContext.__aexit__
+    # runs — which is owned by MistralDrivenAgent.on_exit in production.
+    assert orch.is_closed is False
+    assert fake_mcp.aclose_calls == 0

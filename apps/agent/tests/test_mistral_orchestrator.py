@@ -17,6 +17,7 @@ import pytest
 
 from mistralai.client.models import Function, FunctionTool
 from mistralai.client.models.messageoutputevent import MessageOutputEvent
+from mistralai.client.models.responseerrorevent import ResponseErrorEvent
 from mistralai.extra.run.result import RunResultEvents
 
 
@@ -99,6 +100,13 @@ def _msg_event(text: str) -> RunResultEvents:
     return RunResultEvents(
         event="message.output.delta",
         data=MessageOutputEvent(id="evt-1", content=text),
+    )
+
+
+def _error_event(message: str = "bad request", code: int = 400) -> RunResultEvents:
+    return RunResultEvents(
+        event="conversation.response.error",
+        data=ResponseErrorEvent(message=message, code=code),
     )
 
 
@@ -317,6 +325,83 @@ async def test_run_turn_ignores_non_message_events():
 
     out = [c async for c in orch.run_turn("input")]
     assert out == ["hello", " world"]
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_logs_response_error_event_and_yields_fallback(caplog):
+    """A ResponseErrorEvent in the stream must (a) log at ERROR with
+    message/code/correlation_id, (b) not be silently discarded, and
+    (c) still result in a user-audible fallback reply."""
+    import logging
+    from src.mistral_orchestrator import MistralOrchestrator, _FALLBACK_REPLY
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[
+        _error_event(message="invalid agent_id", code=404),
+    ])
+
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_wrong", model=None,
+        allowed_tools=None, instructions="", correlation_id="corr-err",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    await orch.initialize()
+
+    chunks: list[str] = []
+    with caplog.at_level(logging.ERROR, logger="src.mistral_orchestrator"):
+        async for c in orch.run_turn("hallo"):
+            chunks.append(c)
+
+    # Fallback-reply was spoken so the user never faces a mute agent.
+    assert chunks == [_FALLBACK_REPLY]
+
+    # Error was logged at ERROR with structured fields.
+    error_records = [
+        rec for rec in caplog.records
+        if rec.message == "mistral_stream_response_error"
+    ]
+    assert error_records, "Expected mistral_stream_response_error ERROR log"
+    rec = error_records[0]
+    assert rec.levelno == logging.ERROR
+    assert rec.correlation_id == "corr-err"
+    assert rec.agent_id == "ag_wrong"
+    assert rec.error_message == "invalid agent_id"
+    assert rec.error_code == 404
+
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_run_turn_yields_fallback_on_empty_stream(caplog):
+    """Stream that emits zero events at all (pure silence from Mistral)
+    must still yield the fallback so TTS has text to speak."""
+    import logging
+    from src.mistral_orchestrator import MistralOrchestrator, _FALLBACK_REPLY
+
+    fake_mcp = FakeMCPClient(tool_names=["ping"])
+    fake_mistral = FakeMistralClient(events=[])  # truly empty
+
+    orch = MistralOrchestrator(
+        api_key="test-key", agent_id="ag_1", model=None,
+        allowed_tools=None, instructions="", correlation_id="corr-empty",
+        mcp_client_factory=lambda: fake_mcp,
+        mistral_client_factory=_mistral_factory_builder(fake_mistral),
+    )
+    await orch.initialize()
+
+    chunks: list[str] = []
+    with caplog.at_level(logging.WARNING, logger="src.mistral_orchestrator"):
+        async for c in orch.run_turn("hallo"):
+            chunks.append(c)
+
+    assert chunks == [_FALLBACK_REPLY]
+    assert any(
+        rec.message == "mistral_run_turn_empty_stream_fallback"
+        for rec in caplog.records
+    )
 
     await orch.aclose()
 

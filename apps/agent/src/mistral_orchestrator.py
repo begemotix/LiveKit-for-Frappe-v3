@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_FALLBACK_REPLY = (
+    "Entschuldigung, ich habe gerade ein Problem mit meinem Hintergrundsystem."
+)
+
 
 class MistralOrchestrator:
     """Runs the type_b Mistral tool loop outside LiveKit's AgentSession.
@@ -122,12 +126,16 @@ class MistralOrchestrator:
         )
 
         registered = [t.function.name for t in self._run_ctx.get_tools()]
+        # api_key prefix is logged (first 4 chars only) to help diagnose
+        # key/agent_id workspace mismatches without leaking the secret.
+        api_key_prefix = self._api_key[:4] if self._api_key else ""
         logger.info(
             "mistral_orchestrator_initialized",
             extra={
                 "correlation_id": self._correlation_id,
                 "agent_id": self._agent_id,
                 "model": self._model,
+                "api_key_prefix": api_key_prefix,
                 "allowed_tools_count": len(self._allowed_tools or []),
                 "registered_tools": registered,
                 "registered_tools_count": len(registered),
@@ -161,6 +169,12 @@ class MistralOrchestrator:
         (system prompt) are sent per-turn only in stateless mode; in
         agent_id mode the Mistral Console agent's system prompt wins and
         we pass no override.
+
+        Robust to stream errors: ResponseErrorEvent is logged at ERROR
+        level and converted to a user-audible fallback reply. If the
+        stream ends without yielding any text (e.g. silent failure,
+        tool-only turn), the same fallback is emitted so the user never
+        faces a mute agent.
         """
         if not self._initialized:
             raise RuntimeError("run_turn() called before initialize()")
@@ -171,6 +185,7 @@ class MistralOrchestrator:
         # Late imports so tests that monkey-patch these symbols don't
         # have to reach into a module-level cache.
         from mistralai.client.models.messageoutputevent import MessageOutputEvent
+        from mistralai.client.models.responseerrorevent import ResponseErrorEvent
         from mistralai.extra.run.result import RunResult
 
         # Instructions: only override in stateless mode.
@@ -181,19 +196,82 @@ class MistralOrchestrator:
         if self._model is not None:
             stream_kwargs["instructions"] = self._instructions
 
+        logger.info(
+            "mistral_run_turn_started",
+            extra={
+                "correlation_id": self._correlation_id,
+                "user_text_length": len(user_text),
+            },
+        )
+
+        yielded_any_text = False
+        stream_errored = False
+        event_count = 0
+
         async for event in self._client.beta.conversations.run_stream_async(
             **stream_kwargs
         ):
+            event_count += 1
+
             # The last yielded object is a RunResult summary; we stop there.
             if isinstance(event, RunResult):
                 break
 
             data = getattr(event, "data", None)
-            if not isinstance(data, MessageOutputEvent):
+
+            if isinstance(data, ResponseErrorEvent):
+                stream_errored = True
+                logger.error(
+                    "mistral_stream_response_error",
+                    extra={
+                        "correlation_id": self._correlation_id,
+                        "agent_id": self._agent_id,
+                        "model": self._model,
+                        "error_message": getattr(data, "message", None),
+                        "error_code": getattr(data, "code", None),
+                    },
+                )
                 continue
 
-            for chunk in self._extract_text(data):
-                yield chunk
+            if isinstance(data, MessageOutputEvent):
+                for chunk in self._extract_text(data):
+                    yielded_any_text = True
+                    yield chunk
+                continue
+
+            # Non-text, non-error events (function.call.delta, tool.execution.*,
+            # conversation.response.started/done, agent.handoff.*, etc.) —
+            # informational only; log on DEBUG to aid diagnosis without noise.
+            logger.debug(
+                "mistral_stream_unhandled_event",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "event_type": type(data).__name__ if data is not None else "None",
+                    "event_envelope": type(event).__name__,
+                },
+            )
+
+        if not yielded_any_text:
+            logger.warning(
+                "mistral_run_turn_empty_stream_fallback",
+                extra={
+                    "correlation_id": self._correlation_id,
+                    "agent_id": self._agent_id,
+                    "event_count": event_count,
+                    "stream_errored": stream_errored,
+                },
+            )
+            yield _FALLBACK_REPLY
+            return
+
+        logger.info(
+            "mistral_run_turn_completed",
+            extra={
+                "correlation_id": self._correlation_id,
+                "event_count": event_count,
+                "stream_errored": stream_errored,
+            },
+        )
 
     @staticmethod
     def _extract_text(msg: "MessageOutputEvent") -> list[str]:

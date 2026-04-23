@@ -445,15 +445,19 @@ async def entrypoint(ctx: JobContext):
         if mcp_cleanup_done:
             return
         mcp_cleanup_done = True
-        # type_a closes the LiveKit MCPToolset; type_b closes the Mistral
-        # orchestrator (which in turn closes the MCP stdio client via
-        # RunContext.__aexit__). Both implementations are idempotent, so
-        # MistralDrivenAgent.on_exit can safely also call aclose() without
-        # fighting this disconnect-driven cleanup path.
+        # type_a: close the LiveKit MCPToolset from this disconnect-driven
+        # task. type_b: deliberately NOT closed here — the Mistral
+        # orchestrator owns an AsyncExitStack that was opened inside the
+        # agent-activity task (via MistralDrivenAgent.on_enter →
+        # orchestrator.initialize). Closing it from a fresh asyncio.Task
+        # spawned by participant_disconnected triggers AnyIO's
+        # cross-task cancel-scope guard and raises
+        # RuntimeError("Attempted to exit cancel scope in a different task").
+        # LiveKit's AgentActivity already invokes MistralDrivenAgent.on_exit
+        # in the correct task on session teardown, which calls
+        # orchestrator.aclose() cleanly.
         if frappe_toolset is not None:
             await frappe_toolset.aclose()
-        elif orchestrator is not None:
-            await orchestrator.aclose()
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(_participant):
