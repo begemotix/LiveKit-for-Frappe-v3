@@ -124,11 +124,11 @@ async def test_on_enter_returns_immediately_and_initializes_in_background():
 
 
 @pytest.mark.asyncio
-async def test_speak_filler_uses_session_say_with_default_text_and_interruptions_allowed():
+async def test_speak_filler_uses_session_say_with_pool_entry_and_interruptions_allowed():
     """When the orchestrator signals tool execution start, the agent
-    must call session.say() with the configured filler text and
+    must call session.say() with a phrase from the filler pool and
     allow_interruptions=True (so the user can still cut in)."""
-    from src.mistral_agent import DEFAULT_FILLER_TEXT, MistralDrivenAgent
+    from src.mistral_agent import DEFAULT_FILLER_TEXTS, MistralDrivenAgent
 
     orch = FakeOrchestrator()
     agent = MistralDrivenAgent(
@@ -153,9 +153,79 @@ async def test_speak_filler_uses_session_say_with_default_text_and_interruptions
     agent._speak_filler("get_document")
 
     assert len(say_calls) == 1
-    assert say_calls[0]["text"] == DEFAULT_FILLER_TEXT
+    assert say_calls[0]["text"] in DEFAULT_FILLER_TEXTS
     assert say_calls[0]["allow_interruptions"] is True
     assert say_calls[0]["add_to_chat_ctx"] is False
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_rotates_across_pool_via_random_choice(monkeypatch):
+    """Humanisierung Tier 1: over many turns, the filler must draw from
+    the full pool rather than repeating one phrase. We verify this
+    deterministically by stubbing random.choice to round-robin the
+    list; the agent must hand that list to random.choice unchanged."""
+    from src import mistral_agent as mod
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch, instructions="sys", correlation_id="c-pool",
+        filler_texts=["A", "B", "C"],
+    )
+
+    say_calls: list[str] = []
+
+    class _FakeSession:
+        def say(self, text, **_kwargs):
+            say_calls.append(text)
+
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+
+    counter = {"i": 0}
+    captured_seqs: list[list[str]] = []
+
+    def fake_choice(seq):
+        captured_seqs.append(list(seq))
+        idx = counter["i"] % len(seq)
+        counter["i"] += 1
+        return seq[idx]
+
+    monkeypatch.setattr(mod.random, "choice", fake_choice)
+
+    for _ in range(3):
+        agent._speak_filler("get_document")
+
+    # All three phrases get spoken — no phrase repeats when the pool
+    # is fully exercised.
+    assert say_calls == ["A", "B", "C"]
+    # random.choice received the pool exactly as configured (no mutation,
+    # no filtering).
+    assert captured_seqs == [["A", "B", "C"]] * 3
+
+
+@pytest.mark.asyncio
+async def test_filler_texts_constructor_overrides_default_pool():
+    """Passing filler_texts replaces the default pool entirely."""
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch, instructions="sys", correlation_id="c-pool2",
+        filler_texts=["Nur diese eine."],
+    )
+
+    say_calls: list[str] = []
+
+    class _FakeSession:
+        def say(self, text, **_kwargs):
+            say_calls.append(text)
+
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+
+    for _ in range(5):
+        agent._speak_filler("tool")
+
+    assert say_calls == ["Nur diese eine."] * 5
 
 
 @pytest.mark.asyncio

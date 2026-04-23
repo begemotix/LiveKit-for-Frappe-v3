@@ -1,5 +1,77 @@
 # Humanisierung der Voxtral-Agenten
 
+## Umgesetzt (Tier 1 + 2, minimal-invasiv)
+
+> Dieser Abschnitt dokumentiert den Ist-Zustand nach der ersten
+> Umsetzungswelle. Für die vollständige Analyse und den
+> Maßnahmenkatalog siehe die nachfolgenden Abschnitte.
+
+### Tier 1 — Codeänderungen
+
+| Maßnahme | Datei | Diff | Erwarteter Effekt |
+|---|---|---|---|
+| Greeting nicht-blockierend als Task | `apps/agent/agent.py` | `await session.say(...)` → `asyncio.create_task(_speak_greeting())` + nutzt jetzt wirklich `INITIAL_GREETING` + `AGENT_NAME` statt hartkodiertem "Hallo, wie kann ich helfen?" | −300 bis −800 ms wahrgenommene Start-Latenz; Branding funktioniert wieder. |
+| Interruption `min_duration` 1.2 → 0.6 s | `apps/agent/agent.py` (beide AgentSession-Blöcke) | Schnelleres Barge-in | Agent fühlt sich nicht mehr "taub" bei Unterbrechungen. |
+| VAD `min_silence_duration` 0.3 → 0.2 s | `apps/agent/agent.py` (`prewarm_fnc`) | Silero-Endpoint reagiert schneller | ~100 ms Ersparnis nach jedem User-Turn. |
+| Filler-Pool statt Einzelphrase | `apps/agent/src/mistral_agent.py` | `DEFAULT_FILLER_TEXT` (str) → `DEFAULT_FILLER_TEXTS` (list) + `random.choice` in `_speak_filler` | Kein "Papagei-Effekt" mehr nach 2–3 Tool-Calls. |
+
+**Bewusst nicht angefasst:**
+
+- Cursors Punkt #4 ("Filler für type_b deaktiviert") — war beim
+  Schreiben des Plans bereits aktiv über `FillerAwareMCPClient` /
+  `MistralOrchestrator._fire_filler_if_needed` (Commits `6abfdff` /
+  `665b2af`). Cursor hatte die alte Dormant-Funktion
+  `_apply_filler_to_toolset` gelesen, die ohne Call-Site liegt.
+- Cursors Punkt #5 ("Timed Fallback Filler") — bewusst nicht
+  reaktiviert, wurde vorher entfernt, weil er "lügt" (sagte "Ich
+  sehe nach" auch wenn das LLM nur nachgedacht, nicht tatsächlich
+  ein Tool gerufen hat). Begründung im Kommentar in
+  `mistral_orchestrator.py:137`.
+
+### Tier 2 — Konfiguration in der Mistral Console
+
+**Stiller Fehler, den die Tier-1-Edits nicht heilen:**
+Die Pacing- und Agentic-Instruktionen aus `agent.py` (ca.
+Zeilen 225–239) werden im Produktionsmodus (mit
+`MISTRAL_AGENT_ID`) **nicht an Mistral gesendet** — siehe
+`mistral_orchestrator.py` → `run_turn`: `instructions` wird nur
+übergeben, wenn `self._model is not None` (also nur im
+Stateless-/Dev-Modus). Im Agent-ID-Modus gewinnt der
+Console-Prompt. Das heißt: die App-internen Regeln ("max. 12
+Wörter", "max. 50 Wörter", "variiere Formulierungen") kommen
+beim LLM nie an.
+
+**Lösung ohne Code-Deploy:** Der Console-Prompt muss die
+Humanisierungs-Regeln selbst tragen. Die empfohlene Vorlage
+steht in [`MISTRAL-AGENT.md`](MISTRAL-AGENT.md) → Schritt 5.
+Pflegen in <https://console.mistral.ai> → Ihr Agent →
+Anweisungen → Speichern. Wirkt ab dem nächsten Gespräch.
+
+### Verifikation
+
+- `uv run pytest` (Agent): alle bestehenden Tests grün, plus
+  zwei neue Tests für den Filler-Pool
+  (`test_speak_filler_rotates_across_pool_via_random_choice`,
+  `test_filler_texts_constructor_overrides_default_pool`).
+- Manuell: eine Testsession mit drei Tool-Calls starten —
+  Log-Feld `filler_pool_size=4` und unterschiedliche
+  `filler_text_length`-Werte in den
+  `mistral_agent_filler_spoken`-Events beobachten.
+
+### Bewusst für eine spätere Welle zurückgestellt
+
+- Pre-synthesized Audio (Greeting + Filler): lohnt sich erst,
+  wenn die Tier-1-Edits real gemessen nicht reichen.
+- Text-Normalisierung (Zahlen, "Frappe"-Phonetik): ~20 LOC in
+  `MistralDrivenAgent.llm_node`, aber erfordert kleines
+  Benchmark.
+- Dynamic Endpointing über LiveKits Turn-Detector-Modell: neue
+  Dependency, eigener Release-Zyklus.
+- Preemptive Generation in `type_b`: großer Orchestrator-Umbau,
+  Nutzen gegenüber Mistral-Console-Latenzen unklar.
+
+---
+
 ## Zweck
 Dieses Dokument dient als verbindliche technische und architektonische Umsetzungsgrundlage für die Verbesserung der Nutzererfahrung (UX) und der wahrgenommenen Natürlichkeit unserer Voice-Agenten. Es analysiert die aktuelle Implementierung gegen offizielle LiveKit-Maßnahmen und definiert einen klaren Maßnahmenkatalog zur Reduktion von "toter Luft", zur Beschleunigung der Interaktion und zur Steigerung der Sprachqualität.
 

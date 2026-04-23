@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from typing import AsyncIterator, Optional, TYPE_CHECKING
 
 from livekit.agents import llm as lk_llm
@@ -32,11 +33,22 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Default filler sentence spoken once per turn whenever the LLM
-# triggers an MCP tool call. Single sentence by design (Phase 1) — a
-# small audio-clip rotation is planned but explicitly out of scope
-# for this change.
-DEFAULT_FILLER_TEXT = "Ich sehe im System nach, einen Moment bitte."
+# Humanisierung Tier 1: Filler-Pool statt Einzelphrase.
+# Ein fester Satz pro Tool-Call klingt nach ~3 Aufrufen roboterhaft
+# ("Papagei-Effekt"). Mit einer Rotation von natürlichen Varianten
+# wirkt der Agent lebendiger. Bei jedem MCP-Dispatch wird aus dem
+# Pool zufällig gewählt. Die Phrasen sind bewusst kurz (< 1.5 s TTS),
+# damit die echte Antwort den Filler schnell ablösen kann.
+DEFAULT_FILLER_TEXTS: list[str] = [
+    "Einen Moment, ich schaue nach.",
+    "Ich prüfe das kurz.",
+    "Lassen Sie mich das nachsehen.",
+    "Moment bitte, ich recherchiere.",
+]
+
+# Backwards-compatibility alias — some call sites / tests still import
+# the singular name. Always points to the first pool entry.
+DEFAULT_FILLER_TEXT = DEFAULT_FILLER_TEXTS[0]
 
 
 # ---------------------------------------------------------------------------
@@ -86,12 +98,24 @@ class MistralDrivenAgent(Agent):
         orchestrator: "MistralOrchestrator",
         instructions: str,
         correlation_id: str,
-        filler_text: str = DEFAULT_FILLER_TEXT,
+        filler_text: Optional[str] = None,
+        filler_texts: Optional[list[str]] = None,
     ) -> None:
         super().__init__(instructions=instructions)
         self._orchestrator = orchestrator
         self._correlation_id = correlation_id
-        self._filler_text = filler_text
+        # Filler-Pool-Auflösung:
+        # - Explizite `filler_texts`-Liste gewinnt (neue API).
+        # - Fallback `filler_text` (Einzelphrase, legacy, weiterhin
+        #   gültig für Tests und Deployments, die nur eine Phrase
+        #   wollen). Wird in eine 1-Element-Liste umgewandelt.
+        # - Ohne Angabe wird der kuratierte Pool genutzt.
+        if filler_texts:
+            self._filler_texts = list(filler_texts)
+        elif filler_text:
+            self._filler_texts = [filler_text]
+        else:
+            self._filler_texts = list(DEFAULT_FILLER_TEXTS)
         self._init_task: Optional[asyncio.Task] = None
 
     async def on_enter(self) -> None:
@@ -149,9 +173,10 @@ class MistralDrivenAgent(Agent):
             )
             return
 
+        phrase = random.choice(self._filler_texts)
         try:
             session.say(
-                self._filler_text,
+                phrase,
                 allow_interruptions=True,
                 add_to_chat_ctx=False,
             )
@@ -160,7 +185,8 @@ class MistralDrivenAgent(Agent):
                 extra={
                     "correlation_id": self._correlation_id,
                     "tool_name": tool_name,
-                    "filler_text_length": len(self._filler_text),
+                    "filler_text_length": len(phrase),
+                    "filler_pool_size": len(self._filler_texts),
                 },
             )
         except Exception:

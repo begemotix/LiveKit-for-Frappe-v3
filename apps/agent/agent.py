@@ -104,9 +104,16 @@ def prewarm_fnc(proc: JobProcess) -> None:
     # force_cpu is left unset so LiveKit picks GPU if available and
     # falls back to CPU otherwise; forcing CPU was a preliminary
     # safety that doesn't match what LiveKit's own quick-start ships.
+    # Humanisierung Tier 1: min_silence_duration von 0.3 → 0.2 s.
+    # 0.3 s war konservativ genug für laute Umgebungen, kostet aber in
+    # ruhigen Büro-/Headset-Szenarien ~100 ms zusätzliche Wartezeit nach
+    # jedem User-Turn. Silero bei 16 kHz ist präzise genug, dass 0.2 s
+    # keine messbaren False-Positives verursachen (siehe LiveKit Turn-
+    # Detector Doku). Bei Beschwerden über abgeschnittene User-Sätze
+    # wieder auf 0.3 s erhöhen.
     proc.userdata["vad"] = silero.VAD.load(
         min_speech_duration=0.25,
-        min_silence_duration=0.3,
+        min_silence_duration=0.2,
         prefix_padding_duration=0.25,
         activation_threshold=0.5,
         sample_rate=16000,
@@ -282,7 +289,13 @@ async def entrypoint(ctx: JobContext):
                 turn_detection="vad",
                 interruption={
                     "mode": "vad",
-                    "min_duration": 1.2,
+                    # Humanisierung Tier 1: min_duration 1.2 → 0.6 s.
+                    # 1.2 s fühlte sich "taub" an — der Agent reagierte
+                    # erst auf Barge-in nach über einer Sekunde. 0.6 s ist
+                    # LiveKits Default, genug gegen Huster/Räuspern, aber
+                    # so reaktiv, dass echte Unterbrechungen sofort
+                    # greifen. resume_false_interruption fängt den Rest.
+                    "min_duration": 0.6,
                     "resume_false_interruption": True,
                     "false_interruption_timeout": 2.0,
                 },
@@ -315,7 +328,13 @@ async def entrypoint(ctx: JobContext):
                 turn_detection="vad",
                 interruption={
                     "mode": "vad",
-                    "min_duration": 1.2,
+                    # Humanisierung Tier 1: min_duration 1.2 → 0.6 s.
+                    # 1.2 s fühlte sich "taub" an — der Agent reagierte
+                    # erst auf Barge-in nach über einer Sekunde. 0.6 s ist
+                    # LiveKits Default, genug gegen Huster/Räuspern, aber
+                    # so reaktiv, dass echte Unterbrechungen sofort
+                    # greifen. resume_false_interruption fängt den Rest.
+                    "min_duration": 0.6,
                     "resume_false_interruption": True,
                     "false_interruption_timeout": 2.0,
                 },
@@ -421,26 +440,51 @@ async def entrypoint(ctx: JobContext):
                 .replace("{AGENT_NAME}", effective_agent_name) \
                 .replace("{COMPANY_NAME}", os.getenv("COMPANY_NAME", "Company"))
             logger.info(
-                "calling session.say for greeting",
+                "scheduling greeting task",
                 extra={"correlation_id": correlation_id},
             )
             greeting_call_started = time.perf_counter()
-            # Begrüßung lokal auslösen (derzeit blockierend gewartet, 
-            # könnte in Zukunft als Task entkoppelt werden).
-            await session.say("Hallo, wie kann ich helfen?")
+
+            # Humanisierung Tier 1: Begrüßung entblocken.
+            # Vorher: `await session.say("Hallo, wie kann ich helfen?")`
+            # ignorierte den aufgelösten `greeting`-String komplett und
+            # blockierte `start_agent_session` bis das Audio fertig war
+            # (300-800 ms Voxtral-HTTP-Roundtrip). Jetzt: den echten
+            # Greeting-Text als Hintergrundtask auslösen — das erste
+            # Audio-Chunk kommt unverändert schnell (TTFA wird weiter
+            # über `agent_started_speaking` gemessen), aber der Caller
+            # kann sofort zurückkehren.
+            async def _speak_greeting():
+                t_say_start = time.perf_counter()
+                try:
+                    await session.say(greeting)
+                except Exception:
+                    logger.exception(
+                        "greeting_say_failed",
+                        extra={"correlation_id": correlation_id},
+                    )
+                    return
+                t_tts_generate_ms = (time.perf_counter() - t_say_start) * 1000
+                t_greeting_total_ms = (time.perf_counter() - greeting_flow_started) * 1000
+                logger.info(
+                    "greeting session.say returned",
+                    extra={
+                        "correlation_id": correlation_id,
+                        "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2) if t_tts_first_audio_ms is not None else None,
+                        "t_tts_first_chunk_ms": round(t_tts_first_chunk_ms, 2) if t_tts_first_chunk_ms is not None else None,
+                        "t_tts_generate_ms": round(t_tts_generate_ms, 2),
+                        "stt_retry_count": stt_retry_count,
+                        "t_greeting_total_ms": round(t_greeting_total_ms, 2),
+                    },
+                )
+
+            asyncio.create_task(_speak_greeting())
             t_session_start_to_greeting_call_ms = (greeting_call_started - greeting_flow_started) * 1000
-            t_tts_generate_ms = (time.perf_counter() - greeting_call_started) * 1000
-            t_greeting_total_ms = (time.perf_counter() - greeting_flow_started) * 1000
             logger.info(
-                "greeting session.say returned",
+                "greeting_scheduled",
                 extra={
                     "correlation_id": correlation_id,
                     "t_session_start_to_greeting_call_ms": round(t_session_start_to_greeting_call_ms, 2),
-                    "t_tts_first_audio_ms": round(t_tts_first_audio_ms, 2) if t_tts_first_audio_ms is not None else None,
-                    "t_tts_first_chunk_ms": round(t_tts_first_chunk_ms, 2) if t_tts_first_chunk_ms is not None else None,
-                    "t_tts_generate_ms": round(t_tts_generate_ms, 2),
-                    "stt_retry_count": stt_retry_count,
-                    "t_greeting_total_ms": round(t_greeting_total_ms, 2),
                 },
             )
         except Exception:
