@@ -293,11 +293,13 @@ async def entrypoint(ctx: JobContext):
         extra={"correlation_id": correlation_id}
     )
 
-    # Experiment A: raise WebRTC jitter buffer from Agents' hardcoded
-    # 200 ms to 500 ms so gaps between Voxtral sentence-batch HTTP
-    # round-trips are partially absorbed. Idempotent per-process.
-    # This is BUFFER-LAYER-4 (audio-side, after capture_frame).
-    apply_audio_buffer_patch(queue_size_ms=500)
+    # Experiment A: WebRTC jitter buffer. 500 ms absorbed short gaps
+    # but measured inter-batch gaps peak at ~1500 ms (voice_diagnostics,
+    # 2026-04-24), so we push to 1000 ms to cover typical 1.0–1.5 s
+    # silences between Voxtral sentence-batches. Trade-off: +500 ms
+    # worst-case latency before first audio, minus hearable stuttering.
+    # BUFFER-LAYER-4 (audio-side, after capture_frame).
+    apply_audio_buffer_patch(queue_size_ms=1000)
 
     # Experiment C: prebuffer 300 ms of audio *before* handing it to the
     # AudioSource so the 500 ms queue is actually populated. Fixes the
