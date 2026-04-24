@@ -151,12 +151,39 @@ async def _collect_filler_frames_pool_async(
     """Pre-synthesize every filler phrase once and return a
     {phrase: [AudioFrame, ...]} dict. Re-uses the same TTS instance the
     greeting prewarm builds, so we inherit Piper's warm-up cost for free
-    and don't spawn a second synthesis path."""
+    and don't spawn a second synthesis path.
+
+    The frames are resampled to 48 kHz because that's the sample rate
+    LiveKit's ``BackgroundAudioPlayer`` hardcodes for its rtc.AudioSource
+    and rtc.AudioMixer. Without this step, Piper's native 22.05 kHz
+    frames would be played back on the 48 kHz track at ~2.18x speed —
+    the filler would sound chipmunk-fast and unintelligible (reproduced
+    in production on 2026-04-24 19:34 deploy). The main TTS pipeline
+    doesn't hit this because it resamples automatically downstream;
+    only the BackgroundAudioPlayer shortcut bypasses that machinery.
+    """
+    from livekit import rtc
+
     pool: dict[str, list] = {}
     for phrase in phrases:
         frames = await _collect_greeting_frames_async(tts, phrase)
-        if frames:
+        if not frames:
+            continue
+        source_rate = frames[0].sample_rate
+        if source_rate == 48000:
             pool[phrase] = frames
+            continue
+        resampler = rtc.AudioResampler(
+            input_rate=source_rate,
+            output_rate=48000,
+            num_channels=frames[0].num_channels,
+        )
+        resampled: list = []
+        for f in frames:
+            resampled.extend(resampler.push(f))
+        resampled.extend(resampler.flush())
+        if resampled:
+            pool[phrase] = resampled
     return pool
 
 
