@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 def test_type_b_requires_mistral_and_voxtral_env(
@@ -158,7 +159,7 @@ def test_type_b_stateless_mode_warns_when_agent_id_also_set(
     monkeypatch.setenv("MISTRAL_STATELESS_MODE", "true")
     monkeypatch.setenv("MISTRAL_LLM_MODEL", "mistral-small-latest")
     monkeypatch.setenv("MISTRAL_AGENT_ID", "ag_conflict")
-    from src.mode_config import validate_mode_env, resolve_mistral_config
+    from src.mode_config import resolve_mistral_config, validate_mode_env
 
     with caplog.at_level(logging.WARNING, logger="src.mode_config"):
         validate_mode_env("type_b")
@@ -184,3 +185,36 @@ def test_resolve_mistral_config_production_path(
     assert cfg["stateless"] is False
     assert cfg["agent_id"] == "ag_prod"
     assert cfg["llm_model"] is None
+
+
+# TTS_PROVIDER switch — "voxtral" (default) or "piper"
+
+def test_resolve_tts_provider_defaults_to_voxtral(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("TTS_PROVIDER", raising=False)
+    from src.mode_config import resolve_tts_provider
+
+    assert resolve_tts_provider() == "voxtral"
+
+
+@pytest.mark.parametrize("value", ["piper", "PIPER", " piper "])
+def test_resolve_tts_provider_accepts_piper(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("TTS_PROVIDER", value)
+    from src.mode_config import resolve_tts_provider
+
+    assert resolve_tts_provider() == "piper"
+
+
+def test_resolve_tts_provider_rejects_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TTS_PROVIDER", "elevenlabs")
+    from src.mode_config import resolve_tts_provider
+
+    with pytest.raises(ValueError) as exc:
+        resolve_tts_provider()
+    assert "TTS_PROVIDER" in str(exc.value)
+    assert "elevenlabs" in str(exc.value)

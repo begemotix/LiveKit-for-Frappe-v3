@@ -12,7 +12,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # type_b — llm is NullLLM, STT/TTS come from the real livekit mistralai plugin
 # ---------------------------------------------------------------------------
@@ -154,3 +153,92 @@ def test_build_voice_pipeline_type_a_llm_remains_openai_realtime(
     assert pipeline["llm"]["kind"] == "openai_realtime"
     assert pipeline["stt"] is None  # realtime model handles STT inline
     assert pipeline["tts"] is None  # realtime model handles TTS inline
+
+
+# ---------------------------------------------------------------------------
+# type_b with TTS_PROVIDER=piper — swap only the TTS; STT + LLM stay Mistral
+# ---------------------------------------------------------------------------
+
+def test_build_voice_pipeline_type_b_piper_switches_tts_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from livekit.agents import tts as lk_tts
+
+    from src.mistral_agent import NullLLM
+    from src.piper_tts import PiperTTS
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
+    monkeypatch.setenv("MISTRAL_AGENT_ID", "ag_test")
+    monkeypatch.delenv("MISTRAL_STATELESS_MODE", raising=False)
+    monkeypatch.setenv("VOXTRAL_STT_MODEL", "voxtral-mini-transcribe-realtime-2602")
+    # TTS model env is irrelevant when TTS_PROVIDER=piper, but mode_config
+    # still requires the var to be present (it's in _required_env_keys).
+    monkeypatch.setenv("VOXTRAL_TTS_MODEL", "voxtral-tts")
+    monkeypatch.delenv("AGENT_VOICE_REF_AUDIO", raising=False)
+    monkeypatch.setenv("AGENT_VOICE_ID", "en_paul_neutral")
+    monkeypatch.setenv("TTS_PROVIDER", "piper")
+    monkeypatch.setenv("PIPER_VOICE", "de_DE-thorsten-high")
+
+    from src.model_factory import build_voice_pipeline
+
+    pipeline = build_voice_pipeline("type_b")
+
+    # LLM + STT stay Mistral
+    assert isinstance(pipeline["llm"], NullLLM)
+    assert pipeline["stt"] is not None
+
+    # TTS is Piper, still wrapped in StreamAdapter for sentence pacing.
+    assert isinstance(pipeline["tts"], lk_tts.StreamAdapter)
+    assert isinstance(pipeline["tts"]._wrapped_tts, PiperTTS)
+    assert pipeline["tts"]._wrapped_tts._opts.voice == "de_DE-thorsten-high"
+
+    obs = pipeline["tts_observability"]
+    assert obs["tts_provider"] == "piper"
+    assert obs["tts_model"] == "de_DE-thorsten-high"
+    assert obs["voice_mode"] == "preset"
+
+
+def test_build_voice_pipeline_type_b_piper_defaults_voice_when_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from src.piper_tts import PiperTTS
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
+    monkeypatch.setenv("MISTRAL_AGENT_ID", "ag_test")
+    monkeypatch.delenv("MISTRAL_STATELESS_MODE", raising=False)
+    monkeypatch.setenv("VOXTRAL_STT_MODEL", "voxtral-stt")
+    monkeypatch.setenv("VOXTRAL_TTS_MODEL", "voxtral-tts")
+    monkeypatch.delenv("AGENT_VOICE_REF_AUDIO", raising=False)
+    monkeypatch.setenv("AGENT_VOICE_ID", "en_paul_neutral")
+    monkeypatch.setenv("TTS_PROVIDER", "piper")
+    monkeypatch.delenv("PIPER_VOICE", raising=False)
+
+    from src.model_factory import build_voice_pipeline
+
+    pipeline = build_voice_pipeline("type_b")
+
+    inner: PiperTTS = pipeline["tts"]._wrapped_tts
+    assert inner._opts.voice == "de_DE-thorsten-high"
+
+
+def test_build_voice_pipeline_type_b_default_provider_is_voxtral(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard: when TTS_PROVIDER is unset the existing Voxtral
+    path must stay fully intact (no accidental promotion of Piper)."""
+    from livekit.plugins import mistralai
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
+    monkeypatch.setenv("MISTRAL_AGENT_ID", "ag_test")
+    monkeypatch.delenv("MISTRAL_STATELESS_MODE", raising=False)
+    monkeypatch.setenv("VOXTRAL_STT_MODEL", "voxtral-stt")
+    monkeypatch.setenv("VOXTRAL_TTS_MODEL", "voxtral-tts")
+    monkeypatch.delenv("AGENT_VOICE_REF_AUDIO", raising=False)
+    monkeypatch.setenv("AGENT_VOICE_ID", "en_paul_neutral")
+    monkeypatch.delenv("TTS_PROVIDER", raising=False)
+
+    from src.model_factory import build_voice_pipeline
+
+    pipeline = build_voice_pipeline("type_b")
+    assert pipeline["tts_observability"]["tts_provider"] == "voxtral"
+    assert isinstance(pipeline["tts"]._wrapped_tts, mistralai.TTS)

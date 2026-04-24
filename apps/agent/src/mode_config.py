@@ -7,6 +7,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 VALID_MODES = {"type_a", "type_b"}
+VALID_TTS_PROVIDERS = {"voxtral", "piper"}
 
 # Phase-05 D-17: MISTRAL_AGENT_ID is the production contract for type_b.
 # MISTRAL_STATELESS_MODE=true is an explicit dev/test escape hatch that swaps
@@ -48,6 +49,20 @@ def resolve_agent_mode() -> str:
     if raw_mode not in VALID_MODES:
         raise ValueError(f"Unsupported AGENT_MODE: {raw_mode}")
     return raw_mode
+
+
+def resolve_tts_provider() -> str:
+    """Return the active TTS provider ("voxtral" default, "piper" opt-in).
+
+    Only consulted for type_b. type_a keeps OpenAI Realtime which owns
+    its own TTS internally and has no TTS_PROVIDER switch.
+    """
+    raw = (os.getenv("TTS_PROVIDER") or "voxtral").strip().lower()
+    if raw not in VALID_TTS_PROVIDERS:
+        raise ValueError(
+            f"Unsupported TTS_PROVIDER: {raw!r} (expected one of {sorted(VALID_TTS_PROVIDERS)})"
+        )
+    return raw
 
 
 def validate_mode_env(mode: str) -> None:

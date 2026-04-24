@@ -724,6 +724,21 @@ async def entrypoint(ctx: JobContext):
         break
 
 if __name__ == "__main__":
+    # When the Piper TTS provider is selected, spawn a single Piper HTTP
+    # server in the supervisor process before workers fork. One server
+    # per container is sufficient: all workers reach it via localhost.
+    # Only runs the subprocess path when actively opted-in via
+    # TTS_PROVIDER=piper; default voxtral path is untouched. See
+    # src/piper_server.py for the lifecycle contract.
+    from src.mode_config import resolve_tts_provider as _resolve_tts_provider
+    if _resolve_tts_provider() == "piper":
+        from src.piper_server import ensure_piper_server
+        ensure_piper_server(
+            voice=os.getenv("PIPER_VOICE", "de_DE-thorsten-high"),
+            data_dir=os.getenv("PIPER_DATA_DIR", "/tmp/piper_voices"),
+            port=int(os.getenv("PIPER_PORT", "5000")),
+        )
+
     port = int(os.getenv("LIVEKIT_AGENT_PORT", 0))
     cli.run_app(
         WorkerOptions(
