@@ -37,7 +37,11 @@ _PATCH_APPLIED = False
 # Tunables — conservative defaults for the first deploy.
 PREBUFFER_MS = 300          # target fill before release
 MAX_WAIT_MS = 500           # safety cap: release even if fill not reached
-RESET_IDLE_S = 0.3          # gap that demarcates a new burst (same as diag)
+RESET_IDLE_S = 2.0          # gap that demarcates a new reply. Must be large
+                            # enough that intra-reply TTS gaps (sentence-batch
+                            # round-trips, ~1 s) do NOT retrigger a prebuffer
+                            # cycle — otherwise the buffer adds exactly the
+                            # stutters it is meant to hide.
 
 
 def apply_audio_prebuffer_patch(

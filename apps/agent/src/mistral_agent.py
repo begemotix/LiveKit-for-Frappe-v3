@@ -175,48 +175,19 @@ class MistralDrivenAgent(Agent):
 
         phrase = random.choice(self._filler_texts)
         try:
-            handle = session.say(
+            # NOTE: session.say() enqueues at SPEECH_PRIORITY_NORMAL which,
+            # under FIFO tie-breaking, loses to the pipeline_reply handle
+            # created at user-turn-end. The filler therefore plays AFTER
+            # the LLM answer in most cases. A heap-reprio hack was tried
+            # and removed — by the time _speak_filler runs the pipeline
+            # handle is already `_current_speech` and no longer in the
+            # heap. Fixing the ordering requires interrupting the active
+            # speech, which is a larger change parked for later.
+            session.say(
                 phrase,
                 allow_interruptions=True,
                 add_to_chat_ctx=False,
             )
-            # Re-prioritise the filler ahead of the already-queued
-            # pipeline_reply: session.say() enqueues at SPEECH_PRIORITY_NORMAL,
-            # which at equal priority loses the FIFO race to the
-            # pipeline_reply handle created at user-turn-end. We push the
-            # same handle back onto the heap with SPEECH_PRIORITY_HIGH so
-            # the filler plays *before* the answer. This is best-effort:
-            # if the private heap layout shifts under a future LiveKit
-            # upgrade we log and leave the handle at NORMAL priority.
-            try:
-                import heapq
-                import time as _t
-                from livekit.agents.voice.speech_handle import SpeechHandle
-
-                activity = session._activity
-                q = activity._speech_q
-                for idx, (_, _, s) in enumerate(q):
-                    if s is handle:
-                        q.pop(idx)
-                        heapq.heapify(q)
-                        heapq.heappush(
-                            q,
-                            (
-                                -SpeechHandle.SPEECH_PRIORITY_HIGH,
-                                _t.perf_counter_ns(),
-                                handle,
-                            ),
-                        )
-                        activity._wake_up_scheduling_task()
-                        break
-            except Exception as _reprio_exc:
-                logger.warning(
-                    "mistral_agent_filler_reprio_failed",
-                    extra={
-                        "correlation_id": self._correlation_id,
-                        "detail": repr(_reprio_exc),
-                    },
-                )
             logger.info(
                 "mistral_agent_filler_spoken",
                 extra={
