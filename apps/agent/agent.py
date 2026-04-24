@@ -8,6 +8,7 @@ from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agen
 from livekit.agents.llm import mcp
 from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
+from src.audio_buffer_patch import apply_audio_buffer_patch
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
 from src.mistral_agent import MistralDrivenAgent
@@ -286,9 +287,14 @@ async def entrypoint(ctx: JobContext):
     ctx.log_context_fields["correlation_id"] = correlation_id
     
     logger.info(
-        f"starting agent for room {correlation_id}", 
+        f"starting agent for room {correlation_id}",
         extra={"correlation_id": correlation_id}
     )
+
+    # Experiment A: raise WebRTC jitter buffer from Agents' hardcoded
+    # 200 ms to 500 ms so gaps between Voxtral sentence-batch HTTP
+    # round-trips are partially absorbed. Idempotent per-process.
+    apply_audio_buffer_patch(queue_size_ms=500)
 
     mode = resolve_agent_mode()
     validate_mode_env(mode)
