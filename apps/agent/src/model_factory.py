@@ -61,7 +61,7 @@ def build_voice_pipeline(mode: str) -> dict[str, Any]:
             piper_voice = (
                 os.getenv("PIPER_VOICE") or "de_DE-thorsten-high"
             ).strip()
-            piper_sample_rate = int(os.getenv("PIPER_SAMPLE_RATE") or "22050")
+            piper_sample_rate = int(os.getenv("PIPER_SAMPLE_RATE") or "24000")
             piper_instance = PiperTTS(
                 voice=piper_voice,
                 base_url=piper_base_url(),

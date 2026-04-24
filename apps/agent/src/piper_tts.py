@@ -51,7 +51,7 @@ from livekit.agents.utils import is_given
 logger = logging.getLogger("agent")
 
 DEFAULT_BASE_URL = "http://127.0.0.1:5000"
-DEFAULT_SAMPLE_RATE = 22050
+DEFAULT_SAMPLE_RATE = 24000
 NUM_CHANNELS = 1
 
 
@@ -76,9 +76,9 @@ class PiperTTS(tts.TTS):
             left unset; the server then uses the model passed on its CLI.
         base_url: URL where the Piper HTTP server is listening, e.g.
             ``http://127.0.0.1:5000``.
-        sample_rate: Declared sample rate for the TTS pipeline. Must match
-            the Piper voice model (``-high`` → 22050 Hz, ``-low`` → 16000
-            Hz). The actual output is still read from the WAV header.
+        sample_rate: Declared sample rate for the TTS pipeline. Defaults to
+            24000 Hz for LiveKit compatibility. Piper output will be
+            labeled with its native rate from the WAV header.
         """
         resolved_sr = sample_rate if is_given(sample_rate) else DEFAULT_SAMPLE_RATE
         super().__init__(
@@ -159,8 +159,22 @@ class _PiperChunkedStream(tts.ChunkedStream):
             num_channels=channels,
             mime_type="audio/pcm",
         )
-        output_emitter.push(pcm_bytes)
+
+        # Chunk the PCM data into 20ms frames to keep the audio pipeline happy.
+        # 20ms at sample_rate with 16-bit (2 bytes) samples.
+        bytes_per_frame = int(sample_rate * 0.02) * 2 * channels
+        
+        frames_pushed = 0
+        for i in range(0, len(pcm_bytes), bytes_per_frame):
+            chunk = pcm_bytes[i : i + bytes_per_frame]
+            output_emitter.push(chunk)
+            frames_pushed += 1
+            
         output_emitter.flush()
+        logger.debug(
+            "piper_tts_pushed_frames", 
+            extra={"frames": frames_pushed, "sample_rate": sample_rate}
+        )
 
 
 def _unwrap_wav(wav_bytes: bytes) -> tuple[bytes, int, int]:
