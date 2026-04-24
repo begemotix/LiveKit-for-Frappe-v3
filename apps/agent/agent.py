@@ -9,6 +9,7 @@ from livekit.agents.llm import mcp
 from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
 from src.audio_buffer_patch import apply_audio_buffer_patch
+from src.audio_prebuffer_patch import apply_audio_prebuffer_patch
 from src.voice_diagnostics import apply_voice_diagnostics
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
@@ -297,6 +298,11 @@ async def entrypoint(ctx: JobContext):
     # round-trips are partially absorbed. Idempotent per-process.
     # This is BUFFER-LAYER-4 (audio-side, after capture_frame).
     apply_audio_buffer_patch(queue_size_ms=500)
+
+    # Experiment C: prebuffer 300 ms of audio *before* handing it to the
+    # AudioSource so the 500 ms queue is actually populated. Fixes the
+    # "first-word stutter" empirically measured on dynamic replies.
+    apply_audio_prebuffer_patch(prebuffer_ms=300, max_wait_ms=500)
 
     # Diagnostic instrumentation for the first-word stutter investigation.
     # Logs a small set of timestamped events along the LLM→TTS→WebRTC path
