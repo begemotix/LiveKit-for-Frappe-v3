@@ -96,12 +96,23 @@ def ensure_piper_server(
             "--host",
             "127.0.0.1",
         ],
-        stdout=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
     atexit.register(_terminate)
 
-    _wait_until_ready(port)
+    try:
+        _wait_until_ready(port, _server_process)
+    except Exception:
+        # If readiness fails, try to grab the last bit of output from the process
+        if _server_process.poll() is not None:
+            out, _ = _server_process.communicate(timeout=1)
+            logger.error("piper_server_failed_at_startup", extra={"output": out[-1000:]})
+        _terminate()
+        raise
+
     logger.info("piper_server_ready", extra={"port": port})
     return _server_process
 
@@ -128,24 +139,33 @@ def _run_blocking(cmd: list[str], *, step: str) -> None:
         )
 
 
-def _wait_until_ready(port: int) -> None:
+def _wait_until_ready(port: int, process: subprocess.Popen) -> None:
     deadline = time.monotonic() + _READINESS_TIMEOUT_S
-    last_err: str | None = None
     url = f"http://127.0.0.1:{port}/voices"
+    last_log_time = 0.0
+    
     while time.monotonic() < deadline:
+        # Check if process died early
+        if process.poll() is not None:
+            raise RuntimeError(f"Piper process exited prematurely with code {process.returncode}")
+
         try:
-            with urlopen(url, timeout=2) as resp:
+            with urlopen(url, timeout=1) as resp:
                 if 200 <= resp.status < 300:
                     return
-                last_err = f"HTTP {resp.status}"
-        except URLError as exc:
-            last_err = repr(exc)
-        except OSError as exc:
-            last_err = repr(exc)
+        except (URLError, OSError):
+            pass
+
+        # Log progress every 5 seconds so the user knows we're still waiting
+        now = time.monotonic()
+        if now - last_log_time > 5.0:
+            logger.info("piper_server_waiting_for_http", extra={"port": port})
+            last_log_time = now
+
         time.sleep(_READINESS_POLL_INTERVAL_S)
+
     raise RuntimeError(
-        f"Piper HTTP server did not become ready on port {port} "
-        f"within {_READINESS_TIMEOUT_S}s; last error: {last_err}"
+        f"Piper HTTP server did not become ready on port {port} within {_READINESS_TIMEOUT_S}s"
     )
 
 

@@ -26,7 +26,7 @@ dependencies = [
     # Optional local TTS provider. Activated via TTS_PROVIDER=piper; the
     # default Voxtral path ignores it entirely. Keeping the dep here
     # (mirrored in requirements.txt) keeps Docker build and uv dev in sync.
-    "piper-tts>=1.3.0",
+    "piper-tts[http]>=1.3.0",
 ]
 
 [dependency-groups]

@@ -7,4 +7,4 @@ python-dotenv~=1.0.0
 # Optional local TTS provider. Activated via TTS_PROVIDER=piper. When the
 # switch is off the package still installs but no Piper HTTP server is
 # spawned and no voice models are downloaded. See src/piper_server.py.
-piper-tts>=1.3.0
+piper-tts[http]>=1.3.0
