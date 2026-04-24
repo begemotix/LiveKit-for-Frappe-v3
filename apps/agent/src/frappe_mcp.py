@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
 if TYPE_CHECKING:
@@ -51,17 +51,17 @@ def _resolve_frappe_base_url() -> str:
 def frappe_mcp_stdio_params() -> dict[str, Any]:
     """Resolve stdio-sidecar parameters for the Frappe MCP server.
 
-    Single source of truth for the subprocess contract. Shared by:
-    - Type-A path via `build_frappe_mcp_server()` (LiveKit `MCPServerStdio`).
-    - Type-B path via `build_frappe_mistral_mcp_client()` (Mistral `MCPClientSTDIO`).
+    Single source of truth for the subprocess contract. Used by
+    ``build_frappe_mcp_server()`` which returns a LiveKit
+    ``MCPServerStdio`` consumed by both modes via the Phase-2
+    pipeline (type_a: ``tools=[MCPToolset(mcp_server=…)]``, type_b:
+    ``mcp_servers=[…]``).
 
-    Returns a plain dict with keys `command`, `args`, `env`. Both consumers
-    accept these as kwargs (LiveKit) or via `StdioServerParameters(**params)`
-    (Mistral / modelcontextprotocol), so the helper stays transport-neutral.
+    Returns a plain dict with keys ``command``, ``args``, ``env``.
 
-    Raises `ValueError` when any of FRAPPE_URL, FRAPPE_API_KEY, FRAPPE_API_SECRET
-    is missing, or when the legacy FRAPPE_MCP_URL fallback is not a valid
-    absolute URL.
+    Raises ``ValueError`` when any of FRAPPE_URL, FRAPPE_API_KEY,
+    FRAPPE_API_SECRET is missing, or when the legacy FRAPPE_MCP_URL
+    fallback is not a valid absolute URL.
     """
     frappe_url = _resolve_frappe_base_url()
     api_key = os.getenv("FRAPPE_API_KEY")
@@ -112,7 +112,7 @@ def _log_stdio_wiring(params: dict[str, Any], client_flavor: str) -> None:
 
 def build_frappe_mcp_server(
     allowed_tools: list[str] | None = None,
-) -> "mcp.MCPServerStdio":
+) -> mcp.MCPServerStdio:
     """Build a LiveKit ``MCPServerStdio`` for the Frappe MCP subprocess.
 
     Used by both modes after the Phase-2 standardisation:
@@ -145,7 +145,7 @@ def build_frappe_mcp_server(
     )
 
 
-_filtered_mcp_server_stdio_cache: Optional[type] = None
+_filtered_mcp_server_stdio_cache: type | None = None
 
 
 def _get_filtered_mcp_server_stdio_class() -> type:
@@ -201,126 +201,6 @@ def _get_filtered_mcp_server_stdio_class() -> type:
 
     _filtered_mcp_server_stdio_cache = _FilteredMCPServerStdio
     return _FilteredMCPServerStdio
-
-
-class FillerAwareMCPClient:
-    """Mistral `MCPClientSTDIO` subclass that fires a callback before
-    every tool dispatch. Constructed lazily via
-    `_get_filler_aware_mcp_client_class()` so this module stays
-    import-cheap for the type_a path that doesn't touch mistralai.
-
-    The callback receives the tool name and is invoked synchronously
-    (inside the async `execute_tool` method but before the awaited
-    `super().execute_tool(...)`), so it must be cheap and non-blocking
-    — typically it just schedules a `session.say(...)` in LiveKit.
-
-    Rationale: type_b hands the tool loop to Mistral's SDK, which
-    means LiveKit's own `function_call_start`-style event never fires
-    (verified via the 1.5.5 source: no such event exists in
-    `livekit/agents/voice/events.py`). The only observable pre-invoke
-    point is the MCP client's `execute_tool()` method, which the
-    research on 2026-04-23 flagged as the documented extension point
-    (`mistralai.extra.mcp.base.MCPClientBase` is a non-final class with
-    a public async `execute_tool`). See readme/... for the decision.
-    """
-
-    # The real class body is built lazily inside
-    # _get_filler_aware_mcp_client_class() so import costs stay in
-    # type_b-only code paths. This stub exists so static checkers and
-    # documentation tools see something meaningful at module level.
-
-
-_filler_aware_class_cache: Optional[type] = None
-
-
-def _get_filler_aware_mcp_client_class() -> type:
-    """Lazily build (once) a real MCPClientSTDIO subclass with the
-    filler hook. Caches the class so repeated calls are free."""
-    global _filler_aware_class_cache
-    if _filler_aware_class_cache is not None:
-        return _filler_aware_class_cache
-
-    from mistralai.extra.mcp.stdio import MCPClientSTDIO
-
-    class _FillerAwareMCPClient(MCPClientSTDIO):
-        def __init__(
-            self,
-            *args: Any,
-            on_tool_execute: Optional[Callable[[str], None]] = None,
-            **kwargs: Any,
-        ) -> None:
-            super().__init__(*args, **kwargs)
-            self._on_tool_execute = on_tool_execute
-
-        async def execute_tool(self, name: str, arguments: dict) -> Any:
-            # Phase-1 filler hotfix: diagnostic log so production makes
-            # it observable whether this hook is ever reached at all.
-            # Research on 2026-04-23 confirmed this IS the correct
-            # Mistral-SDK dispatch point (`tools.py:230` → `run_tool.
-            # mcp_client.execute_tool(...)`), and a live in-process
-            # test proved the override fires. But production logs show
-            # no `mistral_filler_fired` trace despite real tool calls.
-            # So we need runtime evidence: does this log show up in
-            # prod? If yes → the hook fires but `_on_tool_execute` is
-            # None at runtime (init-ordering bug). If no → the SDK has
-            # a path that bypasses our override and we need a deeper
-            # fix (re-hook).
-            logger.info(
-                "filler hook reached",
-                extra={
-                    "tool_name": name,
-                    "has_callback": self._on_tool_execute is not None,
-                },
-            )
-            # Fire the filler FIRST so the user hears bridging speech
-            # while the MCP round-trip (subprocess + Frappe HTTP) runs.
-            # Callback must be sync & cheap — LiveKit's session.say()
-            # fits that contract.
-            if self._on_tool_execute is not None:
-                try:
-                    self._on_tool_execute(name)
-                except Exception:
-                    logger.exception(
-                        "filler_aware_mcp_callback_failed",
-                        extra={"tool_name": name},
-                    )
-            else:
-                # Silent no-op here used to mask the root cause in prod.
-                # Log at WARNING so it's grep-findable.
-                logger.warning(
-                    "filler_hook_reached_but_no_callback",
-                    extra={"tool_name": name},
-                )
-            return await super().execute_tool(name, arguments)
-
-    _filler_aware_class_cache = _FillerAwareMCPClient
-    return _FillerAwareMCPClient
-
-
-def build_frappe_mistral_mcp_client(
-    on_tool_execute: Optional[Callable[[str], None]] = None,
-) -> Any:
-    """Type-B: build a Mistral MCP client consumed by the Mistral RunContext.
-
-    Same stdio sidecar as Type-A (`frappe-mcp-server` via npx, identical
-    ENV contract). The returned client is a `FillerAwareMCPClient` (a
-    transparent `MCPClientSTDIO` subclass) that fires `on_tool_execute`
-    just before each tool dispatch — this is how we bridge Mistral-SDK-
-    owned tool calls into LiveKit's `session.say()` filler path, since
-    LiveKit never sees these invocations in the type_b architecture.
-
-    Passing `on_tool_execute=None` (the default) preserves exact
-    previous behaviour: a plain stdio client with no pre-invoke hook.
-    """
-    from mcp import StdioServerParameters
-
-    params = frappe_mcp_stdio_params()
-    _log_stdio_wiring(params, client_flavor="mistral_mcpclient_stdio")
-    cls = _get_filler_aware_mcp_client_class()
-    return cls(
-        StdioServerParameters(**params),
-        on_tool_execute=on_tool_execute,
-    )
 
 
 def get_allowed_tools_for_mode(mode: str) -> list[str] | None:

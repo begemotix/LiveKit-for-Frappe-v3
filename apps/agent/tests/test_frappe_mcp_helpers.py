@@ -1,14 +1,14 @@
-"""Phase-05 step 1.2 — tests for the transport-neutral Frappe-MCP helpers.
+"""Tests for the transport-neutral Frappe-MCP helpers.
 
 This module imports only `src.frappe_mcp` (no `agent.py`), so it sidesteps
 the pre-existing `JobProcess` pytest-collection issue that affects
-`test_mcp_integration.py`. The Type-A byte-for-byte compatibility is still
-covered by `test_mcp_integration.py`; here we focus on (a) the dict shape
-of the shared helper and (b) the new Type-B client constructor.
+`test_mcp_integration.py`. After the Phase-2 architecture cut-over both
+modes flow through `build_frappe_mcp_server()`; the legacy Mistral
+`MCPClientSTDIO` factory and its FillerAware wrap are gone, so those
+tests have been removed with the code they covered.
 """
 from __future__ import annotations
 
-import os
 from unittest.mock import patch
 
 import pytest
@@ -93,136 +93,8 @@ def test_stdio_params_malformed_legacy_url_raises(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# build_frappe_mistral_mcp_client
-# ---------------------------------------------------------------------------
-
-def test_build_frappe_mistral_mcp_client_returns_stdio_client(frappe_env):
-    from mistralai.extra.mcp.stdio import MCPClientSTDIO
-    from mcp import StdioServerParameters
-    from src.frappe_mcp import build_frappe_mistral_mcp_client
-
-    client = build_frappe_mistral_mcp_client()
-
-    # FillerAwareMCPClient is a subclass of MCPClientSTDIO; the isinstance
-    # check keeps Mistral's RunContext.register_mcp_client() happy.
-    assert isinstance(client, MCPClientSTDIO)
-    # Mistral's client stores its transport config as `_stdio_params`.
-    stdio_params = client._stdio_params  # pylint: disable=protected-access
-    assert isinstance(stdio_params, StdioServerParameters)
-    assert stdio_params.command == "npx"
-    assert stdio_params.args == ["-y", "frappe-mcp-server"]
-    assert stdio_params.env == {
-        "FRAPPE_URL": "https://example.test",
-        "FRAPPE_API_KEY": "agent-key",
-        "FRAPPE_API_SECRET": "agent-secret",
-    }
-
-
-# ---------------------------------------------------------------------------
-# FillerAwareMCPClient — filler hook fires before MCP tool dispatch
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_filler_aware_client_calls_callback_before_super_execute_tool(frappe_env):
-    """The wrap must invoke the callback BEFORE the real MCP round-trip
-    starts, so the filler speech kicks in while the tool is still
-    pending — that's the whole point of bridging Mistral-SDK-owned
-    tool calls into LiveKit's session.say() path."""
-    from unittest.mock import AsyncMock, patch
-    from src.frappe_mcp import build_frappe_mistral_mcp_client
-
-    order: list[str] = []
-
-    def _callback(name: str) -> None:
-        order.append(f"filler:{name}")
-
-    client = build_frappe_mistral_mcp_client(on_tool_execute=_callback)
-
-    # Patch the parent MCPClientSTDIO.execute_tool so we never actually
-    # talk to an MCP server; record that it was called *after* the filler.
-    async def _fake_super_execute_tool(self, name, arguments):
-        order.append(f"super:{name}")
-        return [{"type": "text", "text": "ok"}]
-
-    with patch(
-        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
-        new=_fake_super_execute_tool,
-    ):
-        result = await client.execute_tool("get_document", {"name": "PROJ-0013"})
-
-    assert result == [{"type": "text", "text": "ok"}]
-    assert order == ["filler:get_document", "super:get_document"]
-
-
-@pytest.mark.asyncio
-async def test_filler_aware_client_proceeds_when_callback_raises(frappe_env, caplog):
-    """Filler is best-effort. A raising callback must NOT block the
-    tool dispatch — otherwise a trivial filler bug would break every
-    MCP call in production. The wrap logs the callback error and
-    still hands off to super().execute_tool()."""
-    import logging
-    from unittest.mock import patch
-    from src.frappe_mcp import build_frappe_mistral_mcp_client
-
-    def _broken(_name: str) -> None:
-        raise RuntimeError("callback exploded on purpose")
-
-    client = build_frappe_mistral_mcp_client(on_tool_execute=_broken)
-
-    async def _fake_super_execute_tool(self, name, arguments):
-        return [{"type": "text", "text": "still-dispatched"}]
-
-    with patch(
-        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
-        new=_fake_super_execute_tool,
-    ):
-        with caplog.at_level(logging.ERROR, logger="src.frappe_mcp"):
-            result = await client.execute_tool("ping", {})
-
-    assert result == [{"type": "text", "text": "still-dispatched"}]
-    assert any(
-        rec.message == "filler_aware_mcp_callback_failed"
-        for rec in caplog.records
-    )
-
-
-@pytest.mark.asyncio
-async def test_filler_aware_client_no_callback_is_transparent(frappe_env):
-    """Default case (`on_tool_execute=None`) must behave exactly like
-    a plain MCPClientSTDIO: no filler fired, tool still dispatched
-    normally. Guards against accidental breakage of the type_b path
-    when the filler hook is deliberately disabled."""
-    from unittest.mock import patch
-    from src.frappe_mcp import build_frappe_mistral_mcp_client
-
-    client = build_frappe_mistral_mcp_client()  # no callback
-
-    async def _fake_super_execute_tool(self, name, arguments):
-        return [{"type": "text", "text": "direct"}]
-
-    with patch(
-        "mistralai.extra.mcp.stdio.MCPClientSTDIO.execute_tool",
-        new=_fake_super_execute_tool,
-    ):
-        result = await client.execute_tool("ping", {})
-
-    assert result == [{"type": "text", "text": "direct"}]
-
-
-def test_build_frappe_mistral_mcp_client_propagates_env_error(monkeypatch):
-    monkeypatch.delenv("FRAPPE_URL", raising=False)
-    monkeypatch.delenv("FRAPPE_MCP_URL", raising=False)
-    monkeypatch.delenv("FRAPPE_API_KEY", raising=False)
-    monkeypatch.delenv("FRAPPE_API_SECRET", raising=False)
-    from src.frappe_mcp import build_frappe_mistral_mcp_client
-
-    with pytest.raises(ValueError, match="Missing required MCP env vars"):
-        build_frappe_mistral_mcp_client()
-
-
-# ---------------------------------------------------------------------------
-# build_frappe_mcp_server — smoke-test that Type-A wiring still flows
-# through the shared helper (deep assertions remain in test_mcp_integration.py)
+# build_frappe_mcp_server — smoke-test that both modes still flow through
+# the shared helper (deep assertions remain in test_mcp_integration.py)
 # ---------------------------------------------------------------------------
 
 def test_build_frappe_mcp_server_uses_shared_helper(frappe_env):
@@ -254,10 +126,12 @@ def test_stdio_wiring_log_emitted_with_client_flavor(frappe_env, caplog):
     class DummyStdio:
         pass
 
-    with patch("livekit.agents.mcp.MCPServerStdio", return_value=DummyStdio()):
-        with caplog.at_level(logging.INFO, logger="src.frappe_mcp"):
-            from src.frappe_mcp import build_frappe_mcp_server
-            build_frappe_mcp_server()
+    with (
+        patch("livekit.agents.mcp.MCPServerStdio", return_value=DummyStdio()),
+        caplog.at_level(logging.INFO, logger="src.frappe_mcp"),
+    ):
+        from src.frappe_mcp import build_frappe_mcp_server
+        build_frappe_mcp_server()
 
     flavor_values = [
         getattr(rec, "mcp_client_flavor", None)
@@ -265,18 +139,3 @@ def test_stdio_wiring_log_emitted_with_client_flavor(frappe_env, caplog):
         if rec.message == "using Frappe MCP via stdio"
     ]
     assert "livekit_mcptoolset" in flavor_values
-
-
-def test_stdio_wiring_log_emits_mistral_flavor_for_mistral_client(frappe_env, caplog):
-    import logging
-
-    with caplog.at_level(logging.INFO, logger="src.frappe_mcp"):
-        from src.frappe_mcp import build_frappe_mistral_mcp_client
-        build_frappe_mistral_mcp_client()
-
-    flavor_values = [
-        getattr(rec, "mcp_client_flavor", None)
-        for rec in caplog.records
-        if rec.message == "using Frappe MCP via stdio"
-    ]
-    assert "mistral_mcpclient_stdio" in flavor_values
