@@ -12,19 +12,34 @@ Covers:
 """
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from unittest.mock import MagicMock
 
 import pytest
-
 from livekit.agents import llm as lk_llm
 from livekit.agents.types import FlushSentinel
 from livekit.agents.voice.agent import ModelSettings
 
-
 # ---------------------------------------------------------------------------
 # Test doubles
 # ---------------------------------------------------------------------------
+
+class _RecordingBackgroundAudio:
+    """Test double for ``livekit.agents.voice.background_audio.BackgroundAudioPlayer``.
+
+    Captures every ``play()`` invocation so tests can assert filler
+    routing. We keep the surface deliberately narrow — only ``play`` —
+    because that's the only method ``MistralDrivenAgent._speak_filler``
+    touches on the happy path.
+    """
+
+    def __init__(self) -> None:
+        self.play_calls: list[object] = []
+
+    def play(self, audio, *, loop: bool = False):
+        self.play_calls.append(audio)
+        return MagicMock()
+
 
 class FakeOrchestrator:
     """Records lifecycle calls and replays a canned stream from `run_turn`."""
@@ -102,7 +117,6 @@ async def test_on_enter_returns_immediately_and_initializes_in_background():
     greeting fires without waiting for the MCP-subprocess spawn /
     Mistral handshake. Initialize then runs in a background asyncio
     task whose handle is exposed as agent._init_task for testing."""
-    import asyncio
     from src.mistral_agent import MistralDrivenAgent
 
     orch = FakeOrchestrator()
@@ -234,6 +248,7 @@ async def test_speak_filler_skips_safely_when_session_unavailable(caplog):
     (race during init), the call must log a warning and return
     cleanly — never raise into the orchestrator's stream loop."""
     import logging
+
     from src.mistral_agent import MistralDrivenAgent
 
     orch = FakeOrchestrator()
@@ -273,6 +288,108 @@ async def test_filler_text_is_configurable_via_constructor():
     agent._speak_filler("anytool")
 
     assert say_calls == ["Moment, ich prüfe das."]
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_routes_to_background_audio_when_pool_available():
+    """When a BackgroundAudioPlayer and a matching filler audio pool are
+    handed to the constructor, _speak_filler must play the cached frames
+    on the secondary track and must NOT call session.say(). This is the
+    fix for the ordering race (fillers arriving after the LLM reply)."""
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    sentinel_frames = ["FRAME_1", "FRAME_2"]  # stand-in for rtc.AudioFrame
+    # Pool must cover every phrase the agent could pick; keep it to one
+    # entry and lock the random choice to match.
+    agent = MistralDrivenAgent(
+        orchestrator=orch,
+        instructions="sys",
+        correlation_id="c-bg",
+        filler_texts=["Moment, ich schaue nach."],
+        background_audio=_RecordingBackgroundAudio(),
+        filler_audio_pool={"Moment, ich schaue nach.": sentinel_frames},
+    )
+
+    say_calls: list[dict] = []
+
+    class _SpySession:
+        def say(self, *args, **kwargs):
+            say_calls.append({"args": args, "kwargs": kwargs})
+
+    agent._activity = type("X", (), {"session": _SpySession()})()
+
+    agent._speak_filler("get_document")
+
+    bg = agent._background_audio
+    assert len(bg.play_calls) == 1, "filler must play on the background track"
+    assert say_calls == [], "session.say must NOT be used when background path is wired"
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_falls_back_to_session_say_if_background_play_raises():
+    """Defence in depth: if the background track rejects a play call
+    (e.g. RuntimeError because it hasn't been started), the agent must
+    still speak the filler via session.say rather than silently dropping
+    it. Users would otherwise lose the filler for that turn."""
+    from src.mistral_agent import MistralDrivenAgent
+
+    class _BrokenBackgroundAudio:
+        def play(self, _audio):
+            raise RuntimeError("BackgroundAudio is not started")
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch,
+        instructions="sys",
+        correlation_id="c-bg-fail",
+        filler_texts=["Moment bitte."],
+        background_audio=_BrokenBackgroundAudio(),
+        filler_audio_pool={"Moment bitte.": ["FRAME"]},
+    )
+
+    say_calls: list[str] = []
+
+    class _FakeSession:
+        def say(self, text, **_kwargs):
+            say_calls.append(text)
+
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+
+    agent._speak_filler("get_document")
+
+    assert say_calls == ["Moment bitte."]
+
+
+@pytest.mark.asyncio
+async def test_speak_filler_uses_fallback_when_phrase_missing_from_pool():
+    """If random.choice lands on a phrase that isn't cached (shouldn't
+    happen in production — the prewarm covers every phrase — but a
+    defensive test keeps the intent pinned), fall back to session.say."""
+    from src.mistral_agent import MistralDrivenAgent
+
+    orch = FakeOrchestrator()
+    agent = MistralDrivenAgent(
+        orchestrator=orch,
+        instructions="sys",
+        correlation_id="c-bg-gap",
+        filler_texts=["Nur diese Phrase."],
+        background_audio=_RecordingBackgroundAudio(),
+        filler_audio_pool={"Andere Phrase.": ["FRAME"]},  # mismatched cache
+    )
+
+    say_calls: list[str] = []
+
+    class _FakeSession:
+        def say(self, text, **_kwargs):
+            say_calls.append(text)
+
+    agent._activity = type("X", (), {"session": _FakeSession()})()
+
+    agent._speak_filler("get_document")
+
+    assert say_calls == ["Nur diese Phrase."]
+    assert agent._background_audio.play_calls == []
 
 
 @pytest.mark.asyncio
@@ -339,6 +456,7 @@ async def test_llm_node_extracts_latest_user_message_from_mixed_turns():
 @pytest.mark.asyncio
 async def test_llm_node_skips_turn_when_no_user_message(caplog):
     import logging
+
     from src.mistral_agent import MistralDrivenAgent
 
     orch = FakeOrchestrator(chunks=["should-not-stream"])
@@ -417,6 +535,7 @@ def test_agent_session_accepts_null_llm_without_runtime_error():
     instance and exposes it via .llm, satisfying the isinstance() gate
     that _pipeline_reply_task relies on."""
     from livekit.agents import AgentSession
+
     from src.mistral_agent import NullLLM
 
     session = AgentSession(llm=NullLLM())

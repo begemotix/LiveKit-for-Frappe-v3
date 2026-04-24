@@ -22,13 +22,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import AsyncIterator, Optional, TYPE_CHECKING
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Optional
 
+from livekit import rtc
 from livekit.agents import llm as lk_llm
 from livekit.agents.types import FlushSentinel
 from livekit.agents.voice.agent import Agent, ModelSettings
 
 if TYPE_CHECKING:
+    from livekit.agents.voice.background_audio import BackgroundAudioPlayer
+
     from src.mistral_orchestrator import MistralOrchestrator
 
 logger = logging.getLogger(__name__)
@@ -49,6 +53,17 @@ DEFAULT_FILLER_TEXTS: list[str] = [
 # Backwards-compatibility alias — some call sites / tests still import
 # the singular name. Always points to the first pool entry.
 DEFAULT_FILLER_TEXT = DEFAULT_FILLER_TEXTS[0]
+
+
+async def _frames_to_async_iter(
+    frames: list[rtc.AudioFrame],
+) -> AsyncIterator[rtc.AudioFrame]:
+    """Turn a pre-synthesized list of AudioFrames into an async iterator
+    suitable for ``BackgroundAudioPlayer.play()``. We keep this module-
+    level and stateless so filler playback doesn't allocate a closure
+    per call and so tests can stub it trivially."""
+    for frame in frames:
+        yield frame
 
 
 # ---------------------------------------------------------------------------
@@ -95,11 +110,13 @@ class MistralDrivenAgent(Agent):
     def __init__(
         self,
         *,
-        orchestrator: "MistralOrchestrator",
+        orchestrator: MistralOrchestrator,
         instructions: str,
         correlation_id: str,
         filler_text: Optional[str] = None,
         filler_texts: Optional[list[str]] = None,
+        background_audio: Optional[BackgroundAudioPlayer] = None,
+        filler_audio_pool: Optional[dict[str, list[rtc.AudioFrame]]] = None,
     ) -> None:
         super().__init__(instructions=instructions)
         self._orchestrator = orchestrator
@@ -116,6 +133,14 @@ class MistralDrivenAgent(Agent):
             self._filler_texts = [filler_text]
         else:
             self._filler_texts = list(DEFAULT_FILLER_TEXTS)
+        # Optional second audio track + pre-synthesized filler frames.
+        # When both are present, _speak_filler routes filler playback
+        # through the background track instead of session.say(), which
+        # fixes the ordering race where session.say enqueues behind an
+        # already-active pipeline_reply handle. See agent.py's
+        # _prewarm_filler_audio and entrypoint for the wiring path.
+        self._background_audio = background_audio
+        self._filler_audio_pool = filler_audio_pool or {}
         self._init_task: Optional[asyncio.Task] = None
 
     async def on_enter(self) -> None:
@@ -153,12 +178,50 @@ class MistralDrivenAgent(Agent):
 
     def _speak_filler(self, tool_name: str) -> None:
         """Invoked by the orchestrator on the first ToolExecutionStartedEvent
-        of a turn. Queues the filler sentence into LiveKit's speech
-        queue. The subsequent LLM reply will be queued *after* the
-        filler (FIFO ordering at the same priority), so sentences
-        never get cut mid-word. The user can interrupt either with
-        their voice (allow_interruptions=True is LiveKit's default).
+        of a turn. Plays a short filler phrase so the user hears a
+        conversational bridge while the MCP tool runs.
+
+        Routing
+        -------
+        - **Preferred:** if a BackgroundAudioPlayer and a pre-synthesized
+          filler pool were handed to the constructor (production wiring in
+          agent.py), the filler plays on the secondary audio track. That
+          track has no speech queue, so the filler is audible immediately
+          and does not compete with the pipeline_reply handle that
+          LiveKit created at user-turn-end.
+        - **Fallback:** without those two, _speak_filler calls
+          session.say(). This preserves the historical behaviour for
+          tests and any deployment that hasn't wired the background path
+          yet; the fallback still suffers the ordering race documented
+          in earlier revisions of this method.
         """
+        phrase = random.choice(self._filler_texts)
+
+        if self._background_audio is not None and self._filler_audio_pool:
+            frames = self._filler_audio_pool.get(phrase)
+            if frames:
+                try:
+                    self._background_audio.play(
+                        _frames_to_async_iter(frames)
+                    )
+                    logger.info(
+                        "mistral_agent_filler_spoken",
+                        extra={
+                            "correlation_id": self._correlation_id,
+                            "tool_name": tool_name,
+                            "filler_text_length": len(phrase),
+                            "filler_pool_size": len(self._filler_texts),
+                            "path": "background_audio",
+                        },
+                    )
+                    return
+                except Exception:
+                    logger.exception(
+                        "mistral_agent_filler_background_failed",
+                        extra={"correlation_id": self._correlation_id},
+                    )
+                    # fall through to session.say() fallback below
+
         # Agent.session is a property that raises if no activity is
         # bound. Guard with try/except rather than a `is None` check
         # so we degrade quietly during the brief race where the
@@ -173,16 +236,7 @@ class MistralDrivenAgent(Agent):
             )
             return
 
-        phrase = random.choice(self._filler_texts)
         try:
-            # NOTE: session.say() enqueues at SPEECH_PRIORITY_NORMAL which,
-            # under FIFO tie-breaking, loses to the pipeline_reply handle
-            # created at user-turn-end. The filler therefore plays AFTER
-            # the LLM answer in most cases. A heap-reprio hack was tried
-            # and removed — by the time _speak_filler runs the pipeline
-            # handle is already `_current_speech` and no longer in the
-            # heap. Fixing the ordering requires interrupting the active
-            # speech, which is a larger change parked for later.
             session.say(
                 phrase,
                 allow_interruptions=True,
@@ -195,6 +249,7 @@ class MistralDrivenAgent(Agent):
                     "tool_name": tool_name,
                     "filler_text_length": len(phrase),
                     "filler_pool_size": len(self._filler_texts),
+                    "path": "session_say_fallback",
                 },
             )
         except Exception:

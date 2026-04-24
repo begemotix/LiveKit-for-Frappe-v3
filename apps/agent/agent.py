@@ -1,24 +1,38 @@
+import asyncio
 import logging
 import os
-import asyncio
 import time
+
 from dotenv import load_dotenv
-from pythonjsonlogger import jsonlogger
-from livekit.agents import JobContext, JobProcess, WorkerOptions, cli, llm, Agent, AgentSession
+from livekit.agents import (
+    Agent,
+    AgentSession,
+    JobContext,
+    JobProcess,
+    WorkerOptions,
+    cli,
+    llm,
+)
 from livekit.agents.llm import mcp
 from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
+from pythonjsonlogger import jsonlogger
+
 from src.audio_buffer_patch import apply_audio_buffer_patch
 from src.audio_prebuffer_patch import apply_audio_prebuffer_patch
-from src.mistral_tts_cpu_patch import apply_mistral_tts_cpu_patch
-from src.voice_diagnostics import apply_voice_diagnostics
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
 from src.mistral_agent import MistralDrivenAgent
 from src.mistral_orchestrator import MistralOrchestrator
-from src.mode_config import resolve_agent_mode, resolve_mistral_config, validate_mode_env
+from src.mistral_tts_cpu_patch import apply_mistral_tts_cpu_patch
+from src.mode_config import (
+    resolve_agent_mode,
+    resolve_mistral_config,
+    validate_mode_env,
+)
 from src.model_factory import build_voice_pipeline
 from src.tts_text_transforms import NumberTransform, PronunciationTransform
+from src.voice_diagnostics import apply_voice_diagnostics
 
 # Load environment variables
 load_dotenv()
@@ -26,11 +40,11 @@ load_dotenv()
 def configure_logging():
     logger = logging.getLogger("agent")
     logger.setLevel(logging.INFO)
-    
-    # Phase 5a Follow-up: Disable propagation to avoid duplicate logs 
+
+    # Phase 5a Follow-up: Disable propagation to avoid duplicate logs
     # when running under LiveKit CLI which configures the root logger.
     logger.propagate = False
-    
+
     # Avoid duplicate handlers if re-initialized
     if not logger.handlers:
         handler = logging.StreamHandler()
@@ -61,13 +75,13 @@ def load_agent_instructions():
         # This works both locally and in Docker when mounted
         base_dir = os.path.dirname(__file__)
         path = os.path.join(base_dir, "readme", "AGENT_PROMPT.md")
-        
+
         # Also check one level up if not found (for local dev vs docker)
         if not os.path.exists(path):
             path = os.path.join(base_dir, "..", "..", "readme", "AGENT_PROMPT.md")
 
         if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 content = f.read()
                 logger.info(f"Loaded agent instructions from {path}")
                 return content
@@ -131,6 +145,21 @@ async def _collect_greeting_frames_async(tts, text: str) -> list:
     return frames
 
 
+async def _collect_filler_frames_pool_async(
+    tts, phrases: list[str]
+) -> dict[str, list]:
+    """Pre-synthesize every filler phrase once and return a
+    {phrase: [AudioFrame, ...]} dict. Re-uses the same TTS instance the
+    greeting prewarm builds, so we inherit Piper's warm-up cost for free
+    and don't spawn a second synthesis path."""
+    pool: dict[str, list] = {}
+    for phrase in phrases:
+        frames = await _collect_greeting_frames_async(tts, phrase)
+        if frames:
+            pool[phrase] = frames
+    return pool
+
+
 def _prewarm_greeting_audio(proc: JobProcess, mode: str) -> None:
     """Pre-synthesize the greeting once per worker and cache the audio
     frames in proc.userdata. Best-effort: any exception during this
@@ -176,6 +205,52 @@ def _prewarm_greeting_audio(proc: JobProcess, mode: str) -> None:
         logger.exception("greeting_prewarm_skipped")
 
 
+def _prewarm_filler_audio(proc: JobProcess, mode: str) -> None:
+    """Pre-synthesize every filler phrase once per worker and cache the
+    audio frames in ``proc.userdata['filler_audio_pool']`` as a
+    ``{phrase: [AudioFrame, ...]}`` dict.
+
+    The production wiring in ``entrypoint`` hands this pool — together
+    with a ``BackgroundAudioPlayer`` — into ``MistralDrivenAgent`` so
+    the filler plays on the secondary audio track from RAM (no live
+    TTS roundtrip, no speech-queue race).
+
+    Best-effort: failures are logged and swallowed so a broken prewarm
+    doesn't kill the worker. ``_speak_filler`` falls back to
+    ``session.say()`` if the cached pool is missing or incomplete.
+    """
+    try:
+        from src.mistral_agent import DEFAULT_FILLER_TEXTS
+
+        pipeline = build_voice_pipeline(mode)
+        tts = pipeline.get("tts")
+        if tts is None:
+            logger.info(
+                "filler_prewarm_skipped_no_tts", extra={"mode": mode}
+            )
+            return
+        pool = asyncio.run(
+            _collect_filler_frames_pool_async(tts, DEFAULT_FILLER_TEXTS)
+        )
+        if not pool:
+            logger.warning(
+                "filler_prewarm_empty_pool",
+                extra={"mode": mode, "phrase_count": len(DEFAULT_FILLER_TEXTS)},
+            )
+            return
+        proc.userdata["filler_audio_pool"] = pool
+        logger.info(
+            "filler_prewarm_cached",
+            extra={
+                "mode": mode,
+                "phrase_count": len(pool),
+                "total_frames": sum(len(v) for v in pool.values()),
+            },
+        )
+    except Exception:
+        logger.exception("filler_prewarm_skipped")
+
+
 def prewarm_fnc(proc: JobProcess) -> None:
     # Silero VAD settings — tuned for production voice agents.
     # sample_rate=16000 is the LiveKit Silero default and matches the
@@ -211,6 +286,10 @@ def prewarm_fnc(proc: JobProcess) -> None:
         mode = resolve_agent_mode()
         validate_mode_env(mode)
         _prewarm_greeting_audio(proc, mode)
+        # Pre-bake the filler phrase pool so the agent can play them
+        # from RAM on the background audio track. See
+        # _prewarm_filler_audio + MistralDrivenAgent._speak_filler.
+        _prewarm_filler_audio(proc, mode)
     except Exception:
         # ENV validation / mode resolution failures here are logged but
         # non-fatal: the entrypoint will re-raise them with full context
@@ -249,34 +328,34 @@ def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
             # Sicherstellen, dass wir nicht doppelt wrappen
             if hasattr(tool, "_filler_wrapped"):
                 continue
-                
+
             # In LiveKit Agents 1.5.x speichern Tools ihre Logik in _func
             if hasattr(tool, "_func"):
                 original_func = tool._func
-                
+
                 def make_wrapper(fnc):
                     async def wrapped_fnc(*tool_args, **tool_kwargs):
                         # 1. Filler starten (lokal, nicht im Chat-Kontext, unterbrechbar)
                         handle = session.say(
-                            "Einen Moment, ich schaue kurz nach.", 
+                            "Einen Moment, ich schaue kurz nach.",
                             allow_interruptions=True,
                             add_to_chat_ctx=False
                         )
-                        
+
                         # 2. Original Tool-Aufruf (parallel zum Filler)
                         result = await fnc(*tool_args, **tool_kwargs)
-                        
+
                         # 3. Filler unterbrechen, sobald das Ergebnis da ist (nur wenn er noch läuft)
                         # So wird die Antwort des LLM sofort möglich, ohne auf das Ende des Fillers zu warten.
                         if not handle.done():
                             handle.interrupt()
-                        
+
                         return result
                     return wrapped_fnc
-                
+
                 tool._func = make_wrapper(original_func)
                 tool._filler_wrapped = True
-            
+
         return toolset
 
     toolset.setup = wrapped_setup
@@ -285,10 +364,10 @@ def _apply_filler_to_toolset(session: AgentSession, toolset: llm.Toolset):
 async def entrypoint(ctx: JobContext):
     # Derive correlation ID from room name (D-10)
     correlation_id = ctx.room.name
-    
+
     # Add correlation context to logging
     ctx.log_context_fields["correlation_id"] = correlation_id
-    
+
     logger.info(
         f"starting agent for room {correlation_id}",
         extra={"correlation_id": correlation_id}
@@ -351,14 +430,14 @@ async def entrypoint(ctx: JobContext):
 
     # Try to load instructions from Markdown file first (Punkt X - Baseline Training)
     md_instructions = load_agent_instructions()
-    
+
     # Phase 4: Agentisches Prompting für EU-Modus
     pacing_instructions = (
         "WICHTIG für Voice: Antworte IMMER in sehr kurzen, prägnanten Sätzen (max. 12 Wörter). "
         "Mache nach jedem Satz einen Punkt. Vermeide Schachtelsätze oder lange Aufzählungen. "
         "Wenn du ein Tool nutzt, antworte direkt mit den Daten, ohne vorher Füllwörter zu sagen."
     )
-    
+
     agentic_instructions = (
         "\n\nAGENTIC BEHAVIOR (EU-MODE): "
         "1. Merke dir den gesamten Gesprächsverlauf und beziehe dich auf vorherige Aussagen. "
@@ -368,9 +447,9 @@ async def entrypoint(ctx: JobContext):
         "5. Antworte IMMER mit maximal 50 Wörtern. "
         "6. Wenn du Tools nutzt, fasse das Ergebnis kurz und prägnant zusammen."
     )
-    
+
     final_pacing = pacing_instructions + (agentic_instructions if mode == "type_b" else "")
-    
+
     if md_instructions:
         instructions = f"{md_instructions}\n\n{final_pacing}"
     else:
@@ -503,7 +582,7 @@ async def entrypoint(ctx: JobContext):
             tools=[],
             tts_text_transforms=tts_transforms,
         )
-    
+
     # Phase 5a: Metrik-Instrumentierung
     from src.metrics_listener import MetricsListener
     _metrics_listener = MetricsListener(session, correlation_id, mode=mode)
@@ -568,22 +647,76 @@ async def entrypoint(ctx: JobContext):
                     if isinstance(_ev, dict) and isinstance(_ev.get("retry_count"), int):
                         stt_retry_count = _ev["retry_count"]
                     elif hasattr(_ev, "retry_count"):
-                        retry_count_attr = getattr(_ev, "retry_count")
+                        retry_count_attr = _ev.retry_count
                         if isinstance(retry_count_attr, int):
                             stt_retry_count = retry_count_attr
                 _log_session_event(_event_name)(_ev)
 
         try:
+            # Secondary audio track for filler playback. The default
+            # LiveKit speech queue serializes session.say() behind the
+            # already-scheduled pipeline_reply handle, so fillers
+            # triggered mid-turn would play AFTER the answer. The
+            # BackgroundAudioPlayer runs on its own rtc.AudioSource and
+            # has no queue of its own, which guarantees the filler is
+            # audible immediately upon trigger. Initialised lazily per
+            # session; started right after session.start() below so the
+            # player has a live room to publish into.
+            from livekit.agents.voice.background_audio import (
+                BackgroundAudioPlayer,
+            )
+
+            filler_audio_pool = ctx.proc.userdata.get("filler_audio_pool") or {}
+            background_audio: BackgroundAudioPlayer | None = None
+            if mode == "type_b" and filler_audio_pool:
+                background_audio = BackgroundAudioPlayer()
+
             if mode == "type_b":
                 assert orchestrator is not None  # constructed in the type_b branch above
                 agent = MistralDrivenAgent(
                     orchestrator=orchestrator,
                     instructions=instructions,
                     correlation_id=correlation_id,
+                    background_audio=background_audio,
+                    filler_audio_pool=filler_audio_pool or None,
                 )
             else:
                 agent = Assistant(instructions=instructions, correlation_id=correlation_id)
             logger.info("agent instance created", extra={"correlation_id": correlation_id})
+
+            # Start the background audio track BEFORE session.start so
+            # the player is live by the time the orchestrator's
+            # tool-started callback can fire. Without this ordering
+            # _speak_filler's background path would hit
+            # RuntimeError("BackgroundAudio is not started") during the
+            # brief init window and fall back to session.say().
+            if background_audio is not None:
+                try:
+                    await background_audio.start(
+                        room=ctx.room, agent_session=session
+                    )
+                    logger.info(
+                        "background_audio_started",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "filler_phrase_count": len(filler_audio_pool),
+                        },
+                    )
+                except Exception:
+                    logger.exception(
+                        "background_audio_start_failed",
+                        extra={"correlation_id": correlation_id},
+                    )
+                    background_audio = None
+                    # Rebuild the agent without background_audio so its
+                    # _speak_filler goes straight to the session.say
+                    # fallback instead of throwing on every filler call.
+                    if mode == "type_b":
+                        agent = MistralDrivenAgent(
+                            orchestrator=orchestrator,
+                            instructions=instructions,
+                            correlation_id=correlation_id,
+                        )
 
             await session.start(room=ctx.room, agent=agent)
             logger.info(
