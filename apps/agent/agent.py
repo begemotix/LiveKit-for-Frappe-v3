@@ -9,6 +9,7 @@ from livekit.agents.llm import mcp
 from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.plugins import silero
 from src.audio_buffer_patch import apply_audio_buffer_patch
+from src.voice_diagnostics import apply_voice_diagnostics
 from src.frappe_mcp import build_frappe_mcp_server, get_allowed_tools_for_mode
 from src.mcp_errors import is_permission_error, user_facing_permission_message
 from src.mistral_agent import MistralDrivenAgent
@@ -294,7 +295,14 @@ async def entrypoint(ctx: JobContext):
     # Experiment A: raise WebRTC jitter buffer from Agents' hardcoded
     # 200 ms to 500 ms so gaps between Voxtral sentence-batch HTTP
     # round-trips are partially absorbed. Idempotent per-process.
+    # This is BUFFER-LAYER-4 (audio-side, after capture_frame).
     apply_audio_buffer_patch(queue_size_ms=500)
+
+    # Diagnostic instrumentation for the first-word stutter investigation.
+    # Logs a small set of timestamped events along the LLM→TTS→WebRTC path
+    # (Layer-1 text, Layer-2 sentence-batches, Layer-3 TTS first bytes,
+    # Layer-4 capture_frame rising edge). No functional change.
+    apply_voice_diagnostics()
 
     mode = resolve_agent_mode()
     validate_mode_env(mode)

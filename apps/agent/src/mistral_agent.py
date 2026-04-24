@@ -227,7 +227,22 @@ class MistralDrivenAgent(Agent):
             )
             return
 
+        # BUFFER-LAYER-1 (text-side): LLM → text chunks.
+        # Diagnostic only — see src/voice_diagnostics.py for the full layer map.
+        import time as _diag_time
+
+        _diag_first_chunk_logged = False
         async for chunk in self._orchestrator.run_turn(user_text):
+            if not _diag_first_chunk_logged:
+                _diag_first_chunk_logged = True
+                logger.info(
+                    "tx_llm_first_chunk",
+                    extra={
+                        "correlation_id": self._correlation_id,
+                        "t_monotonic_s": round(_diag_time.monotonic(), 4),
+                        "chunk_preview": (chunk if isinstance(chunk, str) else "")[:40],
+                    },
+                )
             yield chunk
         yield FlushSentinel()
 
